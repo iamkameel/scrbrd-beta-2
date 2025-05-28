@@ -3,13 +3,14 @@
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image'; // Added import for Image
 import { fixtures as allFixtures, type Fixture } from '@/lib/fixtures-data';
 import { resultsData, type Result, type InningsData, type BatsmanScore, type BowlerScore } from '@/lib/results-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Star, Trophy } from "lucide-react";
+import { ArrowLeft, Star, Trophy, TrendingUp, Zap } from "lucide-react"; // Zap might not be used, but let's keep it if we revert bento
 import { format } from 'date-fns';
 import {
   Accordion,
@@ -93,9 +94,9 @@ export default function ScorecardPage() {
   const defaultTabValue = result.innings && result.innings.length > 0 ? `innings-${result.innings[0].inningsNumber}` : "";
 
   const topTeamABatsmen = getTopBatsmen(result.teamA, result.innings, 2);
-  const topTeamABowlers = getTopBowlers(result.teamA, result.innings, 2); // Updated count to 2
+  const topTeamABowlers = getTopBowlers(result.teamA, result.innings, 2); 
   const topTeamBBatsmen = getTopBatsmen(result.teamB, result.innings, 2);
-  const topTeamBBowlers = getTopBowlers(result.teamB, result.innings, 2); // Updated count to 2
+  const topTeamBBowlers = getTopBowlers(result.teamB, result.innings, 2);
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -161,7 +162,7 @@ export default function ScorecardPage() {
                         <>
                           <p className="text-sm font-medium text-muted-foreground mb-1">Top Bowlers</p>
                           <ul className="space-y-1">
-                            {topTeamABowlers.map((bowler, index) => ( // Changed to topTeamABowlers
+                            {topTeamABowlers.map((bowler, index) => ( 
                               <li key={`tA-bowler-${index}`} className="text-sm flex justify-between items-center">
                                 <span className="font-semibold">{bowler.name}</span>
                                 <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets} ({bowler.overs} ov)</span>
@@ -198,7 +199,7 @@ export default function ScorecardPage() {
                         <>
                           <p className="text-sm font-medium text-muted-foreground mb-1">Top Bowlers</p>
                           <ul className="space-y-1">
-                            {topTeamBBowlers.map((bowler, index) => ( // Changed to topTeamBBowlers
+                            {topTeamBBowlers.map((bowler, index) => ( 
                               <li key={`tB-bowler-${index}`} className="text-sm flex justify-between items-center">
                                 <span className="font-semibold">{bowler.name}</span>
                                 <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets} ({bowler.overs} ov)</span>
@@ -227,11 +228,11 @@ export default function ScorecardPage() {
             </CardContent>
           </Card>
 
-          {/* Detailed Innings */}
+          {/* Innings Details */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">Detailed Innings</CardTitle>
-              <CardDescription>Full batting and bowling details.</CardDescription>
+              <CardTitle className="text-xl">Innings Details</CardTitle> 
+              <CardDescription>Full batting, bowling, and partnership details.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {result.innings && result.innings.length > 0 ? (
@@ -245,7 +246,7 @@ export default function ScorecardPage() {
                   </TabsList>
                   {result.innings.map((inningData, index) => (
                     <TabsContent key={`content-innings-${inningData.inningsNumber}`} value={`innings-${inningData.inningsNumber}`} className="mt-4">
-                      <Accordion type="multiple" defaultValue={['batting', 'bowling']} className="w-full space-y-4">
+                      <Accordion type="multiple" defaultValue={['batting', 'bowling', 'fow', 'partnerships']} className="w-full space-y-4">
                         {/* Batting Accordion Item */}
                         <AccordionItem value="batting">
                           <AccordionTrigger className="text-lg font-medium p-4 bg-muted/50 rounded-t-md hover:no-underline">
@@ -322,7 +323,7 @@ export default function ScorecardPage() {
                           </AccordionContent>
                         </AccordionItem>
 
-                        {/* Fall of Wickets Accordion Item (Optional) */}
+                        {/* Fall of Wickets Accordion Item */}
                         {inningData.fallOfWickets && inningData.fallOfWickets.length > 0 && (
                            <AccordionItem value="fow">
                             <AccordionTrigger className="text-lg font-medium p-4 bg-muted/50 rounded-t-md hover:no-underline">
@@ -339,6 +340,27 @@ export default function ScorecardPage() {
                             </AccordionContent>
                           </AccordionItem>
                         )}
+
+                        {/* Batting Partnerships Accordion Item */}
+                        <AccordionItem value="partnerships">
+                          <AccordionTrigger className="text-lg font-medium p-4 bg-muted/50 rounded-t-md hover:no-underline">
+                            Batting Partnerships
+                          </AccordionTrigger>
+                          <AccordionContent className="p-4 border border-t-0 rounded-b-md text-center">
+                            <Image 
+                              src="https://placehold.co/500x250.png" 
+                              alt="Batting Partnerships Infographic Placeholder" 
+                              width={500} 
+                              height={250} 
+                              className="mx-auto my-4 rounded-lg shadow-md"
+                              data-ai-hint="partnership graph cricket"
+                            />
+                            <p className="text-sm text-muted-foreground">
+                              Visual representation of key batting partnerships during the innings. (Infographic Coming Soon)
+                            </p>
+                          </AccordionContent>
+                        </AccordionItem>
+
                       </Accordion>
                     </TabsContent>
                   ))}
