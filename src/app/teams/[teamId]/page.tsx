@@ -169,7 +169,7 @@ export default function TeamDetailsPage() {
                       <div className="flex flex-wrap gap-2">
                         {fixture.status === "Upcoming" && (
                           <Button asChild variant="outline" size="sm">
-                            <Link href="#">
+                            <Link href={`/prematch-team/${fixture.id}`}>
                               <ClipboardList className="mr-2 h-4 w-4" />
                               View Pre-Match Team
                             </Link>
@@ -177,7 +177,7 @@ export default function TeamDetailsPage() {
                         )}
                         {fixture.status === "Past" && (
                           <Button asChild variant="outline" size="sm">
-                           <Link href="#">
+                           <Link href={`/scorecard/${fixture.id}`}>
                               <FileText className="mr-2 h-4 w-4" />
                               View Scorecard
                             </Link>

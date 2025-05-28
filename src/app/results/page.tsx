@@ -1,14 +1,9 @@
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { CheckCircle, Star } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Star } from "lucide-react";
+import { resultsData } from "@/lib/results-data"; // Updated import
 
 export default function ResultsPage() {
-  // Placeholder data
-  const results = [
-    { id: 1, teamA: "Warriors Club", teamAScore: "185/7 (20 Ov)", teamB: "Sharks United", teamBScore: "170/9 (20 Ov)", winner: "Warriors Club", margin: "15 runs", playerOfTheMatch: "Alex Ray (55 runs, 2 wkts)" },
-    { id: 2, teamA: "Titans CC", teamAScore: "220/5 (20 Ov)", teamB: "Giants XI", teamBScore: "221/4 (19.2 Ov)", winner: "Giants XI", margin: "6 wickets", playerOfTheMatch: "Ben Stokes (78* runs)" },
-  ];
-
   return (
     <div className="space-y-6">
       <Card>
@@ -18,7 +13,7 @@ export default function ResultsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {results.map((result) => (
+            {resultsData.length > 0 ? resultsData.map((result) => (
               <Card key={result.id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <CardTitle className="text-lg">{result.teamA} vs {result.teamB}</CardTitle>
@@ -43,7 +38,9 @@ export default function ResultsPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )) : (
+              <p className="text-muted-foreground">No match results available at the moment.</p>
+            )}
           </div>
         </CardContent>
       </Card>
