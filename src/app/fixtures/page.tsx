@@ -1,15 +1,10 @@
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CalendarDays, Clock, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { fixtures } from "@/lib/fixtures-data"; // Import from new location
 
 export default function FixturesPage() {
-  // Placeholder data
-  const fixtures = [
-    { id: 1, teamA: "Eagles High", teamB: "Panthers Academy", date: "2024-09-15", time: "10:00 AM", location: "Northwood Main Oval", status: "Upcoming" },
-    { id: 2, teamA: "Lions College", teamB: "Knights School", date: "2024-09-22", time: "02:00 PM", location: "Hillcrest College Green", status: "Upcoming" },
-    { id: 3, teamA: "Warriors Club", teamB: "Sharks United", date: "2024-08-10", time: "09:30 AM", location: "City Stadium", status: "Past" },
-  ];
-
   return (
     <div className="space-y-6">
       <Card>
@@ -24,7 +19,7 @@ export default function FixturesPage() {
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{fixture.teamA} vs {fixture.teamB}</CardTitle>
-                    <Badge variant={fixture.status === "Upcoming" ? "default" : "secondary"} className={fixture.status === "Upcoming" ? "bg-[hsl(var(--accent))] text-accent-foreground" : ""}>
+                    <Badge variant={fixture.status === "Upcoming" ? "default" : fixture.status === "Live" ? "destructive" : "secondary"} className={fixture.status === "Upcoming" ? "bg-[hsl(var(--accent))] text-accent-foreground" : ""}>
                       {fixture.status}
                     </Badge>
                   </div>

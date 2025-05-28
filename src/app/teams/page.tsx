@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link"; // Import Link
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -147,7 +148,9 @@ export default function TeamsPage() {
                       <p>Age Group: {team.ageGroup}</p>
                       <p>Division: {team.division}</p>
                     </div>
-                    <Button variant="link" className="p-0 h-auto mt-2 text-primary">View Details</Button>
+                    <Button asChild variant="link" className="p-0 h-auto mt-2 text-primary">
+                      <Link href={`/teams/${team.id}`}>View Details</Link>
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
