@@ -81,8 +81,8 @@ export default function TeamDetailsPage() {
           <Image 
             src={`https://placehold.co/1200x400.png`} 
             alt={`${team.affiliation} ${team.teamName} Banner`}
-            layout="fill"
-            objectFit="cover"
+            fill
+            style={{objectFit: "cover"}}
             data-ai-hint="team banner sport"
           />
           <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center p-4">
@@ -168,15 +168,19 @@ export default function TeamDetailsPage() {
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {fixture.status === "Upcoming" && (
-                          <Button variant="outline" size="sm">
-                            <ClipboardList className="mr-2 h-4 w-4" />
-                            View Pre-Match Team
+                          <Button asChild variant="outline" size="sm">
+                            <Link href="#">
+                              <ClipboardList className="mr-2 h-4 w-4" />
+                              View Pre-Match Team
+                            </Link>
                           </Button>
                         )}
                         {fixture.status === "Past" && (
-                          <Button variant="outline" size="sm">
-                            <FileText className="mr-2 h-4 w-4" />
-                            View Scorecard
+                          <Button asChild variant="outline" size="sm">
+                           <Link href="#">
+                              <FileText className="mr-2 h-4 w-4" />
+                              View Scorecard
+                            </Link>
                           </Button>
                         )}
                       </div>
@@ -236,5 +240,3 @@ export default function TeamDetailsPage() {
     </div>
   );
 }
-
-    
