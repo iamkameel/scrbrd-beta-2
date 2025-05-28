@@ -94,6 +94,7 @@ export default function PrematchTeamPage() {
                     <li>Player 9</li>
                     <li>Player 10</li>
                     <li>Player 11</li>
+                    <li>Player 12 (12th Man)</li>
                   </ul>
                 </div>
                 <div>
@@ -110,6 +111,7 @@ export default function PrematchTeamPage() {
                     <li>Player 9</li>
                     <li>Player 10</li>
                     <li>Player 11</li>
+                    <li>Player 12 (12th Man)</li>
                   </ul>
                 </div>
               </div>
