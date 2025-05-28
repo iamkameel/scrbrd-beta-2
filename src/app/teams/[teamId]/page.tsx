@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, BarChartBig, CalendarDays, ShieldCheck, Trophy, TrendingUp, Crosshair, Hand } from "lucide-react";
+import { ArrowLeft, Users, BarChartBig, CalendarDays, ShieldCheck, Trophy, TrendingUp, Crosshair, Hand, FileText, ClipboardList } from "lucide-react";
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -128,7 +128,6 @@ export default function TeamDetailsPage() {
                            <StatBox icon={TrendingUp} label="Runs" value={player.stats.runs} />
                            <StatBox icon={Crosshair} label="Wickets" value={player.stats.wickets} />
                            <StatBox icon={Hand} label="Catches" value={player.stats.catches} />
-                           {/* <StatBox icon={CalendarDays} label="Played" value={player.stats.matchesPlayed} className="sm:col-span-1" /> */}
                         </div>
                       )}
                     </CardContent>
@@ -149,18 +148,38 @@ export default function TeamDetailsPage() {
             </CardHeader>
             <CardContent>
               {teamFixtures.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {teamFixtures.map((fixture) => (
-                    <div key={fixture.id} className="p-3 border rounded-md bg-muted/50">
-                      <div className="flex justify-between items-center mb-1">
-                        <p className="font-semibold text-sm">{fixture.teamA} vs {fixture.teamB}</p>
-                        <Badge variant={fixture.status === "Upcoming" ? "default" : fixture.status === "Live" ? "destructive" : "secondary"} className={fixture.status === "Upcoming" ? "bg-[hsl(var(--accent))] text-accent-foreground" : ""}>
+                    <div key={fixture.id} className="p-4 border rounded-lg bg-muted/50 shadow-sm">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
+                        <p className="font-semibold text-md mb-1 sm:mb-0">{fixture.teamA} vs {fixture.teamB}</p>
+                        <Badge 
+                          variant={fixture.status === "Upcoming" ? "default" : fixture.status === "Live" ? "destructive" : "secondary"} 
+                          className={cn(
+                            fixture.status === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground",
+                            "whitespace-nowrap"
+                          )}
+                        >
                           {fixture.status}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground mb-3">
                         {format(new Date(fixture.date), 'EEE, MMM d')} - {fixture.time} at {fixture.location}
                       </p>
+                      <div className="flex flex-wrap gap-2">
+                        {fixture.status === "Upcoming" && (
+                          <Button variant="outline" size="sm" disabled>
+                            <ClipboardList className="mr-2 h-4 w-4" />
+                            View Pre-Match Team
+                          </Button>
+                        )}
+                        {fixture.status === "Past" && (
+                          <Button variant="outline" size="sm" disabled>
+                            <FileText className="mr-2 h-4 w-4" />
+                            View Scorecard
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -181,12 +200,12 @@ export default function TeamDetailsPage() {
                 Team Details
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+            <CardContent className="space-y-3 text-sm">
               <div><strong>Affiliation:</strong> {team.affiliation}</div>
               <div><strong>Team Name:</strong> {team.teamName}</div>
               {team.mascot && <div><strong>Mascot:</strong> {team.mascot}</div>}
-              <div><strong>Age Group:</strong> <Badge variant="outline">{team.ageGroup}</Badge></div>
-              <div><strong>Division:</strong> <Badge variant="outline">{team.division}</Badge></div>
+              <div><strong>Age Group:</strong> <Badge variant="outline" className="text-xs">{team.ageGroup}</Badge></div>
+              <div><strong>Division:</strong> <Badge variant="outline" className="text-xs">{team.division}</Badge></div>
             </CardContent>
           </Card>
 
@@ -203,7 +222,7 @@ export default function TeamDetailsPage() {
               <div><strong>Wins:</strong> <span className="font-semibold text-[hsl(var(--accent))]">{team.performanceStats.wins}</span></div>
               <div><strong>Losses:</strong> <span className="font-semibold text-destructive">{team.performanceStats.losses}</span></div>
               {team.performanceStats.draws !== undefined && <div><strong>Draws:</strong> {team.performanceStats.draws}</div>}
-              <div><strong>Win Percentage:</strong> <Badge variant="secondary">{team.performanceStats.winPercentage}</Badge></div>
+              <div><strong>Win Percentage:</strong> <Badge variant="secondary" className="text-xs">{team.performanceStats.winPercentage}</Badge></div>
               {team.performanceStats.titles !== undefined && team.performanceStats.titles > 0 && (
                 <div className="flex items-center pt-2">
                   <Trophy className="h-4 w-4 mr-2 text-yellow-500" />
