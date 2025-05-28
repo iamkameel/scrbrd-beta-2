@@ -139,19 +139,19 @@ export default function ScorecardPage() {
               <Separator className="my-6" />
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
-                {/* Team A Top Performers - Simpler Layout */}
+                {/* Team A Top Performers */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 text-foreground">{result.teamA} - Top Performers</h3>
                   { (topTeamABatsmen.length > 0 || topTeamABowler.length > 0) ? (
                     <div className="space-y-2">
                       {topTeamABatsmen.length > 0 && (
                         <>
-                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Batsmen:</p>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Batsmen</p>
                           <ul className="space-y-1 mb-3">
                             {topTeamABatsmen.map((batsman, index) => (
-                              <li key={`tA-batsman-${index}`} className="text-sm">
-                                <span className="font-semibold">{batsman.name}: </span>
-                                <span className="font-bold text-foreground">{batsman.runs}</span> ({batsman.balls})
+                              <li key={`tA-batsman-${index}`} className="text-sm flex justify-between items-center">
+                                <span className="font-semibold">{batsman.name}</span>
+                                <span className="font-bold text-foreground">{batsman.runs} ({batsman.balls})</span>
                               </li>
                             ))}
                           </ul>
@@ -159,12 +159,12 @@ export default function ScorecardPage() {
                       )}
                       {topTeamABowler.length > 0 && (
                         <>
-                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Bowler:</p>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Bowler</p>
                           <ul className="space-y-1">
                             {topTeamABowler.map((bowler, index) => (
-                              <li key={`tA-bowler-${index}`} className="text-sm">
-                                <span className="font-semibold">{bowler.name}: </span>
-                                <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets}</span> ({bowler.overs} ov)
+                              <li key={`tA-bowler-${index}`} className="text-sm flex justify-between items-center">
+                                <span className="font-semibold">{bowler.name}</span>
+                                <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets} ({bowler.overs} ov)</span>
                               </li>
                             ))}
                           </ul>
@@ -176,19 +176,19 @@ export default function ScorecardPage() {
                   )}
                 </div>
 
-                {/* Team B Top Performers - Simpler Layout */}
+                {/* Team B Top Performers */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 text-foreground">{result.teamB} - Top Performers</h3>
                    { (topTeamBBatsmen.length > 0 || topTeamBBowler.length > 0) ? (
                     <div className="space-y-2">
                       {topTeamBBatsmen.length > 0 && (
                         <>
-                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Batsmen:</p>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Batsmen</p>
                           <ul className="space-y-1 mb-3">
                             {topTeamBBatsmen.map((batsman, index) => (
-                              <li key={`tB-batsman-${index}`} className="text-sm">
-                                <span className="font-semibold">{batsman.name}: </span>
-                                <span className="font-bold text-foreground">{batsman.runs}</span> ({batsman.balls})
+                              <li key={`tB-batsman-${index}`} className="text-sm flex justify-between items-center">
+                                <span className="font-semibold">{batsman.name}</span>
+                                <span className="font-bold text-foreground">{batsman.runs} ({batsman.balls})</span>
                               </li>
                             ))}
                           </ul>
@@ -196,12 +196,12 @@ export default function ScorecardPage() {
                       )}
                       {topTeamBBowler.length > 0 && (
                         <>
-                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Bowler:</p>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Bowler</p>
                           <ul className="space-y-1">
                             {topTeamBBowler.map((bowler, index) => (
-                              <li key={`tB-bowler-${index}`} className="text-sm">
-                                <span className="font-semibold">{bowler.name}: </span>
-                                <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets}</span> ({bowler.overs} ov)
+                              <li key={`tB-bowler-${index}`} className="text-sm flex justify-between items-center">
+                                <span className="font-semibold">{bowler.name}</span>
+                                <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets} ({bowler.overs} ov)</span>
                               </li>
                             ))}
                           </ul>
@@ -356,3 +356,4 @@ export default function ScorecardPage() {
     </div>
   );
 }
+
