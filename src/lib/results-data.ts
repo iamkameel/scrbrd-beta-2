@@ -89,6 +89,9 @@ export const resultsData: Result[] = [
             { score: 30, wicket: 1, batsmanOut: "B. South", over: "4.2" },
             { score: 70, wicket: 2, batsmanOut: "A. North", over: "8.5" },
             { score: 120, wicket: 3, batsmanOut: "C. West", over: "13.1" },
+            { score: 140, wicket: 4, batsmanOut: "D. East", over: "15.3" },
+            { score: 150, wicket: 5, batsmanOut: "E. Player", over: "16.4" },
+            { score: 180, wicket: 6, batsmanOut: "F. Player", over: "19.2" },
         ]
       },
       {
@@ -101,17 +104,31 @@ export const resultsData: Result[] = [
           { name: "I. Player", dismissal: "not out", runs: 45, balls: 35, fours: 3, sixes: 1, strikeRate: "128.57" },
           { name: "J. Player", dismissal: "b L. Walker", runs: 15, balls: 15, fours: 1, sixes: 0, strikeRate: "100.00" },
           { name: "K. Player", dismissal: "lbw b A. North", runs: 10, balls: 10, fours: 1, sixes: 0, strikeRate: "100.00" },
+          { name: "L. Player", dismissal: "c Keeper b E. Player", runs: 5, balls: 8, fours: 0, sixes: 0, strikeRate: "62.50"},
+          { name: "M. Player", dismissal: "st F. Player b A. North", runs: 12, balls: 10, fours: 1, sixes: 0, strikeRate: "120.00"},
+          { name: "N. Player", dismissal: "run out (B. South)", runs: 8, balls: 7, fours: 1, sixes: 0, strikeRate: "114.28"},
+          { name: "O. Player", dismissal: "b D. East", runs: 2, balls: 4, fours: 0, sixes: 0, strikeRate: "50.00"},
         ],
         extras: { total: 8, details: "(LB: 3, W: 4, NB: 1)" },
         totalScoreString: "170/9",
         oversPlayed: "20 overs",
         bowlingScores: [
           { name: "L. Walker", overs: "4.0", maidens: 0, runsConceded: 25, wickets: 2, economyRate: "6.25" },
-          { name: "D. East", overs: "4.0", maidens: 0, runsConceded: 35, wickets: 1, economyRate: "8.75" },
-          { name: "A. North", overs: "4.0", maidens: 0, runsConceded: 30, wickets: 1, economyRate: "7.50" },
-          { name: "E. Player", overs: "4.0", maidens: 0, runsConceded: 40, wickets: 0, economyRate: "10.00" },
-          { name: "F. Player", overs: "4.0", maidens: 0, runsConceded: 32, wickets: 0, economyRate: "8.00" },
+          { name: "D. East", overs: "4.0", maidens: 0, runsConceded: 35, wickets: 2, economyRate: "8.75" },
+          { name: "A. North", overs: "4.0", maidens: 0, runsConceded: 30, wickets: 2, economyRate: "7.50" },
+          { name: "E. Player", overs: "4.0", maidens: 0, runsConceded: 40, wickets: 1, economyRate: "10.00" },
+          { name: "F. Player", overs: "4.0", maidens: 0, runsConceded: 32, wickets: 1, economyRate: "8.00" },
         ],
+        fallOfWickets: [
+          { score: 40, wicket: 1, batsmanOut: "G. Shark", over: "5.1" },
+          { score: 65, wicket: 2, batsmanOut: "H. Fish", over: "8.3" },
+          { score: 90, wicket: 3, batsmanOut: "J. Player", over: "11.5" },
+          { score: 110, wicket: 4, batsmanOut: "K. Player", over: "14.2" },
+          { score: 120, wicket: 5, batsmanOut: "L. Player", over: "16.1" },
+          { score: 145, wicket: 6, batsmanOut: "M. Player", over: "18.0" },
+          { score: 158, wicket: 7, batsmanOut: "N. Player", over: "19.0" },
+          { score: 165, wicket: 8, batsmanOut: "O. Player", over: "19.4" },
+        ]
       }
     ]
   },
@@ -143,3 +160,4 @@ export const resultsData: Result[] = [
     // No detailed innings for this one yet
   }
 ];
+
