@@ -93,9 +93,9 @@ export default function ScorecardPage() {
   const defaultTabValue = result.innings && result.innings.length > 0 ? `innings-${result.innings[0].inningsNumber}` : "";
 
   const topTeamABatsmen = getTopBatsmen(result.teamA, result.innings, 2);
-  const topTeamABowler = getTopBowlers(result.teamA, result.innings, 1);
+  const topTeamABowlers = getTopBowlers(result.teamA, result.innings, 2); // Updated count to 2
   const topTeamBBatsmen = getTopBatsmen(result.teamB, result.innings, 2);
-  const topTeamBBowler = getTopBowlers(result.teamB, result.innings, 1);
+  const topTeamBBowlers = getTopBowlers(result.teamB, result.innings, 2); // Updated count to 2
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -142,7 +142,7 @@ export default function ScorecardPage() {
                 {/* Team A Top Performers */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 text-foreground">{result.teamA} - Top Performers</h3>
-                  { (topTeamABatsmen.length > 0 || topTeamABowler.length > 0) ? (
+                  { (topTeamABatsmen.length > 0 || topTeamABowlers.length > 0) ? (
                     <div className="space-y-2">
                       {topTeamABatsmen.length > 0 && (
                         <>
@@ -157,11 +157,11 @@ export default function ScorecardPage() {
                           </ul>
                         </>
                       )}
-                      {topTeamABowler.length > 0 && (
+                      {topTeamABowlers.length > 0 && (
                         <>
-                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Bowler</p>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Bowlers</p>
                           <ul className="space-y-1">
-                            {topTeamABowler.map((bowler, index) => (
+                            {topTeamABowlers.map((bowler, index) => ( // Changed to topTeamABowlers
                               <li key={`tA-bowler-${index}`} className="text-sm flex justify-between items-center">
                                 <span className="font-semibold">{bowler.name}</span>
                                 <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets} ({bowler.overs} ov)</span>
@@ -179,7 +179,7 @@ export default function ScorecardPage() {
                 {/* Team B Top Performers */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 text-foreground">{result.teamB} - Top Performers</h3>
-                   { (topTeamBBatsmen.length > 0 || topTeamBBowler.length > 0) ? (
+                   { (topTeamBBatsmen.length > 0 || topTeamBBowlers.length > 0) ? (
                     <div className="space-y-2">
                       {topTeamBBatsmen.length > 0 && (
                         <>
@@ -194,11 +194,11 @@ export default function ScorecardPage() {
                           </ul>
                         </>
                       )}
-                      {topTeamBBowler.length > 0 && (
+                      {topTeamBBowlers.length > 0 && (
                         <>
-                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Bowler</p>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Bowlers</p>
                           <ul className="space-y-1">
-                            {topTeamBBowler.map((bowler, index) => (
+                            {topTeamBBowlers.map((bowler, index) => ( // Changed to topTeamBBowlers
                               <li key={`tB-bowler-${index}`} className="text-sm flex justify-between items-center">
                                 <span className="font-semibold">{bowler.name}</span>
                                 <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets} ({bowler.overs} ov)</span>
