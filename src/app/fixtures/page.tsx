@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { CalendarDays, Clock, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { fixtures } from "@/lib/fixtures-data"; // Import from new location
+import { format } from 'date-fns';
 
 export default function FixturesPage() {
   return (
@@ -27,7 +28,7 @@ export default function FixturesPage() {
                 <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center">
                     <CalendarDays className="mr-2 h-4 w-4" />
-                    <span>{new Date(fixture.date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                    <span>{format(new Date(fixture.date), 'EEE, MMM d, yyyy')}</span>
                   </div>
                   <div className="flex items-center">
                     <Clock className="mr-2 h-4 w-4" />

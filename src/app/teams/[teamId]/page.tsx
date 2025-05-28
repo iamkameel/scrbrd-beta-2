@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Users, BarChartBig, CalendarDays, ShieldCheck, Trophy, TrendingUp, Crosshair, Hand } from "lucide-react";
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 export default function TeamDetailsPage() {
   const params = useParams();
@@ -158,7 +159,7 @@ export default function TeamDetailsPage() {
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(fixture.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} - {fixture.time} at {fixture.location}
+                        {format(new Date(fixture.date), 'EEE, MMM d')} - {fixture.time} at {fixture.location}
                       </p>
                     </div>
                   ))}
