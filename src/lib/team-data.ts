@@ -6,6 +6,12 @@ export interface Player {
   name: string;
   role: string; // e.g., Batsman, Bowler, All-rounder, Wicket-keeper
   avatar: string; // URL to placeholder image
+  stats?: { // Optional stats object
+    runs?: number;
+    wickets?: number;
+    catches?: number;
+    matchesPlayed?: number;
+  };
 }
 
 export interface TeamPerformanceStats {
@@ -39,21 +45,21 @@ export const detailedTeamsData: Team[] = [
     division: "A",
     mascot: "Knights",
     squad: [
-      { id: "P101", name: "Ethan Miller", role: "Captain / Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P102", name: "Olivia Garcia", role: "Vice-Captain / All-rounder", avatar: "https://placehold.co/100x100.png" },
-      { id: "P103", name: "Liam Davies", role: "Wicket-keeper / Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P104", name: "Sophia Wilson", role: "Opening Bowler", avatar: "https://placehold.co/100x100.png" },
-      { id: "P105", name: "Noah Brown", role: "Spinner", avatar: "https://placehold.co/100x100.png" },
-      { id: "P106", name: "Ava Jones", role: "Middle-order Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P107", name: "Lucas Rodriguez", role: "Fast Bowler", avatar: "https://placehold.co/100x100.png" },
-      { id: "P108", name: "Isabella Smith", role: "All-rounder", avatar: "https://placehold.co/100x100.png" },
-      { id: "P109", name: "Mason Taylor", role: "Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P110", name: "Chloe Evans", role: "Bowler", avatar: "https://placehold.co/100x100.png" },
-      { id: "P111", name: "Jacob White", role: "Reserve Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P112", name: "Mia Harris", role: "Reserve Bowler", avatar: "https://placehold.co/100x100.png" },
-      { id: "P113", name: "William King", role: "Opening Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P114", name: "Ella Wright", role: "Fielder", avatar: "https://placehold.co/100x100.png" },
-      { id: "P115", name: "James Lee", role: "All-rounder", avatar: "https://placehold.co/100x100.png" },
+      { id: "P101", name: "Ethan Miller", role: "Captain / Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 1250, wickets: 5, catches: 20, matchesPlayed: 45 } },
+      { id: "P102", name: "Olivia Garcia", role: "Vice-Captain / All-rounder", avatar: "https://placehold.co/100x100.png", stats: { runs: 980, wickets: 55, catches: 30, matchesPlayed: 42 } },
+      { id: "P103", name: "Liam Davies", role: "Wicket-keeper / Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 750, wickets: 0, catches: 75, matchesPlayed: 40 } },
+      { id: "P104", name: "Sophia Wilson", role: "Opening Bowler", avatar: "https://placehold.co/100x100.png", stats: { runs: 150, wickets: 85, catches: 10, matchesPlayed: 38 } },
+      { id: "P105", name: "Noah Brown", role: "Spinner", avatar: "https://placehold.co/100x100.png", stats: { runs: 200, wickets: 70, catches: 12, matchesPlayed: 35 } },
+      { id: "P106", name: "Ava Jones", role: "Middle-order Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 1100, wickets: 2, catches: 18, matchesPlayed: 43 } },
+      { id: "P107", name: "Lucas Rodriguez", role: "Fast Bowler", avatar: "https://placehold.co/100x100.png", stats: { runs: 120, wickets: 78, catches: 9, matchesPlayed: 36 } },
+      { id: "P108", name: "Isabella Smith", role: "All-rounder", avatar: "https://placehold.co/100x100.png", stats: { runs: 600, wickets: 40, catches: 25, matchesPlayed: 39 } },
+      { id: "P109", name: "Mason Taylor", role: "Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 850, wickets: 1, catches: 15, matchesPlayed: 37 } },
+      { id: "P110", name: "Chloe Evans", role: "Bowler", avatar: "https://placehold.co/100x100.png", stats: { runs: 90, wickets: 60, catches: 8, matchesPlayed: 33 } },
+      { id: "P111", name: "Jacob White", role: "Reserve Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 300, wickets: 0, catches: 5, matchesPlayed: 15 } },
+      { id: "P112", name: "Mia Harris", role: "Reserve Bowler", avatar: "https://placehold.co/100x100.png", stats: { runs: 50, wickets: 20, catches: 3, matchesPlayed: 12 } },
+      { id: "P113", name: "William King", role: "Opening Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 1050, wickets: 3, catches: 22, matchesPlayed: 41 } },
+      { id: "P114", name: "Ella Wright", role: "Fielder", avatar: "https://placehold.co/100x100.png", stats: { runs: 80, wickets: 1, catches: 40, matchesPlayed: 30 } },
+      { id: "P115", name: "James Lee", role: "All-rounder", avatar: "https://placehold.co/100x100.png", stats: { runs: 700, wickets: 30, catches: 28, matchesPlayed: 38 } },
     ],
     performanceStats: {
       matchesPlayed: 20,
@@ -72,18 +78,18 @@ export const detailedTeamsData: Team[] = [
     division: "A",
     mascot: "Knights",
     squad: [
-      { id: "P201", name: "Aiden Clark", role: "Captain / Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P202", name: "Zoe Lewis", role: "Bowler", avatar: "https://placehold.co/100x100.png" },
-      { id: "P203", name: "Ryan Hall", role: "Wicket-keeper", avatar: "https://placehold.co/100x100.png" },
-      { id: "P204", name: "Grace Allen", role: "All-rounder", avatar: "https://placehold.co/100x100.png" },
-      { id: "P205", name: "Owen Young", role: "Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P206", name: "Lily Scott", role: "Spinner", avatar: "https://placehold.co/100x100.png" },
-      { id: "P207", name: "Carter Green", role: "Fast Bowler", avatar: "https://placehold.co/100x100.png" },
-      { id: "P208", name: "Nora Adams", role: "Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P209", name: "Isaac Baker", role: "All-rounder", avatar: "https://placehold.co/100x100.png" },
-      { id: "P210", name: "Hannah Nelson", role: "Bowler", avatar: "https://placehold.co/100x100.png" },
-      { id: "P211", name: "Caleb Hill", role: "Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P212", name: "Penelope Ramirez", role: "Fielder", avatar: "https://placehold.co/100x100.png" },
+      { id: "P201", name: "Aiden Clark", role: "Captain / Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 800, wickets: 10, catches: 15, matchesPlayed: 30 } },
+      { id: "P202", name: "Zoe Lewis", role: "Bowler", avatar: "https://placehold.co/100x100.png", stats: { runs: 100, wickets: 65, catches: 8, matchesPlayed: 28 } },
+      { id: "P203", name: "Ryan Hall", role: "Wicket-keeper", avatar: "https://placehold.co/100x100.png", stats: { runs: 450, wickets: 0, catches: 50, matchesPlayed: 29 } },
+      { id: "P204", name: "Grace Allen", role: "All-rounder", avatar: "https://placehold.co/100x100.png", stats: { runs: 500, wickets: 30, catches: 20, matchesPlayed: 27 } },
+      { id: "P205", name: "Owen Young", role: "Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 700, wickets: 2, catches: 10, matchesPlayed: 26 } },
+      { id: "P206", name: "Lily Scott", role: "Spinner", avatar: "https://placehold.co/100x100.png", stats: { runs: 80, wickets: 50, catches: 5, matchesPlayed: 25 } },
+      { id: "P207", name: "Carter Green", role: "Fast Bowler", avatar: "https://placehold.co/100x100.png", stats: { runs: 60, wickets: 60, catches: 7, matchesPlayed: 28 } },
+      { id: "P208", name: "Nora Adams", role: "Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 650, wickets: 1, catches: 12, matchesPlayed: 24 } },
+      { id: "P209", name: "Isaac Baker", role: "All-rounder", avatar: "https://placehold.co/100x100.png", stats: { runs: 400, wickets: 25, catches: 18, matchesPlayed: 26 } },
+      { id: "P210", name: "Hannah Nelson", role: "Bowler", avatar: "https://placehold.co/100x100.png", stats: { runs: 70, wickets: 45, catches: 6, matchesPlayed: 23 } },
+      { id: "P211", name: "Caleb Hill", role: "Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 550, wickets: 0, catches: 9, matchesPlayed: 22 } },
+      { id: "P212", name: "Penelope Ramirez", role: "Fielder", avatar: "https://placehold.co/100x100.png", stats: { runs: 40, wickets: 0, catches: 30, matchesPlayed: 20 } },
     ],
     performanceStats: {
       matchesPlayed: 18,
@@ -102,17 +108,17 @@ export const detailedTeamsData: Team[] = [
     division: "Premier League",
     mascot: "Panthers",
     squad: [
-      { id: "P301", name: "Logan Walker", role: "Captain / All-rounder", avatar: "https://placehold.co/100x100.png" },
-      { id: "P302", name: "Victoria Perez", role: "Opening Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P303", name: "Gabriel Roberts", role: "Fast Bowler", avatar: "https://placehold.co/100x100.png" },
-      { id: "P304", name: "Evelyn Turner", role: "Wicket-keeper / Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P305", name: "Anthony Phillips", role: "Spinner", avatar: "https://placehold.co/100x100.png" },
-      { id: "P306", name: "Natalie Campbell", role: "Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P307", name: "Christian Parker", role: "All-rounder", avatar: "https://placehold.co/100x100.png" },
-      { id: "P308", name: "Aubrey Edwards", role: "Bowler", avatar: "https://placehold.co/100x100.png" },
-      { id: "P309", name: "Julian Collins", role: "Batsman", avatar: "https://placehold.co/100x100.png" },
-      { id: "P310", name: "Skylar Stewart", role: "Fielder", avatar: "https://placehold.co/100x100.png" },
-      { id: "P311", name: "Aaron Morris", role: "Reserve All-rounder", avatar: "https://placehold.co/100x100.png" },
+      { id: "P301", name: "Logan Walker", role: "Captain / All-rounder", avatar: "https://placehold.co/100x100.png", stats: { runs: 2500, wickets: 150, catches: 50, matchesPlayed: 100 } },
+      { id: "P302", name: "Victoria Perez", role: "Opening Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 3200, wickets: 5, catches: 40, matchesPlayed: 95 } },
+      { id: "P303", name: "Gabriel Roberts", role: "Fast Bowler", avatar: "https://placehold.co/100x100.png", stats: { runs: 500, wickets: 250, catches: 20, matchesPlayed: 90 } },
+      { id: "P304", name: "Evelyn Turner", role: "Wicket-keeper / Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 1800, wickets: 0, catches: 150, matchesPlayed: 88 } },
+      { id: "P305", name: "Anthony Phillips", role: "Spinner", avatar: "https://placehold.co/100x100.png", stats: { runs: 600, wickets: 200, catches: 25, matchesPlayed: 85 } },
+      { id: "P306", name: "Natalie Campbell", role: "Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 2800, wickets: 2, catches: 30, matchesPlayed: 92 } },
+      { id: "P307", name: "Christian Parker", role: "All-rounder", avatar: "https://placehold.co/100x100.png", stats: { runs: 1500, wickets: 100, catches: 45, matchesPlayed: 80 } },
+      { id: "P308", name: "Aubrey Edwards", role: "Bowler", avatar: "https://placehold.co/100x100.png", stats: { runs: 300, wickets: 180, catches: 15, matchesPlayed: 78 } },
+      { id: "P309", name: "Julian Collins", role: "Batsman", avatar: "https://placehold.co/100x100.png", stats: { runs: 2200, wickets: 1, catches: 28, matchesPlayed: 83 } },
+      { id: "P310", name: "Skylar Stewart", role: "Fielder", avatar: "https://placehold.co/100x100.png", stats: { runs: 200, wickets: 0, catches: 60, matchesPlayed: 70 } },
+      { id: "P311", name: "Aaron Morris", role: "Reserve All-rounder", avatar: "https://placehold.co/100x100.png", stats: { runs: 800, wickets: 50, catches: 22, matchesPlayed: 40 } },
     ],
     performanceStats: {
       matchesPlayed: 25,
@@ -123,8 +129,6 @@ export const detailedTeamsData: Team[] = [
       titles: 3,
     },
   },
-  // Add more teams as needed, copying the structure from teamsData in /src/app/teams/page.tsx for basic info
-  // and then adding squad and performanceStats.
   {
     id: 4,
     teamName: "U16",
@@ -137,6 +141,7 @@ export const detailedTeamsData: Team[] = [
       name: `Player HC ${i + 1}`,
       role: i % 4 === 0 ? "Batsman" : i % 4 === 1 ? "Bowler" : i % 4 === 2 ? "All-rounder" : "Wicket-keeper",
       avatar: "https://placehold.co/100x100.png",
+      stats: { runs: Math.floor(Math.random() * 500) + 50, wickets: Math.floor(Math.random() * 30), catches: Math.floor(Math.random() * 20) + 5, matchesPlayed: Math.floor(Math.random() * 15) + 5 }
     })),
     performanceStats: {
       matchesPlayed: 15,
@@ -152,12 +157,13 @@ export const detailedTeamsData: Team[] = [
     affiliation: "Michaelhouse",
     ageGroup: "U16",
     division: "A",
-    mascot: "Knights", // Michaelhouse mascot can vary, using generic 'Knights' if not specific
+    mascot: "Knights", 
     squad: Array.from({ length: 15 }, (_, i) => ({
       id: `P5${101 + i}`,
       name: `Player MH ${i + 1}`,
       role: i % 3 === 0 ? "Batsman" : i % 3 === 1 ? "Bowler" : "All-rounder",
       avatar: "https://placehold.co/100x100.png",
+      stats: { runs: Math.floor(Math.random() * 600) + 100, wickets: Math.floor(Math.random() * 40), catches: Math.floor(Math.random() * 25) + 5, matchesPlayed: Math.floor(Math.random() * 20) + 10 }
     })),
     performanceStats: {
       matchesPlayed: 19,
