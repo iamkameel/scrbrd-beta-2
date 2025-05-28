@@ -3,14 +3,14 @@
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image'; // Added import for Image
+import Image from 'next/image';
 import { fixtures as allFixtures, type Fixture } from '@/lib/fixtures-data';
 import { resultsData, type Result, type InningsData, type BatsmanScore, type BowlerScore } from '@/lib/results-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Star, Trophy, TrendingUp, Zap } from "lucide-react"; // Zap might not be used, but let's keep it if we revert bento
+import { ArrowLeft, Star, Trophy } from "lucide-react";
 import { format } from 'date-fns';
 import {
   Accordion,
@@ -24,6 +24,14 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig
+} from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+
 
 // Helper function to get top batsmen for a team
 function getTopBatsmen(teamName: string, inningsData: InningsData[] | undefined, count: number): BatsmanScore[] {
@@ -31,7 +39,7 @@ function getTopBatsmen(teamName: string, inningsData: InningsData[] | undefined,
   const allTeamBattingScores: BatsmanScore[] = [];
   inningsData.forEach(inning => {
     if (inning.battingTeam === teamName) {
-      allTeamBattingScores.push(...inning.battingScores.filter(bs => typeof bs.runs === 'number')); // Ensure runs are numbers
+      allTeamBattingScores.push(...inning.battingScores.filter(bs => typeof bs.runs === 'number'));
     }
   });
 
@@ -45,8 +53,7 @@ function getTopBowlers(teamName: string, inningsData: InningsData[] | undefined,
   if (!inningsData) return [];
   const allTeamBowlingScores: BowlerScore[] = [];
   inningsData.forEach(inning => {
-    // teamName was the bowling team in this innings
-    if (inning.bowlingTeam === teamName) { 
+    if (inning.bowlingTeam === teamName) {
       allTeamBowlingScores.push(...inning.bowlingScores.filter(bs => typeof bs.wickets === 'number' && typeof bs.runsConceded === 'number'));
     }
   });
@@ -60,6 +67,77 @@ function getTopBowlers(teamName: string, inningsData: InningsData[] | undefined,
     })
     .slice(0, count);
 }
+
+function getOrdinal(n: number) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+interface PartnershipChartDataItem {
+  label: string;
+  runs: number;
+  batsmen?: string; // Optional: for tooltip or future enhancement
+}
+
+function calculatePartnershipChartData(innings: InningsData): PartnershipChartDataItem[] {
+  const chartData: PartnershipChartDataItem[] = [];
+  if (!innings.fallOfWickets) {
+    // Handle innings with no FOW data: could be one big partnership if runs scored
+    const totalRuns = parseInt(innings.totalScoreString.split('/')[0]);
+    if (innings.battingScores.length >= 2 && !isNaN(totalRuns) && totalRuns > 0) {
+      chartData.push({
+        label: `${getOrdinal(1)} Wicket`,
+        runs: totalRuns,
+        batsmen: `${innings.battingScores[0].name} & ${innings.battingScores[1].name} (not out)`
+      });
+    }
+    return chartData;
+  }
+
+  let lastScore = 0;
+  innings.fallOfWickets.forEach((fow, index) => {
+    const partnershipRuns = fow.score - lastScore;
+    if (partnershipRuns >= 0) {
+      chartData.push({
+        label: `${getOrdinal(fow.wicket)} Wicket`,
+        runs: partnershipRuns,
+        // Batsmen names could be added here if logic to determine partners is implemented
+      });
+    }
+    lastScore = fow.score;
+  });
+
+  // Add partnership for the final wicket (if not all out)
+  const totalRuns = parseInt(innings.totalScoreString.split('/')[0]);
+  const wicketsFallen = innings.fallOfWickets.length;
+
+  if (wicketsFallen > 0 && wicketsFallen < 10 && !isNaN(totalRuns) && totalRuns > lastScore) {
+    chartData.push({
+      label: `${getOrdinal(wicketsFallen + 1)} Wicket`,
+      runs: totalRuns - lastScore,
+      // Batsmen names for the not-out partnership
+    });
+  } else if (wicketsFallen === 0 && !isNaN(totalRuns) && totalRuns > 0 && innings.battingScores.length >=2) {
+     //This case is for when 0 wickets fell but runs were scored (e.g. innings declared, or target reached)
+     // It's an "opening partnership" that was never broken.
+      chartData.push({
+        label: `${getOrdinal(1)} Wicket`, // Or "Opening Partnership"
+        runs: totalRuns,
+        batsmen: `${innings.battingScores[0].name} & ${innings.battingScores[1].name} (not out)`
+      });
+  }
+
+
+  return chartData.filter(p => p.runs > 0); // Only show partnerships with runs
+}
+
+const partnershipChartConfig = {
+  runs: {
+    label: "Runs",
+    color: "hsl(var(--chart-1))",
+  },
+} satisfies ChartConfig;
 
 
 export default function ScorecardPage() {
@@ -94,7 +172,7 @@ export default function ScorecardPage() {
   const defaultTabValue = result.innings && result.innings.length > 0 ? `innings-${result.innings[0].inningsNumber}` : "";
 
   const topTeamABatsmen = getTopBatsmen(result.teamA, result.innings, 2);
-  const topTeamABowlers = getTopBowlers(result.teamA, result.innings, 2); 
+  const topTeamABowlers = getTopBowlers(result.teamA, result.innings, 2);
   const topTeamBBatsmen = getTopBatsmen(result.teamB, result.innings, 2);
   const topTeamBBowlers = getTopBowlers(result.teamB, result.innings, 2);
 
@@ -244,7 +322,9 @@ export default function ScorecardPage() {
                       </TabsTrigger>
                     ))}
                   </TabsList>
-                  {result.innings.map((inningData, index) => (
+                  {result.innings.map((inningData, index) => {
+                    const partnershipData = calculatePartnershipChartData(inningData);
+                    return (
                     <TabsContent key={`content-innings-${inningData.inningsNumber}`} value={`innings-${inningData.inningsNumber}`} className="mt-4">
                       <Accordion type="multiple" defaultValue={['batting', 'bowling', 'fow', 'partnerships']} className="w-full space-y-4">
                         {/* Batting Accordion Item */}
@@ -346,24 +426,43 @@ export default function ScorecardPage() {
                           <AccordionTrigger className="text-lg font-medium p-4 bg-muted/50 rounded-t-md hover:no-underline">
                             Batting Partnerships
                           </AccordionTrigger>
-                          <AccordionContent className="p-4 border border-t-0 rounded-b-md text-center">
-                            <Image 
-                              src="https://placehold.co/500x250.png" 
-                              alt="Batting Partnerships Infographic Placeholder" 
-                              width={500} 
-                              height={250} 
-                              className="mx-auto my-4 rounded-lg shadow-md"
-                              data-ai-hint="partnership graph cricket"
-                            />
-                            <p className="text-sm text-muted-foreground">
-                              Visual representation of key batting partnerships during the innings. (Infographic Coming Soon)
-                            </p>
+                          <AccordionContent className="p-4 border border-t-0 rounded-b-md">
+                            {partnershipData.length > 0 ? (
+                              <ChartContainer config={partnershipChartConfig} className="h-[300px] w-full">
+                                <BarChart
+                                  accessibilityLayer
+                                  layout="vertical"
+                                  data={partnershipData}
+                                  margin={{ top: 5, right: 20, left: 50, bottom: 5 }}
+                                >
+                                  <CartesianGrid horizontal={false} vertical={true} strokeDasharray="3 3" />
+                                  <XAxis type="number" dataKey="runs" />
+                                  <YAxis
+                                    dataKey="label"
+                                    type="category"
+                                    tickLine={false}
+                                    axisLine={false}
+                                    width={100}
+                                    tick={{ fontSize: 12 }}
+                                  />
+                                  <RechartsTooltip
+                                    cursor={{ fill: 'hsl(var(--muted))' }}
+                                    content={<ChartTooltipContent hideLabel />}
+                                  />
+                                  <Bar dataKey="runs" layout="vertical" radius={4} barSize={20} />
+                                </BarChart>
+                              </ChartContainer>
+                            ) : (
+                              <p className="text-sm text-muted-foreground text-center py-4">
+                                Partnership data not available for this innings.
+                              </p>
+                            )}
                           </AccordionContent>
                         </AccordionItem>
 
                       </Accordion>
                     </TabsContent>
-                  ))}
+                  )})}
                 </Tabs>
               ) : (
                 <p className="text-muted-foreground">
