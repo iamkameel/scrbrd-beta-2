@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Star, Trophy, TrendingUp, Zap } from "lucide-react";
+import { ArrowLeft, Star, Trophy } from "lucide-react";
 import { format } from 'date-fns';
 import {
   Accordion,
@@ -139,58 +139,74 @@ export default function ScorecardPage() {
               <Separator className="my-6" />
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
-                {/* Team A Top Performers */}
+                {/* Team A Top Performers - Simpler Layout */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 text-foreground">{result.teamA} - Top Performers</h3>
                   { (topTeamABatsmen.length > 0 || topTeamABowler.length > 0) ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {topTeamABatsmen.map((batsman, index) => (
-                        <div key={`tA-batsman-${index}`} className="bg-card p-3 rounded-lg shadow-sm text-center border hover:shadow-md transition-shadow">
-                          <TrendingUp className="h-5 w-5 mx-auto mb-1 text-[hsl(var(--accent))]" />
-                          <p className="text-sm font-semibold truncate" title={batsman.name}>{batsman.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            <span className="font-bold text-foreground">{batsman.runs}</span> ({batsman.balls})
-                          </p>
-                        </div>
-                      ))}
-                      {topTeamABowler.map((bowler, index) => (
-                        <div key={`tA-bowler-${index}`} className="bg-card p-3 rounded-lg shadow-sm text-center border hover:shadow-md transition-shadow">
-                          <Zap className="h-5 w-5 mx-auto mb-1 text-[hsl(var(--accent))]" />
-                          <p className="text-sm font-semibold truncate" title={bowler.name}>{bowler.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets}</span> ({bowler.overs} ov)
-                          </p>
-                        </div>
-                      ))}
+                    <div className="space-y-2">
+                      {topTeamABatsmen.length > 0 && (
+                        <>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Batsmen:</p>
+                          <ul className="space-y-1 mb-3">
+                            {topTeamABatsmen.map((batsman, index) => (
+                              <li key={`tA-batsman-${index}`} className="text-sm">
+                                <span className="font-semibold">{batsman.name}: </span>
+                                <span className="font-bold text-foreground">{batsman.runs}</span> ({batsman.balls})
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                      {topTeamABowler.length > 0 && (
+                        <>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Bowler:</p>
+                          <ul className="space-y-1">
+                            {topTeamABowler.map((bowler, index) => (
+                              <li key={`tA-bowler-${index}`} className="text-sm">
+                                <span className="font-semibold">{bowler.name}: </span>
+                                <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets}</span> ({bowler.overs} ov)
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground mt-2">No top performer data available for this team.</p>
                   )}
                 </div>
 
-                {/* Team B Top Performers */}
+                {/* Team B Top Performers - Simpler Layout */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 text-foreground">{result.teamB} - Top Performers</h3>
                    { (topTeamBBatsmen.length > 0 || topTeamBBowler.length > 0) ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {topTeamBBatsmen.map((batsman, index) => (
-                        <div key={`tB-batsman-${index}`} className="bg-card p-3 rounded-lg shadow-sm text-center border hover:shadow-md transition-shadow">
-                          <TrendingUp className="h-5 w-5 mx-auto mb-1 text-[hsl(var(--accent))]" />
-                          <p className="text-sm font-semibold truncate" title={batsman.name}>{batsman.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            <span className="font-bold text-foreground">{batsman.runs}</span> ({batsman.balls})
-                          </p>
-                        </div>
-                      ))}
-                      {topTeamBBowler.map((bowler, index) => (
-                        <div key={`tB-bowler-${index}`} className="bg-card p-3 rounded-lg shadow-sm text-center border hover:shadow-md transition-shadow">
-                          <Zap className="h-5 w-5 mx-auto mb-1 text-[hsl(var(--accent))]" />
-                          <p className="text-sm font-semibold truncate" title={bowler.name}>{bowler.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets}</span> ({bowler.overs} ov)
-                          </p>
-                        </div>
-                      ))}
+                    <div className="space-y-2">
+                      {topTeamBBatsmen.length > 0 && (
+                        <>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Batsmen:</p>
+                          <ul className="space-y-1 mb-3">
+                            {topTeamBBatsmen.map((batsman, index) => (
+                              <li key={`tB-batsman-${index}`} className="text-sm">
+                                <span className="font-semibold">{batsman.name}: </span>
+                                <span className="font-bold text-foreground">{batsman.runs}</span> ({batsman.balls})
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                      {topTeamBBowler.length > 0 && (
+                        <>
+                          <p className="text-sm font-medium text-muted-foreground mb-1">Top Bowler:</p>
+                          <ul className="space-y-1">
+                            {topTeamBBowler.map((bowler, index) => (
+                              <li key={`tB-bowler-${index}`} className="text-sm">
+                                <span className="font-semibold">{bowler.name}: </span>
+                                <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets}</span> ({bowler.overs} ov)
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground mt-2">No top performer data available for this team.</p>
@@ -340,4 +356,3 @@ export default function ScorecardPage() {
     </div>
   );
 }
-
