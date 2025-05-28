@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -5,11 +6,16 @@ import { Search, Filter } from "lucide-react";
 import Image from "next/image";
 
 export default function TeamsPage() {
-  // Placeholder data
+  // Placeholder data:
+  // A school/club (affiliation) can have many teams. Each team has a teamName (e.g., "1st XI", "U14A"), age group, division.
+  // The 'mascot' can be the general nickname for all teams from that affiliation.
   const teams = [
-    { id: 1, name: "Eagles High School", affiliation: "Northwood School", division: "A", suffix: "Eagles" },
-    { id: 2, name: "Panthers Academy", affiliation: "Riverdale Academy", division: "B", suffix: "Panthers" },
-    { id: 3, name: "Lions College", affiliation: "Hillcrest College", division: "A", suffix: "Lions" },
+    { id: 1, teamName: "1st XI", affiliation: "Northwood School", ageGroup: "Open", division: "A", mascot: "Eagles" },
+    { id: 2, teamName: "U15A", affiliation: "Northwood School", ageGroup: "U15", division: "A", mascot: "Eagles" },
+    { id: 3, teamName: "Seniors", affiliation: "Riverdale Cricket Club", ageGroup: "Senior", division: "Premier League", mascot: "Panthers" },
+    { id: 4, teamName: "U16", affiliation: "Hillcrest College", ageGroup: "U16", division: "B", mascot: "Lions" },
+    { id: 5, teamName: "Colts XI", affiliation: "Michaelhouse", ageGroup: "U16", division: "A", mascot: "Knights" },
+    { id: 6, teamName: "U14B", affiliation: "DHS", ageGroup: "U14", division: "C", mascot: "Stallions" },
   ];
 
   return (
@@ -17,7 +23,7 @@ export default function TeamsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">Team Directory</CardTitle>
-          <CardDescription>Search and browse cricket teams.</CardDescription>
+          <CardDescription>Search and browse cricket teams by affiliation, age group, and division.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -34,20 +40,23 @@ export default function TeamsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {teams.map((team) => (
               <Card key={team.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <Image 
-                  src={`https://placehold.co/600x400.png`} 
-                  alt={`${team.name} crest`} 
-                  width={600} 
-                  height={400} 
+                <Image
+                  src={`https://placehold.co/600x400.png`}
+                  alt={`${team.affiliation} ${team.teamName} ${team.mascot ? `(${team.mascot})` : ''} Logo/Crest`}
+                  width={600}
+                  height={400}
                   className="w-full h-48 object-cover"
-                  data-ai-hint="team crest" 
+                  data-ai-hint="team crest"
                 />
                 <CardHeader>
-                  <CardTitle>{team.name} {team.suffix}</CardTitle>
-                  <CardDescription>{team.affiliation}</CardDescription>
+                  <CardTitle>{team.affiliation} - {team.teamName}</CardTitle>
+                  {team.mascot && <CardDescription>Nickname: {team.mascot}</CardDescription>}
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">Division: {team.division}</p>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p>Age Group: {team.ageGroup}</p>
+                    <p>Division: {team.division}</p>
+                  </div>
                   <Button variant="link" className="p-0 h-auto mt-2">View Details</Button>
                 </CardContent>
               </Card>
