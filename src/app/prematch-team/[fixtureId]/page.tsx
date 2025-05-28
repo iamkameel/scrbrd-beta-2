@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { fixtures as allFixtures, type Fixture } from '@/lib/fixtures-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CalendarDays, Clock, MapPin, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock, MapPin, Users, UserCheck, ClipboardList } from "lucide-react";
 import { format } from 'date-fns';
 
 export default function PrematchTeamPage() {
@@ -117,6 +117,47 @@ export default function PrematchTeamPage() {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center gap-2">
+                <UserCheck className="h-6 w-6 text-[hsl(var(--accent))]" />
+                Match Officials & Personnel
+              </CardTitle>
+              <CardDescription>Assigned umpires and scorers for the match.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(fixture.umpires && fixture.umpires.length > 0) || (fixture.scorers && fixture.scorers.length > 0) ? (
+                <>
+                  {fixture.umpires && fixture.umpires.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold text-md mb-1 flex items-center gap-1.5">
+                        <UserCheck className="h-5 w-5 text-muted-foreground" />
+                        Umpires
+                      </h3>
+                      <ul className="list-disc list-inside pl-2 text-muted-foreground">
+                        {fixture.umpires.map((umpire, index) => <li key={`umpire-${index}`}>{umpire}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {fixture.scorers && fixture.scorers.length > 0 && (
+                    <div className={fixture.umpires && fixture.umpires.length > 0 ? "mt-4" : ""}>
+                      <h3 className="font-semibold text-md mb-1 flex items-center gap-1.5">
+                        <ClipboardList className="h-5 w-5 text-muted-foreground" />
+                        Scorers
+                      </h3>
+                      <ul className="list-disc list-inside pl-2 text-muted-foreground">
+                        {fixture.scorers.map((scorer, index) => <li key={`scorer-${index}`}>{scorer}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Match officials and personnel not yet assigned.</p>
+              )}
+            </CardContent>
+          </Card>
+
         </CardContent>
       </Card>
     </div>
