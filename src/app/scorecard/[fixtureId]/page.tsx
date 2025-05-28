@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { fixtures as allFixtures, type Fixture } from '@/lib/fixtures-data';
-import { resultsData, type Result, type InningsData, type BatsmanScore, type BowlerScore } from '@/lib/results-data';
+import { resultsData, type Result, type InningsData, type BatsmanScore, type BowlerScore, FallOfWicket } from '@/lib/results-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -24,14 +24,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig
-} from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
-
 
 // Helper function to get top batsmen for a team
 function getTopBatsmen(teamName: string, inningsData: InningsData[] | undefined, count: number): BatsmanScore[] {
@@ -74,70 +66,169 @@ function getOrdinal(n: number) {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-interface PartnershipChartDataItem {
-  label: string;
-  runs: number;
-  batsmen?: string; // Optional: for tooltip or future enhancement
+interface PartnershipUIData {
+  wicketOrdinal: string;
+  batsman1: { name: string; scoreDisplay: string };
+  batsman2: { name: string; scoreDisplay: string };
+  partnershipRuns: number;
 }
 
-function calculatePartnershipChartData(innings: InningsData): PartnershipChartDataItem[] {
-  const chartData: PartnershipChartDataItem[] = [];
-  if (!innings.fallOfWickets) {
-    // Handle innings with no FOW data: could be one big partnership if runs scored
-    const totalRuns = parseInt(innings.totalScoreString.split('/')[0]);
-    if (innings.battingScores.length >= 2 && !isNaN(totalRuns) && totalRuns > 0) {
-      chartData.push({
-        label: `${getOrdinal(1)} Wicket`,
-        runs: totalRuns,
-        batsmen: `${innings.battingScores[0].name} & ${innings.battingScores[1].name} (not out)`
-      });
-    }
-    return chartData;
+function formatBatsmanScore(batsman: BatsmanScore | undefined): string {
+  if (!batsman) return "N/A";
+  return `${batsman.runs} (${batsman.balls})`;
+}
+
+function generatePartnershipUIData(innings: InningsData): PartnershipUIData[] {
+  const partnershipData: PartnershipUIData[] = [];
+  if (!innings.battingScores || innings.battingScores.length === 0) return partnershipData;
+
+  let currentScore = 0;
+  let activeBatsmenIndices = [0, 1]; // Start with openers
+
+  const getBatsmanDetails = (name: string | undefined): { name: string; scoreDisplay: string } => {
+    if (!name) return { name: "N/A", scoreDisplay: "" };
+    const batsmanRecord = innings.battingScores.find(bs => bs.name === name);
+    return { name, scoreDisplay: formatBatsmanScore(batsmanRecord) };
+  };
+  
+  const getBatsmanByName = (name: string): BatsmanScore | undefined => {
+    return innings.battingScores.find(bs => bs.name === name);
   }
 
-  let lastScore = 0;
-  innings.fallOfWickets.forEach((fow, index) => {
-    const partnershipRuns = fow.score - lastScore;
-    if (partnershipRuns >= 0) {
-      chartData.push({
-        label: `${getOrdinal(fow.wicket)} Wicket`,
-        runs: partnershipRuns,
-        // Batsmen names could be added here if logic to determine partners is implemented
+  if (innings.fallOfWickets && innings.fallOfWickets.length > 0) {
+    innings.fallOfWickets.forEach((fow, index) => {
+      const partnershipRuns = fow.score - currentScore;
+      const wicketOrdinal = getOrdinal(fow.wicket);
+
+      const dismissedBatsmanName = fow.batsmanOut;
+      let partnerName = "";
+
+      // Determine partner:
+      // This logic is an approximation based on batting order and who got out.
+      // Assumes battingScores is in batting order.
+      const dismissedBatsmanIndexInBattingOrder = innings.battingScores.findIndex(b => b.name === dismissedBatsmanName);
+      
+      // Find who was at the crease with the dismissed batsman.
+      // This requires tracking active batsmen. For simplicity, we'll use the players assumed to be at the crease
+      // based on batting order up to the point of this wicket.
+      // Batsmen involved in Nth wicket partnership are roughly battingScores[N-1] and battingScores[N-2]
+      // (or openers for 1st wicket). One of them is dismissed.
+      
+      let b1Name = "";
+      let b2Name = "";
+
+      if (fow.wicket === 1) { // 1st wicket
+        b1Name = innings.battingScores[0]?.name || "Batsman 1";
+        b2Name = innings.battingScores[1]?.name || "Batsman 2";
+      } else {
+        // For wicket W, the new batsman is battingScores[W-1] (0-indexed)
+        // The existing batsman is one of those from the previous partnership who didn't get out.
+        // This simplified logic identifies the batsman who got out and assumes the (W-1)th batsman in batting order was the partner if not the one dismissed.
+        // Or, more directly, the players involved are typically around index `fow.wicket -1` and `fow.wicket -2` in battingScores
+        const potentialPartner1Idx = fow.wicket - 2 >= 0 ? fow.wicket - 2 : 0; // previous batsman
+        const potentialPartner2Idx = fow.wicket - 1 >= 0 ? fow.wicket - 1 : 1; // current new batsman or other opener
+        
+        const p1 = innings.battingScores[potentialPartner1Idx];
+        const p2 = innings.battingScores[potentialPartner2Idx];
+
+        if (p1?.name === dismissedBatsmanName) {
+            b1Name = p1.name;
+            b2Name = p2?.name || `Batsman ${fow.wicket+1}`;
+        } else if (p2?.name === dismissedBatsmanName) {
+            b1Name = p2.name;
+            b2Name = p1?.name || `Batsman ${fow.wicket-1 > 0 ? fow.wicket-1 : 1}`;
+        } else {
+            // Fallback if names don't match (e.g. run out of non-facing batsman, complex scenarios)
+            b1Name = dismissedBatsmanName;
+            // Try to find a sensible partner from those who batted around this wicket
+            const otherBatsmen = innings.battingScores.filter(b => b.name !== dismissedBatsmanName);
+            if (index > 0 && innings.fallOfWickets) { // Find who was NOT out in previous FOW
+                 const prevFow = innings.fallOfWickets[index-1];
+                 if (prevFow.batsmanOut !== innings.battingScores[fow.wicket-2]?.name) {
+                    b2Name = innings.battingScores[fow.wicket-2]?.name || "Partner";
+                 } else {
+                    b2Name = innings.battingScores[fow.wicket-1]?.name || "Partner";
+                 }
+            } else {
+                 b2Name = innings.battingScores.find(b => b.name !== dismissedBatsmanName && innings.battingScores.indexOf(b) < 2)?.name || "Partner";
+            }
+
+        }
+      }
+
+
+      partnershipData.push({
+        wicketOrdinal: `${wicketOrdinal} Wicket`,
+        batsman1: getBatsmanDetails(b1Name === dismissedBatsmanName ? dismissedBatsmanName : b2Name),
+        batsman2: getBatsmanDetails(b1Name === dismissedBatsmanName ? b2Name : dismissedBatsmanName),
+        partnershipRuns,
       });
-    }
-    lastScore = fow.score;
-  });
-
-  // Add partnership for the final wicket (if not all out)
-  const totalRuns = parseInt(innings.totalScoreString.split('/')[0]);
-  const wicketsFallen = innings.fallOfWickets.length;
-
-  if (wicketsFallen > 0 && wicketsFallen < 10 && !isNaN(totalRuns) && totalRuns > lastScore) {
-    chartData.push({
-      label: `${getOrdinal(wicketsFallen + 1)} Wicket`,
-      runs: totalRuns - lastScore,
-      // Batsmen names for the not-out partnership
+      currentScore = fow.score;
     });
-  } else if (wicketsFallen === 0 && !isNaN(totalRuns) && totalRuns > 0 && innings.battingScores.length >=2) {
-     //This case is for when 0 wickets fell but runs were scored (e.g. innings declared, or target reached)
-     // It's an "opening partnership" that was never broken.
-      chartData.push({
-        label: `${getOrdinal(1)} Wicket`, // Or "Opening Partnership"
-        runs: totalRuns,
-        batsmen: `${innings.battingScores[0].name} & ${innings.battingScores[1].name} (not out)`
-      });
   }
 
+  // Final partnership (if not all out)
+  const totalRuns = parseInt(innings.totalScoreString.split('/')[0]);
+  const wicketsFallen = innings.fallOfWickets ? innings.fallOfWickets.length : 0;
 
-  return chartData.filter(p => p.runs > 0); // Only show partnerships with runs
+  if (wicketsFallen < 10 && totalRuns > currentScore) {
+    const partnershipRuns = totalRuns - currentScore;
+    const wicketOrdinal = getOrdinal(wicketsFallen + 1);
+    
+    // Identify the not out batsmen
+    // The last dismissed batsman was fallOfWickets[wicketsFallen-1].batsmanOut
+    // The batsman who came in at that wicket is battingScores[wicketsFallen].name
+    // The other not out batsman was the partner in the last FOW who didn't get out.
+
+    let b1Name = "";
+    let b2Name = "";
+
+    if (wicketsFallen > 0 && innings.battingScores[wicketsFallen-1] && innings.battingScores[wicketsFallen]) {
+        // One is the last man dismissed (fow.batsmanOut), other is who came in at that wicket. No, this is wrong.
+        // Batsmen are those at the crease.
+        // Find not out batsmen from battingScores
+        const notOutBatsmen = innings.battingScores.filter(bs => bs.dismissal.toLowerCase().includes('not out'));
+        if (notOutBatsmen.length >= 2) {
+            b1Name = notOutBatsmen[0].name;
+            b2Name = notOutBatsmen[1].name;
+        } else if (notOutBatsmen.length === 1 && wicketsFallen > 0) {
+            b1Name = notOutBatsmen[0].name;
+            // The partner was the one who formed the last partnership with this notOutBatsman
+            // This would be the batsman at battingScores[wicketsFallen-1] if they are not the notOutBatsman
+            if(innings.battingScores[wicketsFallen-1]?.name !== b1Name) {
+                b2Name = innings.battingScores[wicketsFallen-1]?.name || "Partner";
+            } else {
+                 b2Name = innings.battingScores[wicketsFallen]?.name || "Partner"; // Should be next batsman
+            }
+        } else if (wicketsFallen === 0 && innings.battingScores.length >=2) { // Opening not out partnership
+            b1Name = innings.battingScores[0].name;
+            b2Name = innings.battingScores[1].name;
+        }
+
+    } else if (wicketsFallen === 0 && innings.battingScores.length >= 2) { // Openers still batting
+        b1Name = innings.battingScores[0].name;
+        b2Name = innings.battingScores[1].name;
+    }
+
+
+    if (b1Name && b2Name) {
+        partnershipData.push({
+            wicketOrdinal: `${wicketOrdinal} Wicket (not out)`,
+            batsman1: getBatsmanDetails(b1Name),
+            batsman2: getBatsmanDetails(b2Name),
+            partnershipRuns,
+        });
+    } else if (partnershipRuns > 0) { // If only one batsman identifiable or other complex case
+        partnershipData.push({
+            wicketOrdinal: `${wicketOrdinal} Wicket (not out)`,
+            batsman1: getBatsmanDetails(innings.battingScores[wicketsFallen]?.name || "Batsman"),
+            batsman2: { name: "Partner", scoreDisplay: ""},
+            partnershipRuns,
+        });
+    }
+  }
+  return partnershipData.filter(p => p.partnershipRuns >= 0); // Ensure non-negative partnership runs
 }
-
-const partnershipChartConfig = {
-  runs: {
-    label: "Runs",
-    color: "hsl(var(--chart-1))",
-  },
-} satisfies ChartConfig;
 
 
 export default function ScorecardPage() {
@@ -218,7 +309,6 @@ export default function ScorecardPage() {
               <Separator className="my-6" />
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
-                {/* Team A Top Performers */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 text-foreground">{result.teamA} - Top Performers</h3>
                   { (topTeamABatsmen.length > 0 || topTeamABowlers.length > 0) ? (
@@ -255,7 +345,6 @@ export default function ScorecardPage() {
                   )}
                 </div>
 
-                {/* Team B Top Performers */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 text-foreground">{result.teamB} - Top Performers</h3>
                    { (topTeamBBatsmen.length > 0 || topTeamBBowlers.length > 0) ? (
@@ -295,7 +384,6 @@ export default function ScorecardPage() {
             </CardContent>
           </Card>
           
-          {/* Player of the Match */}
           <Card>
             <CardHeader>
                 <CardTitle className="text-xl">Player of the Match</CardTitle>
@@ -306,7 +394,6 @@ export default function ScorecardPage() {
             </CardContent>
           </Card>
 
-          {/* Innings Details */}
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">Innings Details</CardTitle> 
@@ -323,11 +410,10 @@ export default function ScorecardPage() {
                     ))}
                   </TabsList>
                   {result.innings.map((inningData, index) => {
-                    const partnershipData = calculatePartnershipChartData(inningData);
+                    const partnershipVisualData = generatePartnershipUIData(inningData);
                     return (
                     <TabsContent key={`content-innings-${inningData.inningsNumber}`} value={`innings-${inningData.inningsNumber}`} className="mt-4">
                       <Accordion type="multiple" defaultValue={['batting', 'bowling', 'fow', 'partnerships']} className="w-full space-y-4">
-                        {/* Batting Accordion Item */}
                         <AccordionItem value="batting">
                           <AccordionTrigger className="text-lg font-medium p-4 bg-muted/50 rounded-t-md hover:no-underline">
                             Batting - {inningData.battingTeam} ({inningData.totalScoreString} in {inningData.oversPlayed})
@@ -370,7 +456,6 @@ export default function ScorecardPage() {
                           </AccordionContent>
                         </AccordionItem>
 
-                        {/* Bowling Accordion Item */}
                         <AccordionItem value="bowling">
                           <AccordionTrigger className="text-lg font-medium p-4 bg-muted/50 rounded-t-md hover:no-underline">
                             Bowling - {inningData.bowlingTeam}
@@ -403,7 +488,6 @@ export default function ScorecardPage() {
                           </AccordionContent>
                         </AccordionItem>
 
-                        {/* Fall of Wickets Accordion Item */}
                         {inningData.fallOfWickets && inningData.fallOfWickets.length > 0 && (
                            <AccordionItem value="fow">
                             <AccordionTrigger className="text-lg font-medium p-4 bg-muted/50 rounded-t-md hover:no-underline">
@@ -421,40 +505,36 @@ export default function ScorecardPage() {
                           </AccordionItem>
                         )}
 
-                        {/* Batting Partnerships Accordion Item */}
                         <AccordionItem value="partnerships">
                           <AccordionTrigger className="text-lg font-medium p-4 bg-muted/50 rounded-t-md hover:no-underline">
                             Batting Partnerships
                           </AccordionTrigger>
-                          <AccordionContent className="p-4 border border-t-0 rounded-b-md">
-                            {partnershipData.length > 0 ? (
-                              <ChartContainer config={partnershipChartConfig} className="h-[300px] w-full">
-                                <BarChart
-                                  accessibilityLayer
-                                  layout="vertical"
-                                  data={partnershipData}
-                                  margin={{ top: 5, right: 20, left: 50, bottom: 5 }}
-                                >
-                                  <CartesianGrid horizontal={false} vertical={true} strokeDasharray="3 3" />
-                                  <XAxis type="number" dataKey="runs" />
-                                  <YAxis
-                                    dataKey="label"
-                                    type="category"
-                                    tickLine={false}
-                                    axisLine={false}
-                                    width={100}
-                                    tick={{ fontSize: 12 }}
-                                  />
-                                  <RechartsTooltip
-                                    cursor={{ fill: 'hsl(var(--muted))' }}
-                                    content={<ChartTooltipContent hideLabel />}
-                                  />
-                                  <Bar dataKey="runs" layout="vertical" radius={4} barSize={20} />
-                                </BarChart>
-                              </ChartContainer>
+                          <AccordionContent className="p-4 border border-t-0 rounded-b-md space-y-3">
+                            {partnershipVisualData.length > 0 ? (
+                              partnershipVisualData.map((p, idx) => (
+                                <div key={`partnership-${idx}`} className="py-2">
+                                  <p className="text-sm font-medium text-center mb-2 text-muted-foreground">{p.wicketOrdinal} Partnership: <span className="font-bold text-foreground">{p.partnershipRuns} runs</span></p>
+                                  <div className="flex items-center justify-between text-sm">
+                                    <div className="text-left w-[calc(50%-2rem)]">
+                                      <p className="font-semibold">{p.batsman1.name}</p>
+                                      <p className="text-xs text-muted-foreground">{p.batsman1.scoreDisplay}</p>
+                                    </div>
+                                    <div className="flex-shrink-0 h-px w-6 bg-border"></div> {/* Decorative line */}
+                                    <div className="flex-shrink-0 text-lg font-bold p-2 border rounded-md bg-background shadow-sm min-w-[40px] text-center">
+                                      {p.partnershipRuns}
+                                    </div>
+                                    <div className="flex-shrink-0 h-px w-6 bg-border"></div> {/* Decorative line */}
+                                    <div className="text-right w-[calc(50%-2rem)]">
+                                      <p className="font-semibold">{p.batsman2.name}</p>
+                                      <p className="text-xs text-muted-foreground">{p.batsman2.scoreDisplay}</p>
+                                    </div>
+                                  </div>
+                                   {idx < partnershipVisualData.length -1 && <Separator className="mt-3"/>}
+                                </div>
+                              ))
                             ) : (
                               <p className="text-sm text-muted-foreground text-center py-4">
-                                Partnership data not available for this innings.
+                                Partnership data not available or could not be generated for this innings.
                               </p>
                             )}
                           </AccordionContent>
@@ -477,4 +557,3 @@ export default function ScorecardPage() {
     </div>
   );
 }
-
