@@ -151,7 +151,7 @@ export default function ScorecardPage() {
                       {topTeamABatsmen.length > 0 ? (
                         topTeamABatsmen.map((p, i) => (
                           <p key={`tA-bat-${i}`} className="ml-5 text-foreground">
-                            {p.name} <span className="text-muted-foreground">({p.runs} runs)</span>
+                            {p.name} <span className="font-semibold">{p.runs}</span> <span className="text-muted-foreground">({p.balls})</span>
                           </p>
                         ))
                       ) : (
@@ -166,7 +166,7 @@ export default function ScorecardPage() {
                       {topTeamABowler.length > 0 ? (
                         topTeamABowler.map((p, i) => (
                           <p key={`tA-bowl-${i}`} className="ml-5 text-foreground">
-                            {p.name} <span className="text-muted-foreground">({p.wickets} wkts for {p.runsConceded} runs)</span>
+                            {p.name} <span className="font-semibold">{p.runsConceded}/{p.wickets}</span> <span className="text-muted-foreground">({p.overs} ov)</span>
                           </p>
                         ))
                       ) : (
@@ -188,7 +188,7 @@ export default function ScorecardPage() {
                       {topTeamBBatsmen.length > 0 ? (
                         topTeamBBatsmen.map((p, i) => (
                           <p key={`tB-bat-${i}`} className="ml-5 text-foreground">
-                            {p.name} <span className="text-muted-foreground">({p.runs} runs)</span>
+                             {p.name} <span className="font-semibold">{p.runs}</span> <span className="text-muted-foreground">({p.balls})</span>
                           </p>
                         ))
                       ) : (
@@ -203,7 +203,7 @@ export default function ScorecardPage() {
                       {topTeamBBowler.length > 0 ? (
                         topTeamBBowler.map((p, i) => (
                           <p key={`tB-bowl-${i}`} className="ml-5 text-foreground">
-                            {p.name} <span className="text-muted-foreground">({p.wickets} wkts for {p.runsConceded} runs)</span>
+                            {p.name} <span className="font-semibold">{p.runsConceded}/{p.wickets}</span> <span className="text-muted-foreground">({p.overs} ov)</span>
                           </p>
                         ))
                       ) : (
@@ -356,3 +356,4 @@ export default function ScorecardPage() {
     </div>
   );
 }
+
