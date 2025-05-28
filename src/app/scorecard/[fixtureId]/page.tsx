@@ -4,12 +4,12 @@
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { fixtures as allFixtures, type Fixture } from '@/lib/fixtures-data';
-import { resultsData, type Result, type InningsData } from '@/lib/results-data'; // Removed unused BatsmanScore, BowlerScore
+import { resultsData, type Result, type InningsData, type BatsmanScore, type BowlerScore } from '@/lib/results-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Star, Trophy } from "lucide-react";
+import { ArrowLeft, Star, Trophy, TrendingUp, Zap } from "lucide-react";
 import { format } from 'date-fns';
 import {
   Accordion,
@@ -23,6 +23,43 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+
+// Helper function to get top batsmen for a team
+function getTopBatsmen(teamName: string, inningsData: InningsData[] | undefined, count: number): BatsmanScore[] {
+  if (!inningsData) return [];
+  const allTeamBattingScores: BatsmanScore[] = [];
+  inningsData.forEach(inning => {
+    if (inning.battingTeam === teamName) {
+      allTeamBattingScores.push(...inning.battingScores.filter(bs => typeof bs.runs === 'number')); // Ensure runs are numbers
+    }
+  });
+
+  return allTeamBattingScores
+    .sort((a, b) => b.runs - a.runs)
+    .slice(0, count);
+}
+
+// Helper function to get top bowlers for a team
+function getTopBowlers(teamName: string, inningsData: InningsData[] | undefined, count: number): BowlerScore[] {
+  if (!inningsData) return [];
+  const allTeamBowlingScores: BowlerScore[] = [];
+  inningsData.forEach(inning => {
+    // teamName was the bowling team in this innings
+    if (inning.bowlingTeam === teamName) { 
+      allTeamBowlingScores.push(...inning.bowlingScores.filter(bs => typeof bs.wickets === 'number' && typeof bs.runsConceded === 'number'));
+    }
+  });
+
+  return allTeamBowlingScores
+    .sort((a, b) => {
+      if (b.wickets !== a.wickets) {
+        return b.wickets - a.wickets;
+      }
+      return a.runsConceded - b.runsConceded;
+    })
+    .slice(0, count);
+}
+
 
 export default function ScorecardPage() {
   const params = useParams();
@@ -54,6 +91,11 @@ export default function ScorecardPage() {
   }
 
   const defaultTabValue = result.innings && result.innings.length > 0 ? `innings-${result.innings[0].inningsNumber}` : "";
+
+  const topTeamABatsmen = getTopBatsmen(result.teamA, result.innings, 2);
+  const topTeamABowler = getTopBowlers(result.teamA, result.innings, 1);
+  const topTeamBBatsmen = getTopBatsmen(result.teamB, result.innings, 2);
+  const topTeamBBowler = getTopBowlers(result.teamB, result.innings, 1);
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -92,6 +134,84 @@ export default function ScorecardPage() {
                   <Trophy className="mr-2 h-5 w-5" />
                   {result.winner} won by {result.margin}
                 </p>
+              </div>
+
+              <Separator className="my-4" />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                {/* Team A Top Performers */}
+                <div>
+                  <h3 className="text-md font-semibold mb-3 text-foreground">{result.teamA}</h3>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <div className="flex items-center gap-1.5 font-medium text-muted-foreground mb-1">
+                        <TrendingUp className="h-4 w-4 text-[hsl(var(--accent))]" />
+                        <span>Top Batsmen:</span>
+                      </div>
+                      {topTeamABatsmen.length > 0 ? (
+                        topTeamABatsmen.map((p, i) => (
+                          <p key={`tA-bat-${i}`} className="ml-5 text-foreground">
+                            {p.name} <span className="text-muted-foreground">({p.runs} runs)</span>
+                          </p>
+                        ))
+                      ) : (
+                        <p className="ml-5 text-muted-foreground">Not available</p>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 font-medium text-muted-foreground mb-1">
+                        <Zap className="h-4 w-4 text-[hsl(var(--accent))]" />
+                        <span>Top Bowler:</span>
+                      </div>
+                      {topTeamABowler.length > 0 ? (
+                        topTeamABowler.map((p, i) => (
+                          <p key={`tA-bowl-${i}`} className="ml-5 text-foreground">
+                            {p.name} <span className="text-muted-foreground">({p.wickets} wkts for {p.runsConceded} runs)</span>
+                          </p>
+                        ))
+                      ) : (
+                        <p className="ml-5 text-muted-foreground">Not available</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Team B Top Performers */}
+                <div>
+                  <h3 className="text-md font-semibold mb-3 text-foreground">{result.teamB}</h3>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <div className="flex items-center gap-1.5 font-medium text-muted-foreground mb-1">
+                        <TrendingUp className="h-4 w-4 text-[hsl(var(--accent))]" />
+                        <span>Top Batsmen:</span>
+                      </div>
+                      {topTeamBBatsmen.length > 0 ? (
+                        topTeamBBatsmen.map((p, i) => (
+                          <p key={`tB-bat-${i}`} className="ml-5 text-foreground">
+                            {p.name} <span className="text-muted-foreground">({p.runs} runs)</span>
+                          </p>
+                        ))
+                      ) : (
+                        <p className="ml-5 text-muted-foreground">Not available</p>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5 font-medium text-muted-foreground mb-1">
+                        <Zap className="h-4 w-4 text-[hsl(var(--accent))]" />
+                        <span>Top Bowler:</span>
+                      </div>
+                      {topTeamBBowler.length > 0 ? (
+                        topTeamBBowler.map((p, i) => (
+                          <p key={`tB-bowl-${i}`} className="ml-5 text-foreground">
+                            {p.name} <span className="text-muted-foreground">({p.wickets} wkts for {p.runsConceded} runs)</span>
+                          </p>
+                        ))
+                      ) : (
+                        <p className="ml-5 text-muted-foreground">Not available</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -236,5 +356,3 @@ export default function ScorecardPage() {
     </div>
   );
 }
-
-    
