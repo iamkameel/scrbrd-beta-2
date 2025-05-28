@@ -136,81 +136,65 @@ export default function ScorecardPage() {
                 </p>
               </div>
 
-              <Separator className="my-4" />
+              <Separator className="my-6" />
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
                 {/* Team A Top Performers */}
                 <div>
-                  <h3 className="text-md font-semibold mb-3 text-foreground">{result.teamA}</h3>
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <div className="flex items-center gap-1.5 font-medium text-muted-foreground mb-1">
-                        <TrendingUp className="h-4 w-4 text-[hsl(var(--accent))]" />
-                        <span>Top Batsmen:</span>
-                      </div>
-                      {topTeamABatsmen.length > 0 ? (
-                        topTeamABatsmen.map((p, i) => (
-                          <p key={`tA-bat-${i}`} className="ml-5 text-foreground">
-                            {p.name} <span className="font-semibold">{p.runs}</span> <span className="text-muted-foreground">({p.balls})</span>
+                  <h3 className="text-lg font-semibold mb-3 text-foreground">{result.teamA} - Top Performers</h3>
+                  { (topTeamABatsmen.length > 0 || topTeamABowler.length > 0) ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {topTeamABatsmen.map((batsman, index) => (
+                        <div key={`tA-batsman-${index}`} className="bg-card p-3 rounded-lg shadow-sm text-center border hover:shadow-md transition-shadow">
+                          <TrendingUp className="h-5 w-5 mx-auto mb-1 text-[hsl(var(--accent))]" />
+                          <p className="text-sm font-semibold truncate" title={batsman.name}>{batsman.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            <span className="font-bold text-foreground">{batsman.runs}</span> ({batsman.balls})
                           </p>
-                        ))
-                      ) : (
-                        <p className="ml-5 text-muted-foreground">Not available</p>
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 font-medium text-muted-foreground mb-1">
-                        <Zap className="h-4 w-4 text-[hsl(var(--accent))]" />
-                        <span>Top Bowler:</span>
-                      </div>
-                      {topTeamABowler.length > 0 ? (
-                        topTeamABowler.map((p, i) => (
-                          <p key={`tA-bowl-${i}`} className="ml-5 text-foreground">
-                            {p.name} <span className="font-semibold">{p.runsConceded}/{p.wickets}</span> <span className="text-muted-foreground">({p.overs} ov)</span>
+                        </div>
+                      ))}
+                      {topTeamABowler.map((bowler, index) => (
+                        <div key={`tA-bowler-${index}`} className="bg-card p-3 rounded-lg shadow-sm text-center border hover:shadow-md transition-shadow">
+                          <Zap className="h-5 w-5 mx-auto mb-1 text-[hsl(var(--accent))]" />
+                          <p className="text-sm font-semibold truncate" title={bowler.name}>{bowler.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets}</span> ({bowler.overs} ov)
                           </p>
-                        ))
-                      ) : (
-                        <p className="ml-5 text-muted-foreground">Not available</p>
-                      )}
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-2">No top performer data available for this team.</p>
+                  )}
                 </div>
 
                 {/* Team B Top Performers */}
                 <div>
-                  <h3 className="text-md font-semibold mb-3 text-foreground">{result.teamB}</h3>
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <div className="flex items-center gap-1.5 font-medium text-muted-foreground mb-1">
-                        <TrendingUp className="h-4 w-4 text-[hsl(var(--accent))]" />
-                        <span>Top Batsmen:</span>
-                      </div>
-                      {topTeamBBatsmen.length > 0 ? (
-                        topTeamBBatsmen.map((p, i) => (
-                          <p key={`tB-bat-${i}`} className="ml-5 text-foreground">
-                             {p.name} <span className="font-semibold">{p.runs}</span> <span className="text-muted-foreground">({p.balls})</span>
+                  <h3 className="text-lg font-semibold mb-3 text-foreground">{result.teamB} - Top Performers</h3>
+                   { (topTeamBBatsmen.length > 0 || topTeamBBowler.length > 0) ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {topTeamBBatsmen.map((batsman, index) => (
+                        <div key={`tB-batsman-${index}`} className="bg-card p-3 rounded-lg shadow-sm text-center border hover:shadow-md transition-shadow">
+                          <TrendingUp className="h-5 w-5 mx-auto mb-1 text-[hsl(var(--accent))]" />
+                          <p className="text-sm font-semibold truncate" title={batsman.name}>{batsman.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            <span className="font-bold text-foreground">{batsman.runs}</span> ({batsman.balls})
                           </p>
-                        ))
-                      ) : (
-                        <p className="ml-5 text-muted-foreground">Not available</p>
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 font-medium text-muted-foreground mb-1">
-                        <Zap className="h-4 w-4 text-[hsl(var(--accent))]" />
-                        <span>Top Bowler:</span>
-                      </div>
-                      {topTeamBBowler.length > 0 ? (
-                        topTeamBBowler.map((p, i) => (
-                          <p key={`tB-bowl-${i}`} className="ml-5 text-foreground">
-                            {p.name} <span className="font-semibold">{p.runsConceded}/{p.wickets}</span> <span className="text-muted-foreground">({p.overs} ov)</span>
+                        </div>
+                      ))}
+                      {topTeamBBowler.map((bowler, index) => (
+                        <div key={`tB-bowler-${index}`} className="bg-card p-3 rounded-lg shadow-sm text-center border hover:shadow-md transition-shadow">
+                          <Zap className="h-5 w-5 mx-auto mb-1 text-[hsl(var(--accent))]" />
+                          <p className="text-sm font-semibold truncate" title={bowler.name}>{bowler.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets}</span> ({bowler.overs} ov)
                           </p>
-                        ))
-                      ) : (
-                        <p className="ml-5 text-muted-foreground">Not available</p>
-                      )}
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-2">No top performer data available for this team.</p>
+                  )}
                 </div>
               </div>
             </CardContent>
