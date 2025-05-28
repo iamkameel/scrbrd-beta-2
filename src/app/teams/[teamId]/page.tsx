@@ -168,13 +168,13 @@ export default function TeamDetailsPage() {
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {fixture.status === "Upcoming" && (
-                          <Button variant="outline" size="sm" disabled>
+                          <Button variant="outline" size="sm">
                             <ClipboardList className="mr-2 h-4 w-4" />
                             View Pre-Match Team
                           </Button>
                         )}
                         {fixture.status === "Past" && (
-                          <Button variant="outline" size="sm" disabled>
+                          <Button variant="outline" size="sm">
                             <FileText className="mr-2 h-4 w-4" />
                             View Scorecard
                           </Button>
@@ -236,3 +236,5 @@ export default function TeamDetailsPage() {
     </div>
   );
 }
+
+    
