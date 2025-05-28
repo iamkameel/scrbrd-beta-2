@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Users, BarChartBig, CalendarDays, ShieldCheck, Trophy, TrendingUp, Crosshair, Hand } from "lucide-react";
-import { cn } from '@/lib/utils'; // Added import
+import { cn } from '@/lib/utils';
 
 export default function TeamDetailsPage() {
   const params = useParams();
@@ -181,11 +181,11 @@ export default function TeamDetailsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <p><strong>Affiliation:</strong> {team.affiliation}</p>
-              <p><strong>Team Name:</strong> {team.teamName}</p>
-              {team.mascot && <p><strong>Mascot:</strong> {team.mascot}</p>}
-              <p><strong>Age Group:</strong> <Badge variant="outline">{team.ageGroup}</Badge></p>
-              <p><strong>Division:</strong> <Badge variant="outline">{team.division}</Badge></p>
+              <div><strong>Affiliation:</strong> {team.affiliation}</div>
+              <div><strong>Team Name:</strong> {team.teamName}</div>
+              {team.mascot && <div><strong>Mascot:</strong> {team.mascot}</div>}
+              <div><strong>Age Group:</strong> <Badge variant="outline">{team.ageGroup}</Badge></div>
+              <div><strong>Division:</strong> <Badge variant="outline">{team.division}</Badge></div>
             </CardContent>
           </Card>
 
@@ -198,11 +198,11 @@ export default function TeamDetailsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <p><strong>Matches Played:</strong> {team.performanceStats.matchesPlayed}</p>
-              <p><strong>Wins:</strong> <span className="font-semibold text-[hsl(var(--accent))]">{team.performanceStats.wins}</span></p>
-              <p><strong>Losses:</strong> <span className="font-semibold text-destructive">{team.performanceStats.losses}</span></p>
-              {team.performanceStats.draws !== undefined && <p><strong>Draws:</strong> {team.performanceStats.draws}</p>}
-              <p><strong>Win Percentage:</strong> <Badge variant="secondary">{team.performanceStats.winPercentage}</Badge></p>
+              <div><strong>Matches Played:</strong> {team.performanceStats.matchesPlayed}</div>
+              <div><strong>Wins:</strong> <span className="font-semibold text-[hsl(var(--accent))]">{team.performanceStats.wins}</span></div>
+              <div><strong>Losses:</strong> <span className="font-semibold text-destructive">{team.performanceStats.losses}</span></div>
+              {team.performanceStats.draws !== undefined && <div><strong>Draws:</strong> {team.performanceStats.draws}</div>}
+              <div><strong>Win Percentage:</strong> <Badge variant="secondary">{team.performanceStats.winPercentage}</Badge></div>
               {team.performanceStats.titles !== undefined && team.performanceStats.titles > 0 && (
                 <div className="flex items-center pt-2">
                   <Trophy className="h-4 w-4 mr-2 text-yellow-500" />
