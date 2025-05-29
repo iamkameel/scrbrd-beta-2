@@ -9,7 +9,8 @@ export interface NavLink {
   label: string;
   icon: LucideIcon;
   disabled?: boolean;
-  separator?: boolean;
+  separator?: boolean; // This might need to be revisited if used with sub-links
+  subLinks?: NavLink[];
 }
 
 export const navLinks: NavLink[] = [
