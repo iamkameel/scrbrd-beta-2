@@ -1,7 +1,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import {
-  Shield, Users, CalendarDays, ListChecks, Trophy, Sparkles, UsersRound, Target, LayoutGrid, Radar, SchoolIcon, Tv, Home, Settings, FilePenLine, UserCheck, Tractor, Map
+  Shield, Users, CalendarDays, ListChecks, Trophy, Sparkles, UsersRound, Target, LayoutGrid, Radar, School as SchoolIcon, Tv, Home, Settings, FilePenLine, UserCheck, Tractor, Map
 } from 'lucide-react';
 
 export interface NavLink {
