@@ -18,6 +18,19 @@ export interface BowlerScore {
   economyRate: string;
 }
 
+export interface BallEvent {
+  over: number;
+  ball: number;
+  batsman: string;
+  bowler: string;
+  runs: number;
+  isExtra: boolean;
+  extraType?: string; // e.g., "wide", "no-ball", "bye", "leg-bye"
+  isWicket: boolean;
+  wicketType?: string; // e.g., "caught", "bowled", "lbw"
+  dismissedBatsman?: string;
+}
+
 export interface FallOfWicket {
   score: number; 
   wicket: number; 
@@ -38,6 +51,7 @@ export interface InningsData {
   oversPlayed: string; // e.g., "20 overs"
   bowlingScores: BowlerScore[];
   fallOfWickets?: FallOfWicket[];
+  ballEvents?: BallEvent[]; // Optional field for ball-by-ball data
 }
 
 export interface Result {
@@ -92,6 +106,45 @@ export const resultsData: Result[] = [
             { score: 140, wicket: 4, batsmanOut: "D. East", over: "15.3" },
             { score: 150, wicket: 5, batsmanOut: "E. Player", over: "16.4" },
             { score: 180, wicket: 6, batsmanOut: "F. Player", over: "19.2" },
+        ],
+        ballEvents: [
+          // Dummy ball-by-ball data for the first few overs
+          { over: 0, ball: 1, batsman: "A. North", bowler: "J. Fast", runs: 0, isExtra: false, isWicket: false },
+          { over: 0, ball: 2, batsman: "A. North", bowler: "J. Fast", runs: 1, isExtra: false, isWicket: false },
+          { over: 0, ball: 3, batsman: "B. South", bowler: "J. Fast", runs: 0, isExtra: false, isWicket: false },
+          { over: 0, ball: 4, batsman: "B. South", bowler: "J. Fast", runs: 4, isExtra: false, isWicket: false },
+          { over: 0, ball: 5, batsman: "B. South", bowler: "J. Fast", runs: 0, isExtra: false, isWicket: false },
+          { over: 0, ball: 6, batsman: "B. South", bowler: "J. Fast", runs: 1, isExtra: false, isWicket: false }, // End of over 1 (Score: 6/0)
+
+          { over: 1, ball: 1, batsman: "A. North", bowler: "S. Archer", runs: 2, isExtra: false, isWicket: false },
+          { over: 1, ball: 2, batsman: "A. North", bowler: "S. Archer", runs: 0, isExtra: false, isWicket: false },
+          { over: 1, ball: 3, batsman: "A. North", bowler: "S. Archer", runs: 6, isExtra: false, isWicket: false },
+          { over: 1, ball: 4, batsman: "A. North", bowler: "S. Archer", runs: 0, isExtra: false, isWicket: false },
+          { over: 1, ball: 5, batsman: "A. North", bowler: "S. Archer", runs: 4, isExtra: false, isWicket: false },
+          { over: 1, ball: 6, batsman: "A. North", bowler: "S. Archer", runs: 1, isExtra: false, isWicket: false }, // End of over 2 (Score: 19/0)
+
+          { over: 2, ball: 1, batsman: "B. South", bowler: "J. Fast", runs: 0, isExtra: false, isWicket: false },
+          { over: 2, ball: 2, batsman: "B. South", bowler: "J. Fast", runs: 1, isExtra: false, isWicket: false },
+          { over: 2, ball: 3, batsman: "A. North", bowler: "J. Fast", runs: 1, isExtra: false, isWicket: false },
+          { over: 2, ball: 4, batsman: "B. South", bowler: "J. Fast", runs: 0, isExtra: false, isWicket: false },
+          { over: 2, ball: 5, batsman: "B. South", bowler: "J. Fast", runs: 2, isExtra: false, isWicket: false },
+          { over: 2, ball: 6, batsman: "B. South", bowler: "J. Fast", runs: 0, isExtra: false, isWicket: false }, // End of over 3 (Score: 23/0)
+
+          { over: 3, ball: 1, batsman: "A. North", bowler: "S. Archer", runs: 1, isExtra: false, isWicket: false },
+          { over: 3, ball: 2, batsman: "B. South", bowler: "S. Archer", runs: 1, isExtra: false, isWicket: false },
+          { over: 3, ball: 3, batsman: "A. North", bowler: "S. Archer", runs: 0, isExtra: false, isWicket: false },
+          { over: 3, ball: 4, batsman: "A. North", bowler: "S. Archer", runs: 4, isExtra: false, isWicket: false },
+          { over: 3, ball: 5, batsman: "A. North", bowler: "S. Archer", runs: 0, isExtra: false, isWicket: false },
+          { over: 3, ball: 6, batsman: "A. North", bowler: "S. Archer", runs: 1, isExtra: false, isWicket: false }, // End of over 4 (Score: 30/0)
+
+          { over: 4, ball: 1, batsman: "B. South", bowler: "J. Fast", runs: 0, isExtra: false, isWicket: false },
+          { over: 4, ball: 2, batsman: "B. South", bowler: "J. Fast", runs: 0, isExtra: false, isWicket: true, wicketType: "lbw", dismissedBatsman: "B. South" }, // Wicket!
+          // Partnership 1: A. North & B. South (30 runs)
+
+          { over: 4, ball: 3, batsman: "L. Walker", bowler: "J. Fast", runs: 1, isExtra: false, isWicket: false },
+          { over: 4, ball: 4, batsman: "A. North", bowler: "J. Fast", runs: 0, isExtra: false, isWicket: false },
+          { over: 4, ball: 5, batsman: "A. North", bowler: "J. Fast", runs: 4, isExtra: false, isWicket: false },
+          { over: 4, ball: 6, batsman: "A. North", bowler: "J. Fast", runs: 1, isExtra: false, isWicket: false }, // End of over 5 (Score: 36/1)
         ]
       },
       {
