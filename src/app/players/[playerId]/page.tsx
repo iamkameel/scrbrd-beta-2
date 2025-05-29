@@ -158,6 +158,7 @@ export default function PlayerProfilePage() {
           {/* Top section: Rating, Role, Team Logos (simplified) */}
           <div className="flex items-start justify-between mb-4">
             <div className="text-left">
+              <p className="text-xs text-primary-foreground/80 mb-0.5">Overall Rating</p>
               <p className="text-4xl font-bold leading-none">
                 {overallRating}
               </p>
