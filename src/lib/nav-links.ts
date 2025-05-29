@@ -36,10 +36,11 @@ export const navLinks: NavLink[] = [
   { href: '/umpire-profiles', label: 'Umpire Profiles', icon: UserCheck, disabled: false },
   { href: '/groundskeeper-profiles', label: 'Groundskeepers', icon: Tractor, disabled: false },
   { href: '/field-directory', label: 'Field Directory', icon: Map, disabled: false },
+  { href: '/admin/user-management', label: 'User Management', icon: UserCog, disabled: false }, // Moved here
 ];
 
 export const bottomNavLinks: NavLink[] = [
     { href: '/settings', label: 'Settings', icon: Settings, disabled: false },
-    { href: '/admin/user-management', label: 'User Management', icon: UserCog, disabled: false },
+    // Removed User Management from here
 ];
 
