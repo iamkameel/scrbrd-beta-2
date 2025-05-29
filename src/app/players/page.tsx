@@ -67,8 +67,11 @@ export default function PlayersPage() {
                   </CardHeader>
                   <CardContent className="flex-grow py-3">
                     <div className="grid grid-cols-3 gap-2">
+                      <CompactStatDisplay label="Mat" value={player.stats.matchesPlayed} />
                       <CompactStatDisplay label="Runs" value={player.stats.runs} />
+                      <CompactStatDisplay label="Bat Avg" value={player.stats.average} />
                       <CompactStatDisplay label="Wkts" value={player.stats.wickets} />
+                      <CompactStatDisplay label="Bowl Avg" value={player.stats.bowlingAverage} />
                       <CompactStatDisplay label="Catches" value={player.stats.catches} />
                     </div>
                   </CardContent>
