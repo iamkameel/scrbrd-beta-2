@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { detailedTeamsData, type Team, type Player } from '@/lib/team-data';
 import { fixtures as allFixtures, type Fixture } from '@/lib/fixtures-data';
+import { resultsData, type Result } from '@/lib/results-data'; // Import resultsData and Result type
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -142,50 +143,64 @@ export default function TeamDetailsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
                 <CalendarDays className="h-6 w-6 text-[hsl(var(--primary))]" />
-                Match Fixtures & Results
+                Match Fixtures &amp; Results
               </CardTitle>
               <CardDescription>Upcoming and past matches for {team.teamName}.</CardDescription>
             </CardHeader>
             <CardContent>
               {teamFixtures.length > 0 ? (
                 <div className="space-y-4">
-                  {teamFixtures.map((fixture) => (
-                    <div key={fixture.id} className="p-4 border rounded-lg bg-muted/50 shadow-sm">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
-                        <p className="font-semibold text-md mb-1 sm:mb-0">{fixture.teamA} vs {fixture.teamB}</p>
-                        <Badge 
-                          variant={fixture.status === "Upcoming" ? "default" : fixture.status === "Live" ? "destructive" : "secondary"} 
-                          className={cn(
-                            fixture.status === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground",
-                            "whitespace-nowrap"
+                  {teamFixtures.map((fixture) => {
+                    const matchResult = fixture.status === "Past" 
+                      ? resultsData.find(r => r.fixtureId === fixture.id) 
+                      : undefined;
+
+                    return (
+                      <div key={fixture.id} className="p-4 border rounded-lg bg-muted/50 shadow-sm space-y-3">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                          <p className="font-semibold text-md mb-1 sm:mb-0">{fixture.teamA} vs {fixture.teamB}</p>
+                          <Badge 
+                            variant={fixture.status === "Upcoming" ? "default" : fixture.status === "Live" ? "destructive" : "secondary"} 
+                            className={cn(
+                              fixture.status === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground",
+                              "whitespace-nowrap mt-1 sm:mt-0"
+                            )}
+                          >
+                            {fixture.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(fixture.date), 'EEE, MMM d')} - {fixture.time} at {fixture.location}
+                        </p>
+                        
+                        {matchResult && (
+                          <div className="text-sm space-y-1 pt-1">
+                            <p><span className="font-medium">{matchResult.teamA}:</span> {matchResult.teamAScore} &nbsp;&nbsp; <span className="font-medium">{matchResult.teamB}:</span> {matchResult.teamBScore}</p>
+                            <p className="font-semibold text-[hsl(var(--accent))]">{matchResult.winner} won by {matchResult.margin}</p>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          {fixture.status === "Upcoming" && (
+                            <Button asChild variant="outline" size="sm">
+                              <Link href={`/prematch-team/${fixture.id}`}>
+                                <ClipboardList className="mr-2 h-4 w-4" />
+                                View Pre-Match Team
+                              </Link>
+                            </Button>
                           )}
-                        >
-                          {fixture.status}
-                        </Badge>
+                          {fixture.status === "Past" && (
+                            <Button asChild variant="outline" size="sm">
+                             <Link href={`/scorecard/${fixture.id}`}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                View Scorecard
+                              </Link>
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {format(new Date(fixture.date), 'EEE, MMM d')} - {fixture.time} at {fixture.location}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {fixture.status === "Upcoming" && (
-                          <Button asChild variant="outline" size="sm">
-                            <Link href={`/prematch-team/${fixture.id}`}>
-                              <ClipboardList className="mr-2 h-4 w-4" />
-                              View Pre-Match Team
-                            </Link>
-                          </Button>
-                        )}
-                        {fixture.status === "Past" && (
-                          <Button asChild variant="outline" size="sm">
-                           <Link href={`/scorecard/${fixture.id}`}>
-                              <FileText className="mr-2 h-4 w-4" />
-                              View Scorecard
-                            </Link>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No fixtures found for this team.</p>
