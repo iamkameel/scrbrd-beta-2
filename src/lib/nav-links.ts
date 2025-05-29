@@ -1,7 +1,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import {
-  Shield, Users, CalendarDays, ListChecks, Trophy, Sparkles, UsersRound, Target, LayoutGrid, Radar, School as SchoolIcon, Tv, Home, Settings, FilePenLine, UserCheck, Tractor, Map, UsersCog
+  Shield, Users, CalendarDays, ListChecks, Trophy, Sparkles, UsersRound, Target, LayoutGrid, Radar, School as SchoolIcon, Tv, Home, Settings, FilePenLine, UserCheck, Tractor, Map, UserCog
 } from 'lucide-react';
 
 export interface NavLink {
@@ -39,6 +39,6 @@ export const navLinks: NavLink[] = [
 
 export const bottomNavLinks: NavLink[] = [
     { href: '/settings', label: 'Settings', icon: Settings, disabled: false },
-    { href: '/admin/user-management', label: 'User Management', icon: UsersCog, disabled: false },
+    { href: '/admin/user-management', label: 'User Management', icon: UserCog, disabled: false },
 ];
 

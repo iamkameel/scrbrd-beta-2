@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
-import { UsersCog, Edit3 } from "lucide-react";
+import { UserCog, Edit3 } from "lucide-react";
 
 const ALL_ROLES = [
   "Admin", "School", "Coach", "Player", "Parent", "Captain",
@@ -67,7 +67,7 @@ export default function UserManagementPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold flex items-center gap-2">
-          <UsersCog className="h-8 w-8 text-primary" />
+          <UserCog className="h-8 w-8 text-primary" />
           User Management
         </h1>
         {/* Placeholder for Add User button or other global actions */}
