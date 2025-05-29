@@ -38,5 +38,5 @@ export const navLinks: NavLink[] = [
 ];
 
 export const bottomNavLinks: NavLink[] = [
-    { href: '/settings', label: 'Settings', icon: Settings, disabled: true },
+    { href: '/settings', label: 'Settings', icon: Settings, disabled: false },
 ];
