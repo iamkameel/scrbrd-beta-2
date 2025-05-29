@@ -10,6 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Search, User } from "lucide-react";
 import { playersData, type PlayerProfile } from "@/lib/player-data"; // Import new data structure
 
+const CompactStatDisplay: React.FC<{ label: string; value: string | number | undefined }> = ({ label, value }) => (
+  <div className="text-center px-1">
+    <p className="text-xs uppercase text-muted-foreground tracking-tight truncate">{label}</p>
+    <p className="text-md font-semibold text-foreground">{value !== undefined ? String(value) : '-'}</p>
+  </div>
+);
+
 export default function PlayersPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
 
@@ -35,9 +42,9 @@ export default function PlayersPage() {
           <div className="flex items-center gap-4 mb-6">
             <div className="relative flex-grow">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input 
-                placeholder="Search players by name, team, or role..." 
-                className="pl-10" 
+              <Input
+                placeholder="Search players by name, team, or role..."
+                className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -58,14 +65,14 @@ export default function PlayersPage() {
                       <CardDescription>{player.team} - {player.role}</CardDescription>
                     </div>
                   </CardHeader>
-                  <CardContent className="flex-grow">
-                    <ul className="space-y-1 text-sm text-muted-foreground">
-                      <li>Runs: {player.stats.runs ?? 'N/A'}</li>
-                      <li>Wickets: {player.stats.wickets ?? 'N/A'}</li>
-                      <li>Catches: {player.stats.catches ?? 'N/A'}</li>
-                    </ul>
+                  <CardContent className="flex-grow py-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      <CompactStatDisplay label="Runs" value={player.stats.runs} />
+                      <CompactStatDisplay label="Wkts" value={player.stats.wickets} />
+                      <CompactStatDisplay label="Catches" value={player.stats.catches} />
+                    </div>
                   </CardContent>
-                  <CardContent className="pt-0">
+                  <CardContent className="pt-0 mt-auto">
                      <Button asChild variant="link" className="p-0 h-auto text-primary">
                         <Link href={`/players/${player.id}`}>View Full Profile</Link>
                       </Button>
