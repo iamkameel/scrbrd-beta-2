@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CalendarDays, Clock, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { fixtures, type Fixture } from "@/lib/fixtures-data"; 
+import { fixtures, type Fixture } from "@/lib/fixtures-data";
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 
@@ -11,17 +11,17 @@ export default function FixturesPage() {
   const getStatusBadgeVariant = (status: Fixture["status"]): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case "Upcoming":
-        return "default";
-      case "Live":
-        return "destructive";
-      case "Completed":
-      case "Match Abandoned":
       case "Rain-Delay":
       case "Play Suspended":
-        return "secondary";
+        return "default"; // Base for custom bg/text using HSL vars
+      case "Live":
+        return "destructive"; // Red
+      case "Completed":
+      case "Match Abandoned": // Base for custom text/opacity on gray bg
+        return "secondary"; // Gray
       case "Scheduled":
       default:
-        return "outline";
+        return "outline"; // Standard outline
     }
   };
 
@@ -39,10 +39,14 @@ export default function FixturesPage() {
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{fixture.teamA} vs {fixture.teamB}</CardTitle>
-                    <Badge 
-                      variant={getStatusBadgeVariant(fixture.status)} 
+                    <Badge
+                      variant={getStatusBadgeVariant(fixture.status)}
                       className={cn(
-                        fixture.status === "Upcoming" ? "bg-[hsl(var(--accent))] text-accent-foreground" : ""
+                        "whitespace-nowrap",
+                        fixture.status === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground border-transparent",
+                        fixture.status === "Rain-Delay" && "bg-[hsl(var(--primary))] text-primary-foreground border-transparent opacity-80",
+                        fixture.status === "Play Suspended" && "bg-[hsl(var(--chart-3))] text-card-foreground border-transparent",
+                        fixture.status === "Match Abandoned" && "bg-[hsl(var(--secondary))] text-muted-foreground opacity-80 border-transparent"
                       )}
                     >
                       {fixture.status}

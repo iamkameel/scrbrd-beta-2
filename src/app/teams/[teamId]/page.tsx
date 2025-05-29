@@ -23,8 +23,8 @@ export default function TeamDetailsPage() {
   const team: Team | undefined = detailedTeamsData.find(t => t.id === teamId);
 
   const teamFixtures: Fixture[] = team ? allFixtures.filter(
-    fixture => 
-      (fixture.teamA.includes(team.affiliation) && fixture.teamA.includes(team.teamName)) || 
+    fixture =>
+      (fixture.teamA.includes(team.affiliation) && fixture.teamA.includes(team.teamName)) ||
       (fixture.teamB.includes(team.affiliation) && fixture.teamB.includes(team.teamName))
   ) : [];
 
@@ -68,17 +68,17 @@ export default function TeamDetailsPage() {
   const getStatusBadgeVariant = (status: Fixture["status"]): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case "Upcoming":
-        return "default";
-      case "Live":
-        return "destructive";
-      case "Completed":
-      case "Match Abandoned":
       case "Rain-Delay":
       case "Play Suspended":
-        return "secondary";
+        return "default"; // Base for custom bg/text using HSL vars
+      case "Live":
+        return "destructive"; // Red
+      case "Completed":
+      case "Match Abandoned": // Base for custom text/opacity on gray bg
+        return "secondary"; // Gray
       case "Scheduled":
       default:
-        return "outline";
+        return "outline"; // Standard outline
     }
   };
 
@@ -93,8 +93,8 @@ export default function TeamDetailsPage() {
 
       <Card className="overflow-hidden">
         <div className="relative h-48 md:h-64 bg-muted">
-          <Image 
-            src={`https://placehold.co/1200x400.png`} 
+          <Image
+            src={`https://placehold.co/1200x400.png`}
             alt={`${team.affiliation} ${team.teamName} Banner`}
             fill
             style={{objectFit: "cover"}}
@@ -110,7 +110,7 @@ export default function TeamDetailsPage() {
           </div>
         </div>
       </Card>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card>
@@ -162,19 +162,22 @@ export default function TeamDetailsPage() {
               {teamFixtures.length > 0 ? (
                 <div className="space-y-4">
                   {teamFixtures.map((fixture) => {
-                    const matchResult = fixture.status === "Completed" 
-                      ? resultsData.find(r => r.fixtureId === fixture.id) 
+                    const matchResult = fixture.status === "Completed"
+                      ? resultsData.find(r => r.fixtureId === fixture.id)
                       : undefined;
 
                     return (
                       <div key={fixture.id} className="p-4 border rounded-lg bg-muted/50 shadow-sm space-y-3">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
                           <p className="font-semibold text-md mb-1 sm:mb-0">{fixture.teamA} vs {fixture.teamB}</p>
-                          <Badge 
+                          <Badge
                             variant={getStatusBadgeVariant(fixture.status)}
                             className={cn(
-                              fixture.status === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground",
-                              "whitespace-nowrap mt-1 sm:mt-0"
+                              "whitespace-nowrap mt-1 sm:mt-0",
+                              fixture.status === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground border-transparent",
+                              fixture.status === "Rain-Delay" && "bg-[hsl(var(--primary))] text-primary-foreground border-transparent opacity-80",
+                              fixture.status === "Play Suspended" && "bg-[hsl(var(--chart-3))] text-card-foreground border-transparent",
+                              fixture.status === "Match Abandoned" && "bg-[hsl(var(--secondary))] text-muted-foreground opacity-80 border-transparent"
                             )}
                           >
                             {fixture.status}
@@ -183,7 +186,7 @@ export default function TeamDetailsPage() {
                         <p className="text-sm text-muted-foreground">
                           {format(new Date(fixture.date), 'EEE, MMM d')} - {fixture.time} at {fixture.location}
                         </p>
-                        
+
                         {matchResult && (
                           <div className="text-sm space-y-1 pt-1">
                             <p><span className="font-medium">{matchResult.teamA}:</span> {matchResult.teamAScore} &nbsp;&nbsp; <span className="font-medium">{matchResult.teamB}:</span> {matchResult.teamBScore}</p>
