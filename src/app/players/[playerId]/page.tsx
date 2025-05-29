@@ -87,6 +87,33 @@ const PlayerStatDisplay: React.FC<{ label: string; value: string | number | unde
   </div>
 );
 
+const calculateOverallRating = (skills: PlayerSkills | undefined): string | number => {
+  if (!skills) return 'N/A';
+
+  let totalScore = 0;
+  let skillCount = 0;
+
+  const processSkillCategory = (category: Record<string, number | undefined> | undefined) => {
+    if (category) {
+      Object.values(category).forEach(score => {
+        if (score !== undefined && typeof score === 'number') {
+          totalScore += score;
+          skillCount++;
+        }
+      });
+    }
+  };
+
+  processSkillCategory(skills.technical);
+  processSkillCategory(skills.tactical);
+  processSkillCategory(skills.physicalMental);
+  processSkillCategory(skills.teamLeadership);
+
+  if (skillCount === 0) return 'N/A';
+  return Math.round(totalScore / skillCount);
+};
+
+
 export default function PlayerProfilePage() {
   const params = useParams();
   const router = useRouter();
@@ -114,6 +141,7 @@ export default function PlayerProfilePage() {
   }
   
   const roleAbbreviation = player.role.substring(0,2).toUpperCase();
+  const overallRating = calculateOverallRating(player.skills);
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -131,8 +159,7 @@ export default function PlayerProfilePage() {
           <div className="flex items-start justify-between mb-4">
             <div className="text-left">
               <p className="text-4xl font-bold leading-none">
-                {/* Placeholder for Overall Rating, using a skill or N/A */}
-                {player.skills?.technical?.battingTechnique ? Math.round(player.skills.technical.battingTechnique / 100 * 90) + 5 : 'N/A'}
+                {overallRating}
               </p>
               <p className="text-lg font-semibold uppercase tracking-wider">{roleAbbreviation}</p>
             </div>
