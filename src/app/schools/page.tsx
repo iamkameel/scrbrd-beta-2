@@ -2,11 +2,12 @@
 "use client";
 
 import * as React from 'react';
+import Link from 'next/link'; // Import Link
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Search, Filter as FilterIcon, ListTree, School } from "lucide-react"; // Added School icon
+import { MapPin, Search, Filter as FilterIcon, ListTree, School as SchoolIcon } from "lucide-react";
 import Image from "next/image";
 import {
   DropdownMenu,
@@ -17,23 +18,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { schoolsData } from '@/lib/schools-data'; // Import data from lib
 import { cn } from '@/lib/utils';
-
-// Updated list of KwaZulu-Natal cricket playing high schools
-const schoolsData = [
-  { id: 1, name: "Michaelhouse", fields: ["Roy Gathorne Oval", "Hannahs Field"], location: "Balgowan", crestUrl: "https://placehold.co/80x80.png" },
-  { id: 2, name: "Hilton College", fields: ["Weightman-Smith Oval", "Hart-Davis Oval"], location: "Hilton", crestUrl: "https://placehold.co/80x80.png" },
-  { id: 3, name: "Maritzburg College", fields: ["Goldstones", "Varsity Oval", "Bavers"], location: "Pietermaritzburg", crestUrl: "https://placehold.co/80x80.png" },
-  { id: 4, name: "Glenwood High School", fields: ["Dixons", "The Subway"], location: "Durban", crestUrl: "https://placehold.co/80x80.png" },
-  { id: 5, name: "Durban High School (DHS)", fields: ["The Memorial Ground", "Seabreeze Oval"], location: "Durban", crestUrl: "https://placehold.co/80x80.png" },
-  { id: 6, name: "Kearsney College", fields: ["AH Smith Oval", "Matterson Field"], location: "Botha's Hill", crestUrl: "https://placehold.co/80x80.png" },
-  { id: 7, name: "Westville Boys' High School", fields: ["Bowsden's Field", "Commons Field", "Roy Couzens Oval"], location: "Westville", crestUrl: "https://placehold.co/80x80.png" },
-  { id: 8, name: "Northwood School", fields: ["Northwood Crusaders Main Oval", "Knights Field"], location: "Durban North", crestUrl: "https://placehold.co/80x80.png" },
-  { id: 9, name: "Clifton School", fields: ["Clifton Riverside Sports Campus", "College Field"], location: "Durban", crestUrl: "https://placehold.co/80x80.png" },
-  { id: 10, name: "St Charles College", fields: ["Samke Khumalo Oval", "College Oval"], location: "Pietermaritzburg", crestUrl: "https://placehold.co/80x80.png" },
-  { id: 11, name: "Crawford College La Lucia", fields: ["Main Cricket Field"], location: "La Lucia", crestUrl: "https://placehold.co/80x80.png" },
-  { id: 12, name: "Ashton International College Ballito", fields: ["Main Sports Field"], location: "Ballito", crestUrl: "https://placehold.co/80x80.png" },
-];
 
 export default function SchoolsPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -64,7 +50,7 @@ export default function SchoolsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl flex items-center gap-2">
-            <School className="h-6 w-6 text-[hsl(var(--primary))]" /> 
+            <SchoolIcon className="h-6 w-6 text-[hsl(var(--primary))]" /> 
             School Profiles
           </CardTitle>
           <CardDescription>
@@ -109,7 +95,7 @@ export default function SchoolsPage() {
                 <Card key={school.id} className="overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 rounded-lg flex flex-col">
                   <div className="relative">
                     <Image
-                      src={`https://placehold.co/600x300.png`} // General campus image
+                      src={school.bannerImageUrl || `https://placehold.co/600x300.png`}
                       alt={`${school.name} campus`}
                       width={600}
                       height={300}
@@ -118,7 +104,7 @@ export default function SchoolsPage() {
                     />
                     <div className="absolute bottom-2 left-2 bg-background/80 p-1.5 rounded-full shadow-lg">
                        <Image
-                        src={school.crestUrl} // School crest
+                        src={school.crestUrl}
                         alt={`${school.name} crest`}
                         width={50}
                         height={50}
@@ -150,8 +136,8 @@ export default function SchoolsPage() {
                     </div>
                   </CardContent>
                    <CardContent className="pt-3 pb-4 border-t mt-auto">
-                     <Button variant="outline" size="sm" className="w-full text-primary hover:bg-primary/10">
-                        View School Details {/* Placeholder for future navigation */}
+                     <Button asChild variant="outline" size="sm" className="w-full text-primary hover:bg-primary/10">
+                        <Link href={`/schools/${school.id}`}>View School Details</Link>
                      </Button>
                    </CardContent>
                 </Card>
