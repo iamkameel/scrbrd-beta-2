@@ -1,30 +1,49 @@
 
 export interface PlayerSkills {
   technical?: {
-    batting?: number;
-    bowling?: number;
-    fielding?: number;
-    allRounder?: number;
-    power?: number;
+    battingTechnique?: number;
+    shotSelection?: number;
+    powerHitting?: number;
+    runningBetweenWickets?: number;
+    bowlingAccuracy?: number;
+    bowlingVariation?: number;
+    spinReading?: number;
+    groundFielding?: number;
+    catchingTechnique?: number;
+    throwingAccuracy?: number;
   };
-  tactical?: {
-    experience?: number;
-    strategy?: number;
-    consistency?: number;
-    leadership?: number;
-    versatility?: number;
+  tactical?: { // Maps to "Tactical Awareness"
+    matchAwareness?: number;
+    strikeRotation?: number;
+    oppositionAnalysis?: number;
+    fieldPlacement?: number;
+    deathOversExecution?: number;
   };
-  physicalMental?: {
-    fitness?: number;
-    strength?: number;
-    speed?: number;
+  physicalMental?: { // Combines "Physical Fitness" and "Mental Attributes"
+    // Physical Fitness
+    speedAgility?: number;
+    endurance?: number;
+    strengthPower?: number; // from strengthPower
+    flexibility?: number;
+    reactionTime?: number;
+    // Mental Attributes
     concentration?: number;
-    aggression?: number;
+    composure?: number;
+    resilience?: number;
+    decisionMaking?: number;
+    coachability?: number;
+  };
+  teamLeadership?: { // Maps to "Team & Leadership"
+    communication?: number;
+    teamSpirit?: number;
+    leadership?: number;
+    discipline?: number;
+    workEthic?: number;
   };
 }
 
 export interface ScoreDetail {
-  value: string; // e.g., "102*", "5/25"
+  value: string;
   opponent?: string;
   year?: number;
   venue?: string;
@@ -35,13 +54,13 @@ export interface PlayerStats {
   runs?: number;
   average?: number | string;
   strikeRate?: number | string;
-  highestScore?: ScoreDetail; // Updated
+  highestScore?: ScoreDetail;
   hundreds?: number;
   fifties?: number;
   wickets?: number;
   bowlingAverage?: number | string;
   economyRate?: number | string;
-  bestBowling?: ScoreDetail; // Updated
+  bestBowling?: ScoreDetail;
   catches?: number;
   stumpings?: number;
 }
@@ -86,7 +105,7 @@ export const playersData: PlayerProfile[] = [
       },
       hundreds: 1,
       fifties: 7,
-      wickets: 65, // Increased wickets
+      wickets: 65,
       bowlingAverage: 22.5,
       economyRate: 4.75,
       bestBowling: {
@@ -99,9 +118,38 @@ export const playersData: PlayerProfile[] = [
       stumpings: 0,
     },
     skills: {
-      technical: { batting: 80, bowling: 75, fielding: 82, allRounder: 85, power: 78 },
-      tactical: { experience: 70, strategy: 72, consistency: 65, leadership: 60, versatility: 80 },
-      physicalMental: { fitness: 88, strength: 75, speed: 70, concentration: 68, aggression: 75 },
+      technical: {
+        battingTechnique: 82,
+        shotSelection: 78,
+        powerHitting: 75,
+        runningBetweenWickets: 70,
+        bowlingAccuracy: 77,
+        bowlingVariation: 72,
+        groundFielding: 80,
+        catchingTechnique: 85,
+        throwingAccuracy: 73,
+      },
+      tactical: {
+        matchAwareness: 80,
+        strikeRotation: 75,
+        oppositionAnalysis: 70,
+        fieldPlacement: 68,
+      },
+      physicalMental: {
+        speedAgility: 88,
+        endurance: 82,
+        strengthPower: 78,
+        reactionTime: 75,
+        concentration: 76,
+        composure: 72,
+        resilience: 79,
+        decisionMaking: 73,
+      },
+      teamLeadership: {
+        communication: 70,
+        teamSpirit: 85,
+        leadership: 65,
+      }
     },
   },
   {
@@ -126,9 +174,28 @@ export const playersData: PlayerProfile[] = [
       stumpings: 15,
     },
     skills: {
-      technical: { batting: 78, fielding: 90, power: 65 },
-      tactical: { experience: 65, strategy: 70, consistency: 75, leadership: 50 },
-      physicalMental: { fitness: 80, strength: 60, speed: 75, concentration: 72, aggression: 60 },
+      technical: {
+        battingTechnique: 78,
+        shotSelection: 80,
+        runningBetweenWickets: 72,
+        catchingTechnique: 90, // Wicket-keeper specific
+        groundFielding: 75,
+      },
+      tactical: {
+        matchAwareness: 70,
+        strikeRotation: 68,
+      },
+      physicalMental: {
+        speedAgility: 80,
+        flexibility: 70, // Good for keepers
+        reactionTime: 85,
+        concentration: 82,
+        composure: 75,
+      },
+      teamLeadership: {
+        communication: 78,
+        teamSpirit: 70,
+      }
     },
   },
   {
@@ -157,9 +224,28 @@ export const playersData: PlayerProfile[] = [
       catches: 12,
     },
     skills: {
-      technical: { batting: 90, power: 70 },
-      tactical: { experience: 85, strategy: 80, consistency: 88, leadership: 70 },
-      physicalMental: { fitness: 75, strength: 65, speed: 60, concentration: 85, aggression: 50 },
+      technical: {
+        battingTechnique: 90,
+        shotSelection: 85,
+        powerHitting: 70, // More about placement and timing for him
+        runningBetweenWickets: 65,
+      },
+      tactical: {
+        matchAwareness: 88,
+        strikeRotation: 80,
+        oppositionAnalysis: 75,
+      },
+      physicalMental: {
+        endurance: 85, // For long innings
+        concentration: 90,
+        composure: 80,
+        resilience: 70,
+        decisionMaking: 82,
+      },
+      teamLeadership: {
+        leadership: 70, // Perhaps a senior player
+        workEthic: 80,
+      }
     },
   },
    {
@@ -189,9 +275,29 @@ export const playersData: PlayerProfile[] = [
       catches: 8,
     },
     skills: {
-      technical: { bowling: 92, power: 60 },
-      tactical: { experience: 75, strategy: 78, consistency: 70 },
-      physicalMental: { fitness: 85, strength: 70, speed: 80, concentration: 75, aggression: 85 },
+      technical: {
+        bowlingAccuracy: 92,
+        bowlingVariation: 75, // e.g., swing, seam
+        powerHitting: 60, // For lower order batting
+      },
+      tactical: {
+        matchAwareness: 78,
+        oppositionAnalysis: 80, // Key for a bowler
+        fieldPlacement: 70, // Understanding fields set for her
+        deathOversExecution: 75, // If she bowls at the death
+      },
+      physicalMental: {
+        speedAgility: 85, // For run-up and fielding
+        strengthPower: 80, // For bowling pace
+        endurance: 70,
+        concentration: 75,
+        resilience: 85, // Important for bowlers after being hit
+        coachability: 78,
+      },
+      teamLeadership: {
+        teamSpirit: 75,
+        workEthic: 88,
+      }
     },
   },
 ];

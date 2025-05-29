@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, BarChart3, Briefcase, Info, ShieldCheck, Star, Target, Zap, Brain, CalendarDays, Hash, AtSign, Activity, TrendingUp, Crosshair } from "lucide-react";
+import { ArrowLeft, BarChart3, Briefcase, Info, ShieldCheck, Star, Target, Zap, Brain, CalendarDays, Hash, AtSign, Activity, TrendingUp, Crosshair, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
 
@@ -51,19 +51,19 @@ const DetailedStat: React.FC<{ label: string; scoreDetail: ScoreDetail | undefin
 
 
 const SkillCategory: React.FC<{ title: string; skills: Record<string, number | undefined> | undefined; icon: React.ElementType }> = ({ title, skills, icon: Icon }) => {
-  if (!skills || Object.values(skills).every(val => val === undefined)) {
+  if (!skills || Object.values(skills).filter(v => v !== undefined).length === 0) {
     return null;
   }
 
   return (
-    <div className="mb-4">
+    <div className="mb-6 last:mb-0">
       <h4 className="text-md font-semibold mb-3 flex items-center gap-1.5">
         <Icon className="h-5 w-5 text-[hsl(var(--accent))]"/> {title}
       </h4>
       <div className="space-y-3">
         {Object.entries(skills).map(([key, value]) => {
           if (value === undefined) return null;
-          const skillName = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'); // Add space before capital letters for multi-word skills
+          const skillName = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
           return (
             <div key={key}>
               <div className="flex justify-between items-center mb-1">
@@ -217,9 +217,10 @@ export default function PlayerProfilePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <SkillCategory title="Technical" skills={player.skills.technical} icon={Target} />
-                <SkillCategory title="Tactical" skills={player.skills.tactical} icon={Briefcase} />
-                <SkillCategory title="Physical & Mental" skills={player.skills.physicalMental} icon={Activity} />
+                <SkillCategory title="Technical Skills" skills={player.skills.technical} icon={Target} />
+                <SkillCategory title="Tactical Awareness" skills={player.skills.tactical} icon={Briefcase} />
+                <SkillCategory title="Physical & Mental Attributes" skills={player.skills.physicalMental} icon={Activity} />
+                <SkillCategory title="Team & Leadership" skills={player.skills.teamLeadership} icon={Users} />
               </CardContent>
             </Card>
           )}
