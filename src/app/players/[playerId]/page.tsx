@@ -4,20 +4,54 @@
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { playersData, type PlayerProfile } from '@/lib/player-data';
+import { playersData, type PlayerProfile, type PlayerSkills } from '@/lib/player-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, BarChart3, Briefcase, CalendarIcon, Info, ShieldCheck, Star, Target, Zap } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, BarChart3, Briefcase, Info, ShieldCheck, Star, Target, Zap, Brain, CalendarDays, Hash, AtSign, Activity } from "lucide-react";
 import { format } from 'date-fns';
 
-const StatItem: React.FC<{ label: string; value: string | number | undefined }> = ({ label, value }) => (
+const StatItem: React.FC<{ label: string; value: string | number | undefined; icon?: React.ElementType }> = ({ label, value, icon: Icon }) => (
   <div className="flex justify-between py-2 border-b border-border/50 last:border-b-0">
-    <span className="text-muted-foreground">{label}</span>
-    <span className="font-semibold">{value !== undefined ? value : 'N/A'}</span>
+    <div className="flex items-center text-muted-foreground">
+      {Icon && <Icon className="mr-2 h-4 w-4" />}
+      <span>{label}</span>
+    </div>
+    <span className="font-semibold text-right">{value !== undefined ? value : 'N/A'}</span>
   </div>
 );
+
+const SkillCategory: React.FC<{ title: string; skills: Record<string, number | undefined> | undefined; icon: React.ElementType }> = ({ title, skills, icon: Icon }) => {
+  if (!skills || Object.values(skills).every(val => val === undefined)) {
+    return null;
+  }
+
+  return (
+    <div className="mb-4">
+      <h4 className="text-md font-semibold mb-3 flex items-center gap-1.5">
+        <Icon className="h-5 w-5 text-[hsl(var(--accent))]"/> {title}
+      </h4>
+      <div className="space-y-3">
+        {Object.entries(skills).map(([key, value]) => {
+          if (value === undefined) return null;
+          const skillName = key.charAt(0).toUpperCase() + key.slice(1);
+          return (
+            <div key={key}>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-muted-foreground">{skillName}</span>
+                <span className="text-sm font-medium text-foreground">{value} / 100</span>
+              </div>
+              <Progress value={value} className="h-2" />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 
 export default function PlayerProfilePage() {
   const params = useParams();
@@ -47,7 +81,7 @@ export default function PlayerProfilePage() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      <Button variant="outline" asChild className="mb-6">
+      <Button variant="outline" asChild className="mb-6 print:hidden">
         <Link href="/players">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Players List
@@ -57,7 +91,6 @@ export default function PlayerProfilePage() {
       <Card className="overflow-hidden">
         <CardHeader className="p-0 relative">
           <div className="h-40 bg-muted/50">
-             {/* Placeholder for a cover image if desired */}
              <Image src="https://placehold.co/1200x300.png" alt={`${player.name} cover image`} layout="fill" objectFit="cover" className="opacity-50" data-ai-hint="stadium crowd" />
           </div>
           <div className="absolute bottom-0 left-6 transform translate-y-1/2">
@@ -67,11 +100,12 @@ export default function PlayerProfilePage() {
             </Avatar>
           </div>
         </CardHeader>
-        <CardContent className="pt-20 pb-6 px-6"> {/* Increased top padding to make space for overlapping avatar */}
+        <CardContent className="pt-20 pb-6 px-6">
           <CardTitle className="text-3xl font-bold">{player.name}</CardTitle>
           <CardDescription className="text-lg text-muted-foreground">
             {player.role} for {player.team}
           </CardDescription>
+          {player.careerSpan && <p className="text-sm text-muted-foreground mt-1">{player.careerSpan}</p>}
         </CardContent>
       </Card>
 
@@ -102,11 +136,11 @@ export default function PlayerProfilePage() {
                   <Target className="h-5 w-5 text-[hsl(var(--accent))]"/> Batting
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                  <StatItem label="Matches" value={player.stats.matchesPlayed} />
-                  <StatItem label="Runs Scored" value={player.stats.runs} />
-                  <StatItem label="Average" value={player.stats.average} />
-                  <StatItem label="Strike Rate" value={player.stats.strikeRate} />
-                  <StatItem label="Highest Score" value={player.stats.highestScore} />
+                  <StatItem label="Matches" value={player.stats.matchesPlayed} icon={Hash}/>
+                  <StatItem label="Runs Scored" value={player.stats.runs} icon={TrendingUp} />
+                  <StatItem label="Average" value={player.stats.average} icon={Activity}/>
+                  <StatItem label="Strike Rate" value={player.stats.strikeRate} icon={Zap}/>
+                  <StatItem label="Highest Score" value={player.stats.highestScore} icon={Star}/>
                   <StatItem label="100s" value={player.stats.hundreds} />
                   <StatItem label="50s" value={player.stats.fifties} />
                 </div>
@@ -117,11 +151,11 @@ export default function PlayerProfilePage() {
                   <Zap className="h-5 w-5 text-[hsl(var(--accent))]"/> Bowling
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                  <StatItem label="Matches" value={player.stats.matchesPlayed} />
-                  <StatItem label="Wickets Taken" value={player.stats.wickets} />
-                  <StatItem label="Average" value={player.stats.bowlingAverage} />
-                  <StatItem label="Economy Rate" value={player.stats.economyRate} />
-                  <StatItem label="Best Bowling" value={player.stats.bestBowling} />
+                  <StatItem label="Matches" value={player.stats.matchesPlayed} icon={Hash} />
+                  <StatItem label="Wickets Taken" value={player.stats.wickets} icon={Crosshair}/>
+                  <StatItem label="Average" value={player.stats.bowlingAverage} icon={Activity}/>
+                  <StatItem label="Economy Rate" value={player.stats.economyRate} icon={Zap}/>
+                  <StatItem label="Best Bowling" value={player.stats.bestBowling} icon={Star}/>
                 </div>
               </div>
               <Separator />
@@ -136,6 +170,21 @@ export default function PlayerProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {player.skills && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-[hsl(var(--primary))]"/> Player Skills
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SkillCategory title="Technical" skills={player.skills.technical} icon={Target} />
+                <SkillCategory title="Tactical" skills={player.skills.tactical} icon={Briefcase} />
+                <SkillCategory title="Physical & Mental" skills={player.skills.physicalMental} icon={Activity} />
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -146,10 +195,10 @@ export default function PlayerProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <StatItem label="Full Name" value={player.name} />
-              <StatItem label="Team" value={player.team} />
+              <StatItem label="Full Name" value={player.name} icon={AtSign} />
+              <StatItem label="Team" value={player.team} icon={ShieldCheck}/>
               <StatItem label="Role" value={player.role} />
-              {player.dateOfBirth && <StatItem label="Date of Birth" value={format(new Date(player.dateOfBirth), "MMMM d, yyyy")} />}
+              {player.dateOfBirth && <StatItem label="Date of Birth" value={format(new Date(player.dateOfBirth), "MMMM d, yyyy")} icon={CalendarDays} />}
               {player.battingStyle && <StatItem label="Batting Style" value={player.battingStyle} />}
               {player.bowlingStyle && <StatItem label="Bowling Style" value={player.bowlingStyle} />}
             </CardContent>

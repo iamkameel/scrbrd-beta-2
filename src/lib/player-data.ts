@@ -1,4 +1,28 @@
 
+export interface PlayerSkills {
+  technical?: { // Made categories optional
+    batting?: number;
+    bowling?: number;
+    fielding?: number;
+    allRounder?: number; // Added from OCR
+    power?: number; // Added from OCR
+  };
+  tactical?: {
+    experience?: number;
+    strategy?: number;
+    consistency?: number;
+    leadership?: number; // Added from OCR
+    versatility?: number; // Added from OCR
+  };
+  physicalMental?: {
+    fitness?: number;
+    strength?: number; // Added from OCR
+    speed?: number; // Added from OCR
+    concentration?: number;
+    aggression?: number;
+  };
+}
+
 export interface PlayerStats {
   matchesPlayed?: number;
   runs?: number;
@@ -16,16 +40,18 @@ export interface PlayerStats {
 }
 
 export interface PlayerProfile {
-  id: string; // Using string for ID for flexibility, e.g., "player-1"
+  id: string;
   name: string;
-  team: string; // Could be a team ID or name
+  team: string;
   avatar: string;
-  role: string; // e.g., "Opening Batsman", "Fast Bowler", "All-rounder"
+  role: string;
   dateOfBirth?: string;
-  battingStyle?: string; // e.g., "Right-hand bat", "Left-hand bat"
-  bowlingStyle?: string; // e.g., "Right-arm fast", "Left-arm orthodox"
+  battingStyle?: string;
+  bowlingStyle?: string;
   bio?: string;
   stats: PlayerStats;
+  careerSpan?: string; // e.g., "INTL: 2018 - Present"
+  skills?: PlayerSkills; // Added skills
 }
 
 export const playersData: PlayerProfile[] = [
@@ -38,6 +64,7 @@ export const playersData: PlayerProfile[] = [
     dateOfBirth: "1998-05-15",
     battingStyle: "Right-hand bat",
     bowlingStyle: "Right-arm medium",
+    careerSpan: "School Career: 2020 - Present",
     bio: "John is a dynamic all-rounder known for his aggressive batting and consistent bowling. He has been a key player for the Eagles, often turning matches with his versatile performances.",
     stats: {
       matchesPlayed: 50,
@@ -54,6 +81,11 @@ export const playersData: PlayerProfile[] = [
       catches: 25,
       stumpings: 0,
     },
+    skills: {
+      technical: { batting: 80, bowling: 75, fielding: 82, allRounder: 85, power: 78 },
+      tactical: { experience: 70, strategy: 72, consistency: 65, leadership: 60, versatility: 80 },
+      physicalMental: { fitness: 88, strength: 75, speed: 70, concentration: 68, aggression: 75 },
+    },
   },
   {
     id: "player-2",
@@ -63,6 +95,7 @@ export const playersData: PlayerProfile[] = [
     role: "Wicket-keeper Batsman",
     dateOfBirth: "2000-02-20",
     battingStyle: "Left-hand bat",
+    careerSpan: "Academy Career: 2021 - Present",
     bio: "Jane is an agile wicket-keeper and a reliable top-order batsman. Her sharp reflexes behind the stumps and ability to build innings make her an invaluable asset to the Panthers.",
     stats: {
       matchesPlayed: 45,
@@ -75,6 +108,11 @@ export const playersData: PlayerProfile[] = [
       catches: 40,
       stumpings: 15,
     },
+    skills: {
+      technical: { batting: 78, fielding: 90, power: 65 },
+      tactical: { experience: 65, strategy: 70, consistency: 75, leadership: 50 },
+      physicalMental: { fitness: 80, strength: 60, speed: 75, concentration: 72, aggression: 60 },
+    },
   },
   {
     id: "player-3",
@@ -84,6 +122,7 @@ export const playersData: PlayerProfile[] = [
     role: "Opening Batsman",
     dateOfBirth: "1997-11-01",
     battingStyle: "Right-hand bat",
+    careerSpan: "College Career: 2019 - 2023",
     bio: "Mike is a classic opening batsman with a penchant for long innings. He provides solid starts for the Lions and is known for his excellent technique against the new ball.",
     stats: {
       matchesPlayed: 60,
@@ -95,6 +134,11 @@ export const playersData: PlayerProfile[] = [
       fifties: 12,
       catches: 12,
     },
+    skills: {
+      technical: { batting: 90, power: 70 },
+      tactical: { experience: 85, strategy: 80, consistency: 88, leadership: 70 },
+      physicalMental: { fitness: 75, strength: 65, speed: 60, concentration: 85, aggression: 50 },
+    },
   },
    {
     id: "player-4",
@@ -105,6 +149,7 @@ export const playersData: PlayerProfile[] = [
     dateOfBirth: "1999-07-22",
     battingStyle: "Right-hand bat",
     bowlingStyle: "Right-arm fast",
+    careerSpan: "School Career: 2020 - Present",
     bio: "Sarah leads the bowling attack for the Eagles with her express pace and ability to swing the ball. She is a genuine wicket-taker.",
     stats: {
       matchesPlayed: 40,
@@ -115,6 +160,11 @@ export const playersData: PlayerProfile[] = [
       economyRate: 4.2,
       bestBowling: "6/20",
       catches: 8,
+    },
+    skills: {
+      technical: { bowling: 92, power: 60 }, // Power more related to batting, but could be bowling power too
+      tactical: { experience: 75, strategy: 78, consistency: 70 },
+      physicalMental: { fitness: 85, strength: 70, speed: 80, concentration: 75, aggression: 85 },
     },
   },
 ];
