@@ -70,15 +70,15 @@ export default function TeamDetailsPage() {
       case "Upcoming":
       case "Rain-Delay":
       case "Play Suspended":
-        return "default"; // Base for custom bg/text using HSL vars
+      case "Completed": // Base variant can be default for custom styling
+        return "default";
       case "Live":
         return "destructive"; // Red
-      case "Completed":
-      case "Match Abandoned": // Base for custom text/opacity on gray bg
-        return "secondary"; // Gray
+      case "Match Abandoned":
+        return "secondary"; 
       case "Scheduled":
       default:
-        return "outline"; // Standard outline
+        return "outline"; 
     }
   };
 
@@ -175,6 +175,7 @@ export default function TeamDetailsPage() {
                             className={cn(
                               "whitespace-nowrap mt-1 sm:mt-0",
                               fixture.status === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground border-transparent",
+                              fixture.status === "Completed" && "bg-[hsl(120,60%,30%)] text-accent-foreground border-transparent",
                               fixture.status === "Rain-Delay" && "bg-[hsl(var(--primary))] text-primary-foreground border-transparent opacity-80",
                               fixture.status === "Play Suspended" && "bg-[hsl(var(--chart-3))] text-card-foreground border-transparent",
                               fixture.status === "Match Abandoned" && "bg-[hsl(var(--secondary))] text-muted-foreground opacity-80 border-transparent"
