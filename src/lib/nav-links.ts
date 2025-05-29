@@ -1,3 +1,4 @@
+
 import type { LucideIcon } from 'lucide-react';
 import {
   Shield, Users, CalendarDays, ListChecks, Trophy, Sparkles, UsersRound, Target, LayoutGrid, Radar, SchoolIcon, Tv, Home, Settings, FilePenLine, UserCheck, Tractor, Map
@@ -30,7 +31,7 @@ export const navLinks: NavLink[] = [
   { href: '/scoring-zones', label: 'Scoring Zones', icon: LayoutGrid, disabled: true },
   { href: '/spider-chart', label: 'Spider Chart', icon: Radar, disabled: true },
   { separator: true, href: '#', label: '', icon: Home },
-  { href: '/scorer-profiles', label: 'Scorer Profiles', icon: FilePenLine, disabled: true },
+  { href: '/scorer-profiles', label: 'Scorer Profiles', icon: FilePenLine, disabled: false },
   { href: '/umpire-profiles', label: 'Umpire Profiles', icon: UserCheck, disabled: true },
   { href: '/groundskeeper-profiles', label: 'Groundskeepers', icon: Tractor, disabled: true },
   { href: '/field-directory', label: 'Field Directory', icon: Map, disabled: true },
