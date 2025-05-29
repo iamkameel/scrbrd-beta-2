@@ -6,7 +6,7 @@ export interface Fixture {
   date: string;
   time: string;
   location: string;
-  status: "Upcoming" | "Past" | "Live"; // Added "Live" status
+  status: "Scheduled" | "Upcoming" | "Live" | "Completed" | "Match Abandoned" | "Rain-Delay" | "Play Suspended";
   umpires?: string[];
   scorers?: string[];
 }
@@ -30,7 +30,7 @@ export const fixtures: Fixture[] = [
     date: "2024-09-22", 
     time: "02:00 PM", 
     location: "Hillcrest College Green", 
-    status: "Upcoming",
+    status: "Scheduled", // Changed from Upcoming
     umpires: ["Mr. E. Evans"],
     scorers: ["Mr. F. Green (Hillcrest)"]
   },
@@ -41,7 +41,7 @@ export const fixtures: Fixture[] = [
     date: "2024-08-10", 
     time: "09:30 AM", 
     location: "City Stadium", 
-    status: "Past" 
+    status: "Completed" // Changed from Past
   },
   { 
     id: 4, 
@@ -51,7 +51,6 @@ export const fixtures: Fixture[] = [
     time: "10:00 AM", 
     location: "Michaelhouse Oval", 
     status: "Upcoming" 
-    // No umpires or scorers assigned yet for this fixture
   },
   { 
     id: 5, 
@@ -60,7 +59,7 @@ export const fixtures: Fixture[] = [
     date: "2024-08-17", 
     time: "01:00 PM", 
     location: "Academy Ground", 
-    status: "Past" 
+    status: "Completed" // Changed from Past
   },
   { 
     id: 6, 
@@ -69,11 +68,44 @@ export const fixtures: Fixture[] = [
     date: "2024-07-20", 
     time: "10:00 AM", 
     location: "Northwood Main Oval", 
-    status: "Past" 
+    status: "Completed" // Changed from Past
+  },
+  {
+    id: 7,
+    teamA: "Durban High School (DHS) 1st XI",
+    teamB: "Glenwood High School 1st XI",
+    date: "2024-10-05",
+    time: "09:00 AM",
+    location: "DHS Memorial Ground",
+    status: "Live",
+    umpires: ["Mr. G. Adams", "Ms. H. Bell"],
+    scorers: ["Mr. I. Cole (DHS)", "Ms. J. Dean (Glenwood)"]
+  },
+  {
+    id: 8,
+    teamA: "Kearsney College U14A",
+    teamB: "Westville Boys' High U14A",
+    date: "2024-10-12",
+    time: "01:30 PM",
+    location: "Kearsney AH Smith Oval",
+    status: "Rain-Delay" 
+  },
+   {
+    id: 9,
+    teamA: "Clifton School U15A",
+    teamB: "St Charles College U15A",
+    date: "2024-08-25",
+    time: "10:00 AM",
+    location: "Clifton Riverside",
+    status: "Match Abandoned"
+  },
+  {
+    id: 10,
+    teamA: "Maritzburg College 2nd XI",
+    teamB: "Hilton College 2nd XI",
+    date: "2024-10-19",
+    time: "09:45 AM",
+    location: "Goldstones",
+    status: "Play Suspended"
   },
 ];
-
-// Helper function to get team name including affiliation if it's part of a known structure
-// This is a conceptual helper, actual team naming in fixtures should be consistent.
-// For this prototype, teamA and teamB in fixtures should match affiliation + teamName from detailedTeamsData
-// e.g. "Northwood School 1st XI"

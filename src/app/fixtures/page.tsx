@@ -2,10 +2,29 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CalendarDays, Clock, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { fixtures } from "@/lib/fixtures-data"; // Import from new location
+import { fixtures, type Fixture } from "@/lib/fixtures-data"; 
 import { format } from 'date-fns';
+import { cn } from "@/lib/utils";
 
 export default function FixturesPage() {
+
+  const getStatusBadgeVariant = (status: Fixture["status"]): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+      case "Upcoming":
+        return "default";
+      case "Live":
+        return "destructive";
+      case "Completed":
+      case "Match Abandoned":
+      case "Rain-Delay":
+      case "Play Suspended":
+        return "secondary";
+      case "Scheduled":
+      default:
+        return "outline";
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -20,7 +39,12 @@ export default function FixturesPage() {
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{fixture.teamA} vs {fixture.teamB}</CardTitle>
-                    <Badge variant={fixture.status === "Upcoming" ? "default" : fixture.status === "Live" ? "destructive" : "secondary"} className={fixture.status === "Upcoming" ? "bg-[hsl(var(--accent))] text-accent-foreground" : ""}>
+                    <Badge 
+                      variant={getStatusBadgeVariant(fixture.status)} 
+                      className={cn(
+                        fixture.status === "Upcoming" ? "bg-[hsl(var(--accent))] text-accent-foreground" : ""
+                      )}
+                    >
                       {fixture.status}
                     </Badge>
                   </div>

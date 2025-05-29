@@ -7,7 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { detailedTeamsData, type Team, type Player } from '@/lib/team-data';
 import { fixtures as allFixtures, type Fixture } from '@/lib/fixtures-data';
-import { resultsData, type Result } from '@/lib/results-data'; // Import resultsData and Result type
+import { resultsData, type Result } from '@/lib/results-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,6 @@ export default function TeamDetailsPage() {
     );
   }
 
-  // Helper to get initials for avatar fallback
   const getInitials = (name: string) => {
     const names = name.split(' ');
     if (names.length > 1) {
@@ -66,9 +65,25 @@ export default function TeamDetailsPage() {
     </div>
   );
 
+  const getStatusBadgeVariant = (status: Fixture["status"]): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+      case "Upcoming":
+        return "default";
+      case "Live":
+        return "destructive";
+      case "Completed":
+      case "Match Abandoned":
+      case "Rain-Delay":
+      case "Play Suspended":
+        return "secondary";
+      case "Scheduled":
+      default:
+        return "outline";
+    }
+  };
+
   return (
     <div className="container mx-auto py-8 space-y-8">
-      {/* Back Button */}
       <Button asChild variant="outline" className="mb-6">
         <Link href="/teams">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -76,7 +91,6 @@ export default function TeamDetailsPage() {
         </Link>
       </Button>
 
-      {/* Team Header */}
       <Card className="overflow-hidden">
         <div className="relative h-48 md:h-64 bg-muted">
           <Image 
@@ -98,9 +112,7 @@ export default function TeamDetailsPage() {
       </Card>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column / Main Column on smaller screens */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Squad Members Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
@@ -138,7 +150,6 @@ export default function TeamDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Match Fixtures Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
@@ -151,7 +162,7 @@ export default function TeamDetailsPage() {
               {teamFixtures.length > 0 ? (
                 <div className="space-y-4">
                   {teamFixtures.map((fixture) => {
-                    const matchResult = fixture.status === "Past" 
+                    const matchResult = fixture.status === "Completed" 
                       ? resultsData.find(r => r.fixtureId === fixture.id) 
                       : undefined;
 
@@ -160,7 +171,7 @@ export default function TeamDetailsPage() {
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
                           <p className="font-semibold text-md mb-1 sm:mb-0">{fixture.teamA} vs {fixture.teamB}</p>
                           <Badge 
-                            variant={fixture.status === "Upcoming" ? "default" : fixture.status === "Live" ? "destructive" : "secondary"} 
+                            variant={getStatusBadgeVariant(fixture.status)}
                             className={cn(
                               fixture.status === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground",
                               "whitespace-nowrap mt-1 sm:mt-0"
@@ -181,7 +192,7 @@ export default function TeamDetailsPage() {
                         )}
 
                         <div className="flex flex-wrap gap-2 pt-2">
-                          {fixture.status === "Upcoming" && (
+                          {(fixture.status === "Upcoming" || fixture.status === "Scheduled") && (
                             <Button asChild variant="outline" size="sm">
                               <Link href={`/prematch-team/${fixture.id}`}>
                                 <ClipboardList className="mr-2 h-4 w-4" />
@@ -189,7 +200,7 @@ export default function TeamDetailsPage() {
                               </Link>
                             </Button>
                           )}
-                          {fixture.status === "Past" && (
+                          {fixture.status === "Completed" && (
                             <Button asChild variant="outline" size="sm">
                              <Link href={`/scorecard/${fixture.id}`}>
                                 <FileText className="mr-2 h-4 w-4" />
@@ -209,9 +220,7 @@ export default function TeamDetailsPage() {
           </Card>
         </div>
 
-        {/* Right Column / Secondary Column on smaller screens */}
         <div className="space-y-6">
-          {/* Team Details Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
@@ -228,7 +237,6 @@ export default function TeamDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Performance Stats Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
