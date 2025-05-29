@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, BarChart3, Briefcase, Info, ShieldCheck, Star, Target, Zap, Brain, CalendarDays, Hash, AtSign, Activity, TrendingUp, Crosshair } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
 
 const StatItem: React.FC<{ label: string; value: string | number | undefined; icon?: React.ElementType }> = ({ label, value, icon: Icon }) => (
@@ -131,43 +132,54 @@ export default function PlayerProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-2 flex items-center gap-1.5">
-                  <Target className="h-5 w-5 text-[hsl(var(--accent))]"/> Batting
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                  <StatItem label="Matches" value={player.stats.matchesPlayed} icon={Hash}/>
-                  <StatItem label="Runs Scored" value={player.stats.runs} icon={TrendingUp} />
-                  <StatItem label="Average" value={player.stats.average} icon={Activity}/>
-                  <StatItem label="Strike Rate" value={player.stats.strikeRate} icon={Zap}/>
-                  <StatItem label="Highest Score" value={player.stats.highestScore} icon={Star}/>
-                  <StatItem label="100s" value={player.stats.hundreds} />
-                  <StatItem label="50s" value={player.stats.fifties} />
-                </div>
-              </div>
-              <Separator />
-              <div>
-                <h3 className="text-lg font-semibold mb-2 flex items-center gap-1.5">
-                  <Zap className="h-5 w-5 text-[hsl(var(--accent))]"/> Bowling
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                  <StatItem label="Matches" value={player.stats.matchesPlayed} icon={Hash} />
-                  <StatItem label="Wickets Taken" value={player.stats.wickets} icon={Crosshair}/>
-                  <StatItem label="Average" value={player.stats.bowlingAverage} icon={Activity}/>
-                  <StatItem label="Economy Rate" value={player.stats.economyRate} icon={Zap}/>
-                  <StatItem label="Best Bowling" value={player.stats.bestBowling} icon={Star}/>
-                </div>
-              </div>
-              <Separator />
-               <div>
-                <h3 className="text-lg font-semibold mb-2 flex items-center gap-1.5">
-                  <ShieldCheck className="h-5 w-5 text-[hsl(var(--accent))]"/> Fielding
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                  <StatItem label="Catches" value={player.stats.catches} />
-                  <StatItem label="Stumpings" value={player.stats.stumpings} />
-                </div>
-              </div>
+              <Tabs defaultValue="batting" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="batting">Batting</TabsTrigger>
+                  <TabsTrigger value="bowling">Bowling</TabsTrigger>
+                  <TabsTrigger value="fielding">Fielding</TabsTrigger>
+                </TabsList>
+                <TabsContent value="batting" className="mt-4">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-1.5">
+                      <Target className="h-5 w-5 text-[hsl(var(--accent))]"/> Batting
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                      <StatItem label="Matches" value={player.stats.matchesPlayed} icon={Hash}/>
+                      <StatItem label="Runs Scored" value={player.stats.runs} icon={TrendingUp} />
+                      <StatItem label="Average" value={player.stats.average} icon={Activity}/>
+                      <StatItem label="Strike Rate" value={player.stats.strikeRate} icon={Zap}/>
+                      <StatItem label="Highest Score" value={player.stats.highestScore} icon={Star}/>
+                      <StatItem label="100s" value={player.stats.hundreds} />
+                      <StatItem label="50s" value={player.stats.fifties} />
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="bowling" className="mt-4">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-1.5">
+                      <Zap className="h-5 w-5 text-[hsl(var(--accent))]"/> Bowling
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                      <StatItem label="Matches" value={player.stats.matchesPlayed} icon={Hash} />
+                      <StatItem label="Wickets Taken" value={player.stats.wickets} icon={Crosshair}/>
+                      <StatItem label="Average" value={player.stats.bowlingAverage} icon={Activity}/>
+                      <StatItem label="Economy Rate" value={player.stats.economyRate} icon={Zap}/>
+                      <StatItem label="Best Bowling" value={player.stats.bestBowling} icon={Star}/>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="fielding" className="mt-4">
+                   <div>
+                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-1.5">
+                      <ShieldCheck className="h-5 w-5 text-[hsl(var(--accent))]"/> Fielding
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                      <StatItem label="Catches" value={player.stats.catches} />
+                      <StatItem label="Stumpings" value={player.stats.stumpings} />
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
 
