@@ -2,6 +2,7 @@
 "use client";
 
 import * as React from 'react';
+import { useTheme } from "next-themes";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,9 +11,18 @@ import { Button } from "@/components/ui/button";
 import { Settings as SettingsIcon, Users, Power, SlidersHorizontal, Trash2 } from "lucide-react";
 
 export default function AdminSettingsPage() {
+  const { theme, setTheme } = useTheme();
   // Placeholder state for visual toggles
-  const [darkModeDefault, setDarkModeDefault] = React.useState(false);
   const [maintenanceMode, setMaintenanceMode] = React.useState(false);
+
+  // Ensure the component is mounted before using the theme state for the switch
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    // Render nothing or a skeleton to avoid hydration mismatch
+    return null; 
+  }
 
   return (
     <div className="space-y-8">
@@ -46,13 +56,13 @@ export default function AdminSettingsPage() {
           </div>
           <div className="flex items-center space-x-2 pt-4">
             <Switch
-              id="darkModeDefault"
-              checked={darkModeDefault}
-              onCheckedChange={setDarkModeDefault}
-              aria-label="Default Dark Mode Toggle"
+              id="darkModeToggle"
+              checked={theme === 'dark'}
+              onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+              aria-label="Dark Mode Toggle"
             />
-            <Label htmlFor="darkModeDefault" className="cursor-pointer">
-              Enable Dark Mode by Default for New Users
+            <Label htmlFor="darkModeToggle" className="cursor-pointer">
+              Dark Mode
             </Label>
           </div>
         </CardContent>
