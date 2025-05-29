@@ -8,8 +8,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, User } from "lucide-react";
+import { Search, User, Filter, Users as TeamIcon, Briefcase } from "lucide-react";
 import { playersData, type PlayerProfile, type PlayerSkills } from "@/lib/player-data";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const CompactStatDisplay: React.FC<{ label: string; value: string | number | undefined }> = ({ label, value }) => (
   <div className="text-center px-1">
@@ -48,14 +57,37 @@ const calculateOverallRating = (skills: PlayerSkills | undefined): string | numb
 
 export default function PlayersPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [teamFilter, setTeamFilter] = React.useState("all");
+  const [roleFilter, setRoleFilter] = React.useState("all");
+
+  const uniqueTeams = React.useMemo(() => {
+    const teams = new Set(playersData.map(player => player.team));
+    return ["all", ...Array.from(teams).sort()];
+  }, []);
+
+  const uniqueRoles = React.useMemo(() => {
+    const roles = new Set(playersData.map(player => player.role));
+    return ["all", ...Array.from(roles).sort()];
+  }, []);
 
   const filteredPlayers = React.useMemo(() => {
-    return playersData.filter(player =>
-      player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      player.team.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      player.role.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [searchTerm]);
+    return playersData.filter(player => {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch =
+        searchTerm === "" || // If search term is empty, it's a match for this part
+        player.name.toLowerCase().includes(searchLower) ||
+        player.team.toLowerCase().includes(searchLower) ||
+        player.role.toLowerCase().includes(searchLower);
+
+      const matchesTeam =
+        teamFilter === "all" || player.team === teamFilter;
+
+      const matchesRole =
+        roleFilter === "all" || player.role === roleFilter;
+
+      return matchesSearch && matchesTeam && matchesRole;
+    });
+  }, [searchTerm, teamFilter, roleFilter]);
 
   return (
     <div className="space-y-6">
@@ -64,19 +96,60 @@ export default function PlayersPage() {
           <CardTitle className="text-2xl flex items-center gap-2">
             <User className="h-6 w-6 text-[hsl(var(--primary))]" />
             Player Profiles
-            </CardTitle>
-          <CardDescription>Discover player statistics and career highlights.</CardDescription>
+          </CardTitle>
+          <CardDescription>Discover player statistics and career highlights. Filter by team and role.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-grow">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Search players by name, team, or role..."
+                placeholder="Search by name..."
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+            </div>
+            <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex-grow sm:flex-grow-0">
+                    <TeamIcon className="mr-2 h-4 w-4" />
+                    Team: {teamFilter === "all" ? "All" : teamFilter}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  <DropdownMenuLabel>Filter by Team</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup value={teamFilter} onValueChange={setTeamFilter}>
+                    {uniqueTeams.map(team => (
+                      <DropdownMenuRadioItem key={team} value={team}>
+                        {team === "all" ? "All Teams" : team}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex-grow sm:flex-grow-0">
+                    <Briefcase className="mr-2 h-4 w-4" />
+                    Role: {roleFilter === "all" ? "All" : roleFilter}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  <DropdownMenuLabel>Filter by Role</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup value={roleFilter} onValueChange={setRoleFilter}>
+                    {uniqueRoles.map(role => (
+                      <DropdownMenuRadioItem key={role} value={role}>
+                        {role === "all" ? "All Roles" : role}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -86,8 +159,8 @@ export default function PlayersPage() {
                 const overallRating = calculateOverallRating(player.skills);
                 return (
                   <Card key={player.id} className="hover:shadow-lg transition-shadow flex flex-col">
-                    <CardHeader className="flex flex-row items-start gap-4 pb-3"> {/* Adjusted pb */}
-                      <Avatar className="h-16 w-16 mt-1"> {/* Added mt-1 for alignment */}
+                    <CardHeader className="flex flex-row items-start gap-4 pb-3">
+                      <Avatar className="h-16 w-16 mt-1">
                         <AvatarImage src={player.avatar} alt={player.name} data-ai-hint="player portrait" />
                         <AvatarFallback>{player.name.substring(0,2).toUpperCase()}</AvatarFallback>
                       </Avatar>
@@ -95,7 +168,7 @@ export default function PlayersPage() {
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-lg">{player.name}</CardTitle>
                           {overallRating !== 'N/A' && (
-                            <Badge variant="secondary" className="ml-2"> {/* Added ml-2 for spacing */}
+                            <Badge variant="secondary" className="ml-2">
                               {overallRating}
                             </Badge>
                           )}
@@ -113,8 +186,8 @@ export default function PlayersPage() {
                         <CompactStatDisplay label="Catches" value={player.stats.catches} />
                       </div>
                     </CardContent>
-                    <CardContent className="pt-0 mt-auto">
-                       <Button asChild variant="link" className="p-0 h-auto text-primary">
+                    <CardContent className="pt-2 pb-4 mt-auto">
+                       <Button asChild variant="default" size="sm" className="w-full">
                           <Link href={`/players/${player.id}`}>View Full Profile</Link>
                         </Button>
                     </CardContent>
@@ -123,7 +196,7 @@ export default function PlayersPage() {
               })}
             </div>
           ) : (
-            <p className="text-center text-muted-foreground py-4">No players found matching your search.</p>
+            <p className="text-center text-muted-foreground py-4">No players found matching your search or filters.</p>
           )}
         </CardContent>
       </Card>
