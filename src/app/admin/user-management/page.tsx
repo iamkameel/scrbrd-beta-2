@@ -5,6 +5,7 @@ import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
-import { UserCog, Edit3 } from "lucide-react";
+import { UserCog, Edit3, Search } from "lucide-react";
 
 const ALL_ROLES = [
   "Admin", "School", "Coach", "Player", "Parent", "Captain",
@@ -44,6 +45,7 @@ const initialSampleUsers: AdminUser[] = [
 
 export default function UserManagementPage() {
   const [users, setUsers] = React.useState<AdminUser[]>(initialSampleUsers);
+  const [searchTerm, setSearchTerm] = React.useState("");
 
   const handleRoleChange = (userId: string, newRole: UserRole) => {
     setUsers(prevUsers =>
@@ -62,6 +64,17 @@ export default function UserManagementPage() {
       )
     );
   };
+
+  const filteredUsers = React.useMemo(() => {
+    if (!searchTerm) {
+      return users;
+    }
+    const lowercasedSearchTerm = searchTerm.toLowerCase();
+    return users.filter(user =>
+      user.name.toLowerCase().includes(lowercasedSearchTerm) ||
+      user.email.toLowerCase().includes(lowercasedSearchTerm)
+    );
+  }, [users, searchTerm]);
   
   return (
     <div className="space-y-8">
@@ -70,21 +83,29 @@ export default function UserManagementPage() {
           <UserCog className="h-8 w-8 text-primary" />
           User Management
         </h1>
-        {/* Placeholder for Add User button or other global actions */}
-        {/* <Button disabled>Add New User</Button> */}
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">User Accounts</CardTitle>
-          <CardDescription>Manage user accounts, roles, and permissions.</CardDescription>
+          <CardDescription>Manage user accounts, roles, and permissions. Search by name or email.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {users.length === 0 ? (
-            <p className="text-muted-foreground text-center">No users to display.</p>
+        <CardContent className="space-y-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or email..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {filteredUsers.length === 0 ? (
+            <p className="text-muted-foreground text-center py-4">No users match your search criteria.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <Card key={user.id} className="flex flex-col">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg">{user.name}</CardTitle>
