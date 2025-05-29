@@ -5,8 +5,8 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button"; // For potential future use
-import { MapPin, Search, Construction } from "lucide-react"; // Using Construction as a general field icon
+import { Button } from "@/components/ui/button";
+import { MapPin, Search, Construction } from "lucide-react";
 import { schoolsData, type SchoolProfile } from '@/lib/schools-data';
 import { Badge } from '@/components/ui/badge';
 
@@ -86,7 +86,7 @@ export default function FieldDirectoryPage() {
                     </div>
                      <Badge variant="outline">{field.schoolLocation}</Badge>
                     <div className="pt-2">
-                      <Button asChild variant="link" className="p-0 h-auto text-sm text-primary">
+                      <Button asChild variant="outline" size="sm">
                         <Link href={`/schools/${field.schoolId}`}>View School Profile</Link>
                       </Button>
                     </div>
