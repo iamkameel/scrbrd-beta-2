@@ -1,0 +1,93 @@
+
+export interface OfficiatedMatch {
+  fixtureId: number;
+  matchDescription: string; // e.g., "Team A vs Team B"
+  date: string;
+  role?: "Main Umpire" | "Leg Umpire" | "Third Umpire"; // Optional role in the match
+  result?: string; // e.g., "Team A won by 5 wickets"
+}
+
+export interface UmpireProfile {
+  id: string;
+  name: string;
+  avatar: string;
+  email: string;
+  phone: string;
+  umpiringLevel: "Club Panel" | "Level 1" | "Level 2" | "National Panel";
+  availability: "Weekends Only" | "Weekdays Available" | "Fully Available";
+  experienceYears: number;
+  matchesOfficiatedCount: number;
+  reliabilityScore?: number; // Optional: 0-100
+  associatedClubOrUnion?: string;
+  bio?: string;
+  recentMatchesOfficiated: OfficiatedMatch[];
+}
+
+export const umpiresData: UmpireProfile[] = [
+  {
+    id: "umpire-1",
+    name: "Edward Norton",
+    avatar: "https://placehold.co/100x100.png",
+    email: "edward.n@example.com",
+    phone: "555-0201",
+    umpiringLevel: "Level 2",
+    availability: "Weekends Only",
+    experienceYears: 7,
+    matchesOfficiatedCount: 120,
+    reliabilityScore: 96,
+    associatedClubOrUnion: "Durban Cricket Umpires Association",
+    bio: "Experienced Level 2 umpire with a strong understanding of the game. Fair and decisive.",
+    recentMatchesOfficiated: [
+      { fixtureId: 1, matchDescription: "Northwood School 1st XI vs Panthers Academy", date: "2024-09-15", role: "Main Umpire", result: "Pending" },
+      { fixtureId: 3, matchDescription: "Riverdale Cricket Club Seniors vs Sharks United", date: "2024-08-10", role: "Leg Umpire", result: "Riverdale won by 15 runs" },
+    ],
+  },
+  {
+    id: "umpire-2",
+    name: "Fiona Gallagher",
+    avatar: "https://placehold.co/100x100.png",
+    email: "fiona.g@example.com",
+    phone: "555-0202",
+    umpiringLevel: "National Panel",
+    availability: "Fully Available",
+    experienceYears: 12,
+    matchesOfficiatedCount: 350,
+    reliabilityScore: 99,
+    associatedClubOrUnion: "CSA Elite Panel",
+    bio: "National Panel umpire with extensive experience in top-tier matches. Highly respected for her professionalism.",
+    recentMatchesOfficiated: [
+      { fixtureId: 5, matchDescription: "Panthers Academy vs Hillcrest College U16", date: "2024-08-17", role: "Main Umpire", result: "Hillcrest won by 5 wickets" },
+      { fixtureId: 7, matchDescription: "DHS 1st XI vs Glenwood 1st XI", date: "2024-10-05", role: "Main Umpire", result: "Live" },
+    ],
+  },
+  {
+    id: "umpire-3",
+    name: "George Harrison",
+    avatar: "https://placehold.co/100x100.png",
+    email: "george.h@example.com",
+    phone: "555-0203",
+    umpiringLevel: "Level 1",
+    availability: "Weekdays Available",
+    experienceYears: 3,
+    matchesOfficiatedCount: 50,
+    associatedClubOrUnion: "Pietermaritzburg Umpires Society",
+    bio: "Level 1 umpire building experience in school and club cricket. Eager and knowledgeable.",
+    recentMatchesOfficiated: [
+      { fixtureId: 2, matchDescription: "Hillcrest College U16 vs Knights School", date: "2024-09-22", role: "Main Umpire", result: "Pending" },
+    ],
+  },
+  {
+    id: "umpire-4",
+    name: "Helen Mirren",
+    avatar: "https://placehold.co/100x100.png",
+    email: "helen.m@example.com",
+    phone: "555-0204",
+    umpiringLevel: "Club Panel",
+    availability: "Weekends Only",
+    experienceYears: 1,
+    matchesOfficiatedCount: 20,
+    reliabilityScore: 92,
+    bio: "New Club Panel umpire, committed to learning and contributing to local cricket.",
+    recentMatchesOfficiated: [],
+  },
+];
