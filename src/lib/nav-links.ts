@@ -33,7 +33,7 @@ export const navLinks: NavLink[] = [
   { separator: true, href: '#', label: '', icon: Home },
   { href: '/scorer-profiles', label: 'Scorer Profiles', icon: FilePenLine, disabled: false },
   { href: '/umpire-profiles', label: 'Umpire Profiles', icon: UserCheck, disabled: false },
-  { href: '/groundskeeper-profiles', label: 'Groundskeepers', icon: Tractor, disabled: true },
+  { href: '/groundskeeper-profiles', label: 'Groundskeepers', icon: Tractor, disabled: false },
   { href: '/field-directory', label: 'Field Directory', icon: Map, disabled: true },
 ];
 
