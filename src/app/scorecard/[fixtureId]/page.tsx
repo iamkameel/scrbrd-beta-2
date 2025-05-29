@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { fixtures as allFixtures, type Fixture } from '@/lib/fixtures-data';
-import { resultsData, type Result, type InningsData, type BatsmanScore, type BowlerScore } from '@/lib/results-data';
+import { resultsData, type Result, type InningsData, type BatsmanScore, type BowlerScore, FallOfWicket } from '@/lib/results-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -40,7 +40,7 @@ function getTopBowlers(teamName: string, inningsData: InningsData[] | undefined,
   if (!inningsData) return [];
   const allTeamBowlingScores: BowlerScore[] = [];
   inningsData.forEach(inning => {
-    if (inning.bowlingTeam === teamName) { // Corrected: Check bowlingTeam
+    if (inning.bowlingTeam === teamName) { 
       allTeamBowlingScores.push(...inning.bowlingScores.filter(bs => typeof bs.wickets === 'number' && typeof bs.runsConceded === 'number'));
     }
   });
@@ -79,6 +79,8 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
   innings.battingScores.forEach(bs => battingScoresMap.set(bs.name, bs));
 
   let currentScore = 0;
+  
+  // Initialize activeBatsmen based on batting order
   let activeBatsmen: [BatsmanScore | undefined, BatsmanScore | undefined] = [
     innings.battingScores.length > 0 ? battingScoresMap.get(innings.battingScores[0].name) : undefined,
     innings.battingScores.length > 1 ? battingScoresMap.get(innings.battingScores[1].name) : undefined,
@@ -98,19 +100,31 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
       partnerBatsmanObj = activeBatsmen[1];
     } else if (activeBatsmen[1]?.name === fow.batsmanOut) {
       partnerBatsmanObj = activeBatsmen[0];
+    } else {
+       // This case might happen if the batting order or FOW data is inconsistent.
+       // Or if one of the active batsmen retired hurt and was replaced earlier.
+       // For simplicity, we'll try to find any other batsman who was at the crease.
+       // This is a heuristic and might not always be accurate.
+       const otherBatsmenAtCrease = innings.battingScores.filter(bs => 
+         bs.name !== fow.batsmanOut && 
+         (activeBatsmen[0]?.name === bs.name || activeBatsmen[1]?.name === bs.name)
+       );
+       if(otherBatsmenAtCrease.length > 0) partnerBatsmanObj = otherBatsmenAtCrease[0];
     }
 
     partnerships.push({
       wicketOrdinal: `${getOrdinal(fow.wicket)} Wicket`,
       batsman1Name: dismissedBatsmanObj?.name || fow.batsmanOut,
       batsman2Name: partnerBatsmanObj?.name || "Partner",
-      partnershipRuns: partnershipRuns < 0 ? 0 : partnershipRuns, // Ensure non-negative
+      partnershipRuns: partnershipRuns < 0 ? 0 : partnershipRuns, 
       batsman1TotalRunsAtWicket: dismissedBatsmanObj?.runs || 0,
       batsman2TotalRunsAtWicket: partnerBatsmanObj?.runs || 0,
     });
-
+    
     let newBatsmanToCrease: BatsmanScore | undefined;
-    const newBatsmanOrderIndex = fow.wicket + 1; // e.g. 1st wicket (fow.wicket=1), new batsman is battingScores[2]
+    // The new batsman is the (wicket number + 2)-th batsman in the batting order.
+    // fow.wicket is 1-indexed, array is 0-indexed. So, index is fow.wicket + 1.
+    const newBatsmanOrderIndex = fow.wicket + 1; 
     if (newBatsmanOrderIndex < innings.battingScores.length) {
         const newBatsmanData = innings.battingScores[newBatsmanOrderIndex];
         if (newBatsmanData) {
@@ -123,6 +137,8 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
     } else if (activeBatsmen[1]?.name === fow.batsmanOut) {
       activeBatsmen = [activeBatsmen[0], newBatsmanToCrease];
     } else {
+       // If the dismissed batsman wasn't one of the tracked active ones (e.g. due to prior logic or data issue)
+       // Re-initialize with the partner and the new batsman
       activeBatsmen = [partnerBatsmanObj || undefined, newBatsmanToCrease];
     }
   }
@@ -135,31 +151,35 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
     let b1Name = activeBatsmen[0]?.name || "N/A";
     let b2Name = activeBatsmen[1]?.name || (activeBatsmen[0] ? "Partner" : "N/A");
 
+    // Try to get actual not out batsmen if available
     const notOutBatsmen = innings.battingScores.filter(bs => bs.dismissal.toLowerCase().includes('not out'));
     if (notOutBatsmen.length === 1) {
         b1Name = notOutBatsmen[0].name;
-        if (activeBatsmen[0]?.name === notOutBatsmen[0].name) {
-            b2Name = activeBatsmen[1]?.name || "Partner";
-        } else if (activeBatsmen[1]?.name === notOutBatsmen[0].name) {
-            b2Name = activeBatsmen[0]?.name || "Partner";
+        // Find the partner if the other active batsman is not the same as the notOut one
+        if (activeBatsmen[0]?.name === notOutBatsmen[0].name && activeBatsmen[1]) {
+            b2Name = activeBatsmen[1].name;
+        } else if (activeBatsmen[1]?.name === notOutBatsmen[0].name && activeBatsmen[0]) {
+            b2Name = activeBatsmen[0].name;
         } else {
-            b2Name = "Partner";
+           b2Name = "Partner"; // Fallback if partner logic above is complex
         }
     } else if (notOutBatsmen.length >= 2) {
+        // If two are not out, these are likely the active ones
         b1Name = notOutBatsmen[0].name;
         b2Name = notOutBatsmen[1].name;
     }
     
-    if (b1Name !== "N/A" && b1Name === b2Name) {
-        b2Name = "Partner";
+    if (b1Name !== "N/A" && b1Name === b2Name && b2Name !== "Partner") {
+        b2Name = "Partner"; // Ensure b2Name is different if it accidentally became same as b1Name
     }
 
-    if ((b1Name !== "N/A" || b2Name !== "N/A") && partnershipRuns >= 0) {
+
+    if ((b1Name !== "N/A" || (b2Name !== "N/A" && b2Name !== "Partner")) && partnershipRuns >= 0) {
         partnerships.push({
           batsman1Name: b1Name,
           batsman2Name: b2Name,
           partnershipRuns,
-          wicketOrdinal: `${getOrdinal(wicketsFallen + 1)} Wicket`, // "Not Out Partnership" or "Last Wicket"
+          wicketOrdinal: `${getOrdinal(wicketsFallen + 1)} Wicket`, 
           batsman1TotalRunsAtWicket: battingScoresMap.get(b1Name)?.runs || 0,
           batsman2TotalRunsAtWicket: battingScoresMap.get(b2Name)?.runs || 0,
         });
@@ -368,14 +388,14 @@ export default function ScorecardPage() {
                     {result.innings.map((inningData, index) => {
                       const partnershipVisualData = generatePartnershipUIData(inningData);
                       const chartConfig = {
-                        partnershipRuns: { label: "Partnership Runs", color: "hsl(var(--chart-1))" }, // Updated color
+                        partnershipRuns: { label: "Partnership Runs", color: "hsl(var(--chart-1))" },
                       };
                       return (
                         <TabsContent key={`content-innings-${inningData.inningsNumber}`} value={`innings-${inningData.inningsNumber}`} className="mt-4">
                           <Accordion type="multiple" defaultValue={['batting', 'bowling', 'extras']} className="w-full space-y-4">
                             <AccordionItem value="batting">
                               <AccordionTrigger className="text-lg font-medium p-4 bg-muted/50 rounded-t-md hover:no-underline">
-                                Batting
+                                Batting - {inningData.battingTeam}
                               </AccordionTrigger>
                               <AccordionContent className="border border-t-0 rounded-b-md p-0">
                                 <div className="p-4">
@@ -403,6 +423,15 @@ export default function ScorecardPage() {
                                           <TableCell className="text-right">{batter.strikeRate}</TableCell>
                                         </TableRow>
                                       ))}
+                                      <TableRow>
+                                        <TableCell className="font-medium">Extras</TableCell>
+                                        <TableCell className="text-muted-foreground">{inningData.extras.details}</TableCell>
+                                        <TableCell className="text-right font-bold">{inningData.extras.total}</TableCell>
+                                        <TableCell className="text-right"></TableCell>
+                                        <TableCell className="text-right"></TableCell>
+                                        <TableCell className="text-right"></TableCell>
+                                        <TableCell className="text-right"></TableCell>
+                                      </TableRow>
                                       <TableRow className="bg-muted/50">
                                         <TableCell colSpan={2} className="font-bold text-lg">Total</TableCell>
                                         <TableCell className="text-right font-bold text-lg" colSpan={5}>{inningData.totalScoreString} ({inningData.oversPlayed})</TableCell>
@@ -439,7 +468,7 @@ export default function ScorecardPage() {
                             
                             <AccordionItem value="bowling">
                               <AccordionTrigger className="text-lg font-medium p-4 bg-muted/50 rounded-t-md hover:no-underline">
-                                 Bowling
+                                 Bowling - {inningData.bowlingTeam}
                               </AccordionTrigger>
                               <AccordionContent className="border border-t-0 rounded-b-md p-0">
                                 <div className="p-4">
@@ -491,7 +520,7 @@ export default function ScorecardPage() {
                             
                              <AccordionItem value="extras">
                                 <AccordionTrigger className="text-lg font-medium p-4 bg-muted/50 rounded-t-md hover:no-underline">
-                                  Extras
+                                  Extras Summary
                                 </AccordionTrigger>
                                 <AccordionContent className="border border-t-0 rounded-b-md p-0">
                                 <div className="p-4">
