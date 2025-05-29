@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, BarChart3, Briefcase, Info, ShieldCheck, Star, Target, Zap, Brain, CalendarDays, Hash, AtSign, Activity } from "lucide-react";
+import { ArrowLeft, BarChart3, Briefcase, Info, ShieldCheck, Star, Target, Zap, Brain, CalendarDays, Hash, AtSign, Activity, TrendingUp, Crosshair } from "lucide-react";
 import { format } from 'date-fns';
 
 const StatItem: React.FC<{ label: string; value: string | number | undefined; icon?: React.ElementType }> = ({ label, value, icon: Icon }) => (
@@ -219,3 +219,4 @@ export default function PlayerProfilePage() {
     </div>
   );
 }
+
