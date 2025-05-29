@@ -9,9 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, BarChart3, Briefcase, Info, ShieldCheck, Star, Target, Zap, Brain, CalendarDays, Hash, AtSign, Activity, TrendingUp, Crosshair, Users } from "lucide-react";
+import { ArrowLeft, BarChart3, Briefcase, Info, ShieldCheck, Star, Target, Zap, Brain, CalendarDays, Hash, AtSign, Activity, TrendingUp, Crosshair, Users, Shirt, ShieldQuestion } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const StatItem: React.FC<{ label: string; value: string | number | undefined; icon?: React.ElementType }> = ({ label, value, icon: Icon }) => (
   <div className="flex justify-between py-2 border-b border-border/50 last:border-b-0">
@@ -79,6 +80,12 @@ const SkillCategory: React.FC<{ title: string; skills: Record<string, number | u
   );
 };
 
+const PlayerStatDisplay: React.FC<{ label: string; value: string | number | undefined }> = ({ label, value }) => (
+  <div className="text-center">
+    <p className="text-xs uppercase text-muted-foreground tracking-wider">{label}</p>
+    <p className="text-xl font-bold text-foreground">{value !== undefined ? value : '-'}</p>
+  </div>
+);
 
 export default function PlayerProfilePage() {
   const params = useParams();
@@ -105,6 +112,8 @@ export default function PlayerProfilePage() {
       </div>
     );
   }
+  
+  const roleAbbreviation = player.role.substring(0,2).toUpperCase();
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -115,27 +124,67 @@ export default function PlayerProfilePage() {
         </Link>
       </Button>
 
-      <Card className="overflow-hidden">
-        <CardHeader className="p-0 relative">
-          <div className="h-40 bg-muted/50">
-             <Image src="https://placehold.co/1200x300.png" alt={`${player.name} cover image`} layout="fill" objectFit="cover" className="opacity-50" data-ai-hint="stadium crowd" />
+      {/* Player Card Overview */}
+      <Card className="overflow-hidden shadow-xl bg-card border-2 border-primary/20 rounded-xl">
+        <div className="relative p-6 bg-gradient-to-br from-primary/90 to-primary/70 text-primary-foreground rounded-t-lg">
+          {/* Top section: Rating, Role, Team Logos (simplified) */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="text-left">
+              <p className="text-4xl font-bold leading-none">
+                {/* Placeholder for Overall Rating, using a skill or N/A */}
+                {player.skills?.technical?.battingTechnique ? Math.round(player.skills.technical.battingTechnique / 100 * 90) + 5 : 'N/A'}
+              </p>
+              <p className="text-lg font-semibold uppercase tracking-wider">{roleAbbreviation}</p>
+            </div>
+            <div className="flex flex-col items-end space-y-1">
+               {/* Simplified Team display */}
+              <div className="flex items-center gap-2 p-2 bg-black/20 rounded-md">
+                <ShieldQuestion className="h-5 w-5" /> {/* Placeholder for team logo */}
+                <span className="text-xs font-medium">{player.team}</span>
+              </div>
+              {/* Placeholder for national team if data was available */}
+            </div>
           </div>
-          <div className="absolute bottom-0 left-6 transform translate-y-1/2">
-            <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
-              <AvatarImage src={player.avatar} alt={player.name} data-ai-hint="player action" />
-              <AvatarFallback className="text-4xl">{player.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+
+          {/* Player Image */}
+          <div className="flex justify-center mb-2">
+            <Avatar className="h-40 w-40 border-4 border-background shadow-2xl">
+              <AvatarImage src={player.avatar} alt={player.name} data-ai-hint="player action" className="object-cover"/>
+              <AvatarFallback className="text-5xl">{player.name.substring(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
           </div>
-        </CardHeader>
-        <CardContent className="pt-20 pb-6 px-6">
-          <CardTitle className="text-3xl font-bold">{player.name}</CardTitle>
-          <CardDescription className="text-lg text-muted-foreground">
-            {player.role} for {player.team}
-          </CardDescription>
-          {player.careerSpan && <p className="text-sm text-muted-foreground mt-1">{player.careerSpan}</p>}
-        </CardContent>
+        </div>
+        
+        {/* Player Name */}
+        <div className="text-center py-4 bg-card border-t border-b border-border">
+          <h1 className="text-3xl font-bold text-foreground">{player.name}</h1>
+          <p className="text-sm text-muted-foreground">{player.role} {player.careerSpan && `| ${player.careerSpan}`}</p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="p-6 bg-card rounded-b-lg">
+          <div className="space-y-5">
+            {/* Batting Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <PlayerStatDisplay label="Mat" value={player.stats.matchesPlayed} />
+              <PlayerStatDisplay label="Runs" value={player.stats.runs} />
+              <PlayerStatDisplay label="Bat Avg" value={player.stats.average} />
+              <PlayerStatDisplay label="SR" value={player.stats.strikeRate} />
+            </div>
+            {/* Bowling Stats & Fielding */}
+            {(player.stats.wickets !== undefined || player.stats.bowlingAverage !== undefined || player.stats.economyRate !== undefined || player.stats.catches !== undefined) && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-border/50">
+                <PlayerStatDisplay label="Wkts" value={player.stats.wickets} />
+                <PlayerStatDisplay label="Bowl Avg" value={player.stats.bowlingAverage} />
+                <PlayerStatDisplay label="Econ" value={player.stats.economyRate} />
+                <PlayerStatDisplay label="Catches" value={player.stats.catches} />
+              </div>
+            )}
+          </div>
+        </div>
       </Card>
 
+      {/* Original Content: Bio, Detailed Stats Tabs, Skills etc. */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           {player.bio && (
@@ -154,7 +203,7 @@ export default function PlayerProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-xl flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-[hsl(var(--primary))]"/> Career Statistics
+                <BarChart3 className="h-5 w-5 text-[hsl(var(--primary))]"/> Detailed Career Statistics
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -258,3 +307,4 @@ export default function PlayerProfilePage() {
     </div>
   );
 }
+
