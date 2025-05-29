@@ -40,6 +40,7 @@ function getTopBowlers(teamName: string, inningsData: InningsData[] | undefined,
   if (!inningsData) return [];
   const allTeamBowlingScores: BowlerScore[] = [];
   inningsData.forEach(inning => {
+    // Corrected to check bowlingTeam
     if (inning.bowlingTeam === teamName) { 
       allTeamBowlingScores.push(...inning.bowlingScores.filter(bs => typeof bs.wickets === 'number' && typeof bs.runsConceded === 'number'));
     }
@@ -65,14 +66,15 @@ interface PartnershipChartDataItem {
   wicketOrdinal: string;
   batsman1Name: string;
   batsman2Name: string;
-  batsman1TotalRunsAtWicket: number;
   partnershipRuns: number;
+  // These are total runs for the batsmen at the point the partnership ended or innings ended
+  batsman1TotalRunsAtWicket: number; 
   batsman2TotalRunsAtWicket: number;
 }
 
 function generatePartnershipUIData(innings: InningsData): PartnershipChartDataItem[] {
   const partnerships: PartnershipChartDataItem[] = [];
-  if (!innings || !innings.battingScores || !innings.fallOfWickets) {
+  if (!innings || !innings.battingScores || innings.battingScores.length === 0) {
     return partnerships;
   }
   const battingScoresMap = new Map<string, BatsmanScore>();
@@ -80,9 +82,8 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
 
   let currentScore = 0;
   
-  // Initialize activeBatsmen based on batting order
   let activeBatsmen: [BatsmanScore | undefined, BatsmanScore | undefined] = [
-    innings.battingScores.length > 0 ? battingScoresMap.get(innings.battingScores[0].name) : undefined,
+    battingScoresMap.get(innings.battingScores[0].name),
     innings.battingScores.length > 1 ? battingScoresMap.get(innings.battingScores[1].name) : undefined,
   ];
   
@@ -101,10 +102,6 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
     } else if (activeBatsmen[1]?.name === fow.batsmanOut) {
       partnerBatsmanObj = activeBatsmen[0];
     } else {
-       // This case might happen if the batting order or FOW data is inconsistent.
-       // Or if one of the active batsmen retired hurt and was replaced earlier.
-       // For simplicity, we'll try to find any other batsman who was at the crease.
-       // This is a heuristic and might not always be accurate.
        const otherBatsmenAtCrease = innings.battingScores.filter(bs => 
          bs.name !== fow.batsmanOut && 
          (activeBatsmen[0]?.name === bs.name || activeBatsmen[1]?.name === bs.name)
@@ -122,8 +119,6 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
     });
     
     let newBatsmanToCrease: BatsmanScore | undefined;
-    // The new batsman is the (wicket number + 2)-th batsman in the batting order.
-    // fow.wicket is 1-indexed, array is 0-indexed. So, index is fow.wicket + 1.
     const newBatsmanOrderIndex = fow.wicket + 1; 
     if (newBatsmanOrderIndex < innings.battingScores.length) {
         const newBatsmanData = innings.battingScores[newBatsmanOrderIndex];
@@ -137,8 +132,6 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
     } else if (activeBatsmen[1]?.name === fow.batsmanOut) {
       activeBatsmen = [activeBatsmen[0], newBatsmanToCrease];
     } else {
-       // If the dismissed batsman wasn't one of the tracked active ones (e.g. due to prior logic or data issue)
-       // Re-initialize with the partner and the new batsman
       activeBatsmen = [partnerBatsmanObj || undefined, newBatsmanToCrease];
     }
   }
@@ -151,35 +144,34 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
     let b1Name = activeBatsmen[0]?.name || "N/A";
     let b2Name = activeBatsmen[1]?.name || (activeBatsmen[0] ? "Partner" : "N/A");
 
-    // Try to get actual not out batsmen if available
     const notOutBatsmen = innings.battingScores.filter(bs => bs.dismissal.toLowerCase().includes('not out'));
     if (notOutBatsmen.length === 1) {
         b1Name = notOutBatsmen[0].name;
-        // Find the partner if the other active batsman is not the same as the notOut one
         if (activeBatsmen[0]?.name === notOutBatsmen[0].name && activeBatsmen[1]) {
             b2Name = activeBatsmen[1].name;
         } else if (activeBatsmen[1]?.name === notOutBatsmen[0].name && activeBatsmen[0]) {
             b2Name = activeBatsmen[0].name;
         } else {
-           b2Name = "Partner"; // Fallback if partner logic above is complex
+           // Fallback if the partner is not one of the active batsmen, try to find the other not out batsman if exists
+           const otherNotOut = notOutBatsmen.find(b => b.name !== b1Name);
+           if(otherNotOut) b2Name = otherNotOut.name;
+           else b2Name = "Partner";
         }
     } else if (notOutBatsmen.length >= 2) {
-        // If two are not out, these are likely the active ones
         b1Name = notOutBatsmen[0].name;
         b2Name = notOutBatsmen[1].name;
     }
     
     if (b1Name !== "N/A" && b1Name === b2Name && b2Name !== "Partner") {
-        b2Name = "Partner"; // Ensure b2Name is different if it accidentally became same as b1Name
+        b2Name = "Partner";
     }
-
 
     if ((b1Name !== "N/A" || (b2Name !== "N/A" && b2Name !== "Partner")) && partnershipRuns >= 0) {
         partnerships.push({
           batsman1Name: b1Name,
           batsman2Name: b2Name,
           partnershipRuns,
-          wicketOrdinal: `${getOrdinal(wicketsFallen + 1)} Wicket`, 
+          wicketOrdinal: `${getOrdinal(wicketsFallen + 1)} Wicket (Not Out)`, 
           batsman1TotalRunsAtWicket: battingScoresMap.get(b1Name)?.runs || 0,
           batsman2TotalRunsAtWicket: battingScoresMap.get(b2Name)?.runs || 0,
         });
@@ -191,13 +183,28 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
 const PartnershipTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const partnershipData = payload[0].payload as PartnershipChartDataItem; 
+    let partnerDisplay = "";
+    if (partnershipData.batsman1Name && partnershipData.batsman1Name !== "N/A" && partnershipData.batsman1Name !== "Partner") {
+        partnerDisplay += partnershipData.batsman1Name;
+    }
+    if (partnershipData.batsman2Name && partnershipData.batsman2Name !== "N/A" && partnershipData.batsman2Name !== "Partner") {
+        if (partnerDisplay && partnershipData.batsman1Name !== partnershipData.batsman2Name) partnerDisplay += " & ";
+        else if (!partnerDisplay) partnerDisplay += partnershipData.batsman2Name;
+        
+        if(partnershipData.batsman1Name !== partnershipData.batsman2Name){
+             partnerDisplay += partnershipData.batsman2Name;
+        } else if (!partnerDisplay) { // Only one distinct name, was set as batsman1Name
+            partnerDisplay = partnershipData.batsman1Name; // Display at least one name if only one is valid
+        }
+
+    }
+    if (!partnerDisplay) partnerDisplay = "Partnership";
+
+
     return (
       <div className="bg-card text-card-foreground p-3 rounded-md shadow-md border">
         <p className="font-semibold mb-1">{label}</p>
-        <p>
-          {partnershipData.batsman1Name} 
-          {partnershipData.batsman2Name && partnershipData.batsman2Name !== "N/A" && partnershipData.batsman2Name !== "Partner" ? ` & ${partnershipData.batsman2Name}` : ""}
-        </p>
+        <p>{partnerDisplay}</p>
         <p>Partnership Total: {partnershipData.partnershipRuns} runs</p>
       </div>
     );
@@ -216,10 +223,10 @@ export default function ScorecardPage() {
 
   const defaultTabValue = result?.innings && result.innings.length > 0 ? `innings-${result.innings[0].inningsNumber}` : "";
   
-  const topTeamABatsmen = React.useMemo(() => getTopBatsmen(result?.teamA || '', result?.innings, 2), [result]);
-  const topTeamABowlers = React.useMemo(() => getTopBowlers(result?.teamA || '', result?.innings, 2), [result]);
-  const topTeamBBatsmen = React.useMemo(() => getTopBatsmen(result?.teamB || '', result?.innings, 2), [result]);
-  const topTeamBBowlers = React.useMemo(() => getTopBowlers(result?.teamB || '', result?.innings, 2), [result]);
+  const topTeamABatsmen = React.useMemo(() => result?.teamA && result?.innings ? getTopBatsmen(result.teamA, result.innings, 2) : [], [result]);
+  const topTeamABowlers = React.useMemo(() => result?.teamA && result?.innings ? getTopBowlers(result.teamA, result.innings, 2) : [], [result]);
+  const topTeamBBatsmen = React.useMemo(() => result?.teamB && result?.innings ? getTopBatsmen(result.teamB, result.innings, 2) : [], [result]);
+  const topTeamBBowlers = React.useMemo(() => result?.teamB && result?.innings ? getTopBowlers(result.teamB, result.innings, 2) : [], [result]);
 
   if (!fixture || !result) {
     return (
@@ -448,15 +455,15 @@ export default function ScorecardPage() {
                                       <BarChart
                                         layout="vertical"
                                         data={partnershipVisualData}
-                                        margin={{ top: 5, right: 20, left: 20, bottom: 20 }}
-                                        barCategoryGap="20%"
+                                        margin={{ top: 5, right: 30, left: 30, bottom: 20 }} // Increased margins
+                                        barCategoryGap="25%" // Adjusted gap
                                       >
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} />
-                                        <YAxis dataKey="wicketOrdinal" type="category" width={100} interval={0} tick={{ fontSize: 12 }} />
-                                        <XAxis type="number" tick={{ fontSize: 12 }} />
+                                        <YAxis dataKey="wicketOrdinal" type="category" width={120} interval={0} tick={{ fontSize: 12, dy: 5 }} />
+                                        <XAxis type="number" tick={{ fontSize: 12 }} allowDecimals={false} />
                                         <RechartsTooltip content={<PartnershipTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
                                         <Legend content={<ChartLegendContent />} verticalAlign="bottom" align="center" wrapperStyle={{ paddingTop: '20px' }}/>
-                                        <Bar dataKey="partnershipRuns" fill="var(--color-partnershipRuns)" radius={[0, 4, 4, 0]} />
+                                        <Bar dataKey="partnershipRuns" name="Runs" fill="var(--color-partnershipRuns)" radius={[0, 4, 4, 0]} />
                                       </BarChart>
                                     </ChartContainer>
                                   ) : (
