@@ -93,28 +93,26 @@ export default function SchoolsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredSchools.map((school) => (
                 <Card key={school.id} className="overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 rounded-lg flex flex-col">
-                  <div className="relative">
-                    <Image
-                      src={school.bannerImageUrl || `https://placehold.co/600x300.png`}
-                      alt={`${school.name} campus`}
-                      width={600}
-                      height={300}
-                      className="w-full h-40 object-cover"
-                      data-ai-hint="school campus sport"
+                  <Image
+                    src={school.bannerImageUrl || `https://placehold.co/600x300.png`}
+                    alt={`${school.name} campus`}
+                    width={600}
+                    height={300}
+                    className="w-full h-40 object-cover"
+                    data-ai-hint="school campus sport"
+                  />
+                  <CardHeader className="flex flex-row items-center gap-3 pb-3 pt-4">
+                     <Image
+                      src={school.crestUrl}
+                      alt={`${school.name} crest`}
+                      width={50}
+                      height={50}
+                      className="rounded-md object-contain border bg-background p-0.5 shadow-sm"
+                      data-ai-hint="school crest logo"
                     />
-                    <div className="absolute bottom-2 left-2 bg-background/80 p-1.5 rounded-full shadow-lg">
-                       <Image
-                        src={school.crestUrl}
-                        alt={`${school.name} crest`}
-                        width={50}
-                        height={50}
-                        className="rounded-full object-contain"
-                        data-ai-hint="school crest logo"
-                      />
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{school.name}</CardTitle>
                     </div>
-                  </div>
-                  <CardHeader className="pb-3 pt-4">
-                    <CardTitle className="text-lg">{school.name}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm flex-grow">
                     <div className="flex items-center">
