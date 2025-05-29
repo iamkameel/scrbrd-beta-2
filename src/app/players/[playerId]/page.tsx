@@ -4,11 +4,10 @@
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { playersData, type PlayerProfile, type PlayerSkills } from '@/lib/player-data';
+import { playersData, type PlayerProfile, type PlayerSkills, type ScoreDetail } from '@/lib/player-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, BarChart3, Briefcase, Info, ShieldCheck, Star, Target, Zap, Brain, CalendarDays, Hash, AtSign, Activity, TrendingUp, Crosshair } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +23,33 @@ const StatItem: React.FC<{ label: string; value: string | number | undefined; ic
   </div>
 );
 
+const DetailedStat: React.FC<{ label: string; scoreDetail: ScoreDetail | undefined; icon: React.ElementType }> = ({ label, scoreDetail, icon: Icon }) => {
+  if (!scoreDetail || !scoreDetail.value) {
+    return (
+      <div className="mt-4 pt-3 border-t">
+        <h5 className="text-sm font-semibold mb-1 flex items-center">
+          <Icon className="mr-2 h-4 w-4 text-yellow-500" /> {label}
+        </h5>
+        <p className="text-lg text-muted-foreground">N/A</p>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-4 pt-3 border-t">
+      <h5 className="text-sm font-semibold mb-1 flex items-center">
+        <Icon className="mr-2 h-4 w-4 text-yellow-500" /> {label}
+      </h5>
+      <p className="text-xl font-bold text-primary">{scoreDetail.value}</p>
+      {scoreDetail.opponent && scoreDetail.year && scoreDetail.venue && (
+        <p className="text-xs text-muted-foreground mt-0.5">
+          vs {scoreDetail.opponent}, {scoreDetail.year} at {scoreDetail.venue}
+        </p>
+      )}
+    </div>
+  );
+};
+
+
 const SkillCategory: React.FC<{ title: string; skills: Record<string, number | undefined> | undefined; icon: React.ElementType }> = ({ title, skills, icon: Icon }) => {
   if (!skills || Object.values(skills).every(val => val === undefined)) {
     return null;
@@ -37,7 +63,7 @@ const SkillCategory: React.FC<{ title: string; skills: Record<string, number | u
       <div className="space-y-3">
         {Object.entries(skills).map(([key, value]) => {
           if (value === undefined) return null;
-          const skillName = key.charAt(0).toUpperCase() + key.slice(1);
+          const skillName = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1'); // Add space before capital letters for multi-word skills
           return (
             <div key={key}>
               <div className="flex justify-between items-center mb-1">
@@ -148,10 +174,10 @@ export default function PlayerProfilePage() {
                       <StatItem label="Runs Scored" value={player.stats.runs} icon={TrendingUp} />
                       <StatItem label="Average" value={player.stats.average} icon={Activity}/>
                       <StatItem label="Strike Rate" value={player.stats.strikeRate} icon={Zap}/>
-                      <StatItem label="Highest Score" value={player.stats.highestScore} icon={Star}/>
                       <StatItem label="100s" value={player.stats.hundreds} />
                       <StatItem label="50s" value={player.stats.fifties} />
                     </div>
+                    <DetailedStat label="Highest Score" scoreDetail={player.stats.highestScore} icon={Star} />
                   </div>
                 </TabsContent>
                 <TabsContent value="bowling" className="mt-4">
@@ -164,8 +190,8 @@ export default function PlayerProfilePage() {
                       <StatItem label="Wickets Taken" value={player.stats.wickets} icon={Crosshair}/>
                       <StatItem label="Average" value={player.stats.bowlingAverage} icon={Activity}/>
                       <StatItem label="Economy Rate" value={player.stats.economyRate} icon={Zap}/>
-                      <StatItem label="Best Bowling" value={player.stats.bestBowling} icon={Star}/>
                     </div>
+                    <DetailedStat label="Best Bowling" scoreDetail={player.stats.bestBowling} icon={Star} />
                   </div>
                 </TabsContent>
                 <TabsContent value="fielding" className="mt-4">
@@ -231,4 +257,3 @@ export default function PlayerProfilePage() {
     </div>
   );
 }
-

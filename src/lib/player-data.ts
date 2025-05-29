@@ -1,26 +1,33 @@
 
 export interface PlayerSkills {
-  technical?: { // Made categories optional
+  technical?: {
     batting?: number;
     bowling?: number;
     fielding?: number;
-    allRounder?: number; // Added from OCR
-    power?: number; // Added from OCR
+    allRounder?: number;
+    power?: number;
   };
   tactical?: {
     experience?: number;
     strategy?: number;
     consistency?: number;
-    leadership?: number; // Added from OCR
-    versatility?: number; // Added from OCR
+    leadership?: number;
+    versatility?: number;
   };
   physicalMental?: {
     fitness?: number;
-    strength?: number; // Added from OCR
-    speed?: number; // Added from OCR
+    strength?: number;
+    speed?: number;
     concentration?: number;
     aggression?: number;
   };
+}
+
+export interface ScoreDetail {
+  value: string; // e.g., "102*", "5/25"
+  opponent?: string;
+  year?: number;
+  venue?: string;
 }
 
 export interface PlayerStats {
@@ -28,13 +35,13 @@ export interface PlayerStats {
   runs?: number;
   average?: number | string;
   strikeRate?: number | string;
-  highestScore?: string;
+  highestScore?: ScoreDetail; // Updated
   hundreds?: number;
   fifties?: number;
   wickets?: number;
   bowlingAverage?: number | string;
   economyRate?: number | string;
-  bestBowling?: string; // e.g., "5/25"
+  bestBowling?: ScoreDetail; // Updated
   catches?: number;
   stumpings?: number;
 }
@@ -50,8 +57,8 @@ export interface PlayerProfile {
   bowlingStyle?: string;
   bio?: string;
   stats: PlayerStats;
-  careerSpan?: string; // e.g., "INTL: 2018 - Present"
-  skills?: PlayerSkills; // Added skills
+  careerSpan?: string;
+  skills?: PlayerSkills;
 }
 
 export const playersData: PlayerProfile[] = [
@@ -71,13 +78,23 @@ export const playersData: PlayerProfile[] = [
       runs: 1250,
       average: 31.25,
       strikeRate: 110.5,
-      highestScore: "102*",
+      highestScore: {
+        value: "102*",
+        opponent: "Panthers Academy",
+        year: 2023,
+        venue: "Northwood Main Oval",
+      },
       hundreds: 1,
       fifties: 7,
-      wickets: 50,
+      wickets: 65, // Increased wickets
       bowlingAverage: 22.5,
       economyRate: 4.75,
-      bestBowling: "4/35",
+      bestBowling: {
+        value: "4/35",
+        opponent: "Lions College",
+        year: 2022,
+        venue: "City Stadium",
+      },
       catches: 25,
       stumpings: 0,
     },
@@ -102,7 +119,7 @@ export const playersData: PlayerProfile[] = [
       runs: 980,
       average: 28.0,
       strikeRate: 95.0,
-      highestScore: "85",
+      highestScore: { value: "85" },
       hundreds: 0,
       fifties: 5,
       catches: 40,
@@ -129,7 +146,12 @@ export const playersData: PlayerProfile[] = [
       runs: 2100,
       average: 42.0,
       strikeRate: 75.5,
-      highestScore: "150",
+      highestScore: {
+        value: "150",
+        opponent: "Eagles High",
+        year: 2021,
+        venue: "Lions Main Ground"
+      },
       hundreds: 3,
       fifties: 12,
       catches: 12,
@@ -158,11 +180,16 @@ export const playersData: PlayerProfile[] = [
       wickets: 75,
       bowlingAverage: 18.5,
       economyRate: 4.2,
-      bestBowling: "6/20",
+      bestBowling: {
+        value: "6/20",
+        opponent: "Panthers Academy",
+        year: 2023,
+        venue: "Academy Ground"
+      },
       catches: 8,
     },
     skills: {
-      technical: { bowling: 92, power: 60 }, // Power more related to batting, but could be bowling power too
+      technical: { bowling: 92, power: 60 },
       tactical: { experience: 75, strategy: 78, consistency: 70 },
       physicalMental: { fitness: 85, strength: 70, speed: 80, concentration: 75, aggression: 85 },
     },
