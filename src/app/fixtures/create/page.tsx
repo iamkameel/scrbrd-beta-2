@@ -1,276 +1,436 @@
 
+// Example: src/app/fixtures/create/page.tsx
 "use client";
 
-import * as React from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
+import * as React from 'react';
+import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarIcon, Loader2, PlusCircle } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
-import type { Fixture } from "@/lib/fixtures-data"; // Import Fixture type
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectLabel,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { schoolsData as allSchools, SchoolProfile as School } from '@/lib/schools-data';
+import { detailedTeamsData as allTeams, Team as TeamData } from '@/lib/team-data';
 
-const fixtureStatuses = ["Scheduled", "Upcoming", "Live", "Completed", "Match Abandoned", "Rain-Delay", "Play Suspended"] as const;
+// --- Type Definitions ---
+interface FixtureFormData {
+  homeTeamId: string;
+  awayTeamId: string;
+  date: Date | null;
+  time: string;
+  location: string;
+  matchType: string;
+  overs: number | undefined;
+  umpires: string;
+  homeTeamSchoolId: string;
+  awayTeamSchoolId?: string;
+  ageGroup?: string;
+  division?: string;
+}
 
-const fixtureFormSchema = z.object({
-  teamA: z.string().min(1, "Team A is required"),
-  teamB: z.string().min(1, "Team B is required"),
-  date: z.date({ required_error: "Date is required." }),
-  time: z.string().min(1, "Time is required").regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format (HH:MM)"),
-  location: z.string().min(1, "Location is required"),
-  status: z.enum(fixtureStatuses, { required_error: "Status is required." }),
-  umpires: z.string().optional(),
-  scorers: z.string().optional(),
-});
-
-type FixtureFormValues = z.infer<typeof fixtureFormSchema>;
+// All fields are optional strings as they represent error messages
+interface FormValidationErrors {
+  homeTeamId?: string;
+  awayTeamId?: string;
+  date?: string;
+  time?: string;
+  location?: string;
+  matchType?: string;
+  overs?: string;
+  umpires?: string;
+  homeTeamSchoolId?: string;
+  awayTeamSchoolId?: string;
+  ageGroup?: string;
+  division?: string;
+  submit?: string; // For general submission errors
+}
+// --- End Type Definitions ---
 
 export default function CreateFixturePage() {
-  const [isLoading, setIsLoading] = React.useState(false);
-  const { toast } = useToast();
-
-  const form = useForm<FixtureFormValues>({
-    resolver: zodResolver(fixtureFormSchema),
-    defaultValues: {
-      teamA: "",
-      teamB: "",
-      time: "",
-      location: "",
-      umpires: "",
-      scorers: "",
-      // date and status will be handled by their respective components' onValueChange
-    },
+  const [teams, setTeams] = useState<TeamData[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [filteredAwayTeams, setFilteredAwayTeams] = useState<TeamData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState<FixtureFormData>({
+    homeTeamId: '',
+    awayTeamId: '',
+    date: null,
+    time: '',
+    location: '',
+    matchType: '',
+    overs: undefined,
+    umpires: '',
+    homeTeamSchoolId: '',
+    awayTeamSchoolId: '', // Initialize optional fields for controlled components
+    ageGroup: '',
+    division: '',
   });
+  // Initialize errors as an empty object, aligning with FormValidationErrors
+  const [errors, setErrors] = useState<FormValidationErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function onSubmit(data: FixtureFormValues) {
-    setIsLoading(true);
-    console.log("Fixture data submitted:", data);
+  useEffect(() => {
+    // Data is imported, no need to fetch from Firestore initially
+    setTeams(allTeams);
+    setSchools(allSchools);
+    setLoading(false);
+  }, []);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  useEffect(() => {
+    let potentialAwayTeams: TeamData[] = [];
+    if (formData.homeTeamSchoolId) {
+      const homeSchoolSelected = formData.homeTeamSchoolId;
+      const homeSchoolTeams = teams.filter((team: TeamData) => team.affiliation === homeSchoolSelected);
+      const otherSchoolTeams = teams.filter((team: TeamData) => team.affiliation?.toString() !== homeSchoolSelected);
+      potentialAwayTeams = [...homeSchoolTeams, ...otherSchoolTeams];
+    } else {
+      potentialAwayTeams = [...teams]; // Use all teams if no home school selected
+    }
 
-    // In a real app, you would send this data to your backend
-    // For now, we just log it and show a success toast.
-    toast({
-      title: "Fixture Created (Simulated)",
-      description: (
-        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-          <code className="text-white">{JSON.stringify(data, null, 2)}</code>
-        </pre>
-      ),
-    });
-    form.reset(); 
-    // Reset date field specifically if it's not covered by form.reset() for controlled components
-    form.setValue('date', undefined as any); // or null, depending on how your date picker clears
-    setIsLoading(false);
+    // Always filter out the selected home team, if any
+    if (formData.homeTeamId) {
+      setFilteredAwayTeams(potentialAwayTeams.filter((team: TeamData) => team.id.toString() !== formData.homeTeamId));
+    } else {
+      setFilteredAwayTeams(potentialAwayTeams);
+    }
+  }, [formData.homeTeamSchoolId, formData.homeTeamId, teams]);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prevFormData => ({ ...prevFormData, [name]: value }));
+  };
+
+  const handleSelectChange = (name: keyof FixtureFormData, value: string) => {
+    setFormData(prevFormData => ({ ...prevFormData, [name]: value }));
+  };
+
+  const handleOversChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData(prevFormData => ({ ...prevFormData, overs: value === '' ? undefined : Number(value) }));
+  };
+
+  const handleDateChange = (date: Date | null) => {
+    setFormData(prevFormData => ({ ...prevFormData, date }));
+  };
+
+  const validateForm = (data: FixtureFormData): FormValidationErrors => {
+    const currentErrors: FormValidationErrors = {};
+    if (!data.homeTeamId) currentErrors.homeTeamId = 'Home team is required';
+    if (!data.awayTeamId) currentErrors.awayTeamId = 'Away team is required';
+    if (data.homeTeamId && data.awayTeamId && data.homeTeamId === data.awayTeamId) {
+      currentErrors.awayTeamId = 'Home and away teams cannot be the same';
+    }
+    if (!data.date) currentErrors.date = 'Date is required';
+    if (!data.time) currentErrors.time = 'Time is required';
+    if (!data.matchType) currentErrors.matchType = 'Match type is required';
+    // Validate overs only if a value is entered
+    if (data.overs !== undefined && (isNaN(data.overs) || data.overs <= 0)) {
+        currentErrors.overs = 'Overs must be a positive number';
+    }
+    return currentErrors;
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const validationErrors = validateForm(formData);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrors({}); // Reset errors to an empty object
+
+    try {
+      const fixtureDate = formData.date ? Timestamp.fromDate(new Date(formData.date)) : null;
+
+      const newFixtureData: any = { // Use 'any' temporarily or create a specific type for Firestore
+        ...formData,
+        date: fixtureDate,
+        overs: formData.overs === undefined ? null : formData.overs, // Store undefined overs as null
+        createdAt: Timestamp.now(),
+      };
+
+      // Optionally remove undefined fields before sending to Firestore
+      Object.keys(newFixtureData).forEach(key => {
+        if (newFixtureData[key] === undefined) {
+          delete newFixtureData[key];
+        }
+      });
+
+      const docRef = await addDoc(collection(db, 'fixtures'), newFixtureData);
+      console.log('Fixture created with ID:', docRef.id);
+
+      setFormData({
+        homeTeamId: '',
+        awayTeamId: '',
+        date: null,
+        time: '',
+        location: '',
+        matchType: '',
+        overs: undefined,
+        umpires: '',
+        homeTeamSchoolId: '',
+        awayTeamSchoolId: '',
+        ageGroup: '',
+        division: '',
+      });
+      // Optionally, show a success notification
+    } catch (error) {
+      console.error('Error creating fixture:', error);
+      // Ensure this aligns with FormValidationErrors
+      setErrors({ submit: 'Failed to create fixture. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <PlusCircle className="h-6 w-6 text-[hsl(var(--primary))]" />
-            Create New Fixture
-          </CardTitle>
-          <CardDescription>
-            Fill in the details below to add a new match fixture.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="teamA"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Team A</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Northwood School 1st XI" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="teamB"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Team B</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Panthers Academy" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+    <Card className="w-full max-w-2xl mx-auto my-4">
+      <CardHeader>
+        <CardTitle>Create New Fixture</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-6 py-4"> {/* Increased gap */}
+
+            {/* Home Team School Select */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="homeTeamSchoolId" className="text-right">
+                Home School
+              </Label>
+              <Select
+                onValueChange={(value) => handleSelectChange('homeTeamSchoolId', value)}
+                value={formData.homeTeamSchoolId}
+              >
+                <SelectTrigger className="col-span-3" id="homeTeamSchoolId">
+                  <SelectValue placeholder="Select home team school" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {schools.map((school) => (
+                      <SelectItem key={school.id} value={school.id.toString()}>
+                        {school.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              {errors.homeTeamSchoolId && <p className="text-red-500 text-sm col-span-4 text-right">{errors.homeTeamSchoolId}</p>}
+            </div>
+
+            {/* Home Team Select */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="homeTeamId" className="text-right">
+                Home Team
+              </Label>
+              <Select
+                onValueChange={(value) => handleSelectChange('homeTeamId', value)}
+                value={formData.homeTeamId}
+                disabled={!formData.homeTeamSchoolId && teams.some(t => !t.affiliation)} // Example: enable if no school needed or school selected
+              >
+                <SelectTrigger className="col-span-3" id="homeTeamId">
+                  <SelectValue placeholder="Select home team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {(formData.homeTeamSchoolId
+                      ? teams.filter(team => team.affiliation === formData.homeTeamSchoolId)
+                      : teams
+                    ).map((team) => (
+                      <SelectItem key={team.id.toString()} value={team.id.toString()}>
+                        {team.teamName} ({schools.find(s => s.id.toString() === team.affiliation)?.name || 'Independent'})
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              {errors.homeTeamId && <p className="text-red-500 text-sm col-span-4 text-right">{errors.homeTeamId}</p>}
+            </div>
+
+            {/* Away Team Select */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="awayTeamId" className="text-right">
+                Away Team
+              </Label>
+              <Select
+                onValueChange={(value) => handleSelectChange('awayTeamId', value)}
+                value={formData.awayTeamId}
+                disabled={!formData.homeTeamId}
+              >
+                <SelectTrigger className="col-span-3" id="awayTeamId">
+                  <SelectValue placeholder="Select away team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Away Teams</SelectLabel>
+                    {filteredAwayTeams.map((team) => (
+                      <SelectItem key={team.id.toString()} value={team.id.toString()}>{team.teamName} ({schools.find(s => s.name === team.affiliation)?.name || 'Independent'})</SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              {errors.awayTeamId && <p className="text-red-500 text-sm col-span-4 text-right">{errors.awayTeamId}</p>}
+            </div>
+
+            {/* Date Picker */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="date" className="text-right">
+                Date
+              </Label>
+              <div className="col-span-3">
+                <DatePicker
+                  id="date"
+                  selected={formData.date}
+                  onChange={handleDateChange}
+                  dateFormat="yyyy/MM/dd"
+                  minDate={new Date()}
+                  className="w-full border rounded-md px-3 py-2 text-sm"
+                  placeholderText="Select fixture date"
+                  autoComplete="off"
                 />
               </div>
+              {errors.date && <p className="text-red-500 text-sm col-span-4 text-right">{errors.date}</p>}
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date < new Date(new Date().setDate(new Date().getDate() -1)) // Disable past dates
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="time"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Time</FormLabel>
-                      <FormControl>
-                        <Input type="time" placeholder="HH:MM" {...field} />
-                      </FormControl>
-                       <FormDescription>Use HH:MM format (e.g., 09:30 or 14:00).</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+            {/* Time Input */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="time" className="text-right">
+                Time
+              </Label>
+              <Input id="time" name="time" type="time" value={formData.time} onChange={handleChange} className="col-span-3" />
+              {errors.time && <p className="text-red-500 text-sm col-span-4 text-right">{errors.time}</p>}
+            </div>
 
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location / Venue</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Northwood Main Oval" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            {/* Match Type Select */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="matchType" className="text-right">
+                Match Type
+              </Label>
+              <Select
+                onValueChange={(value) => handleSelectChange('matchType', value)}
+                value={formData.matchType}
+              >
+                <SelectTrigger className="col-span-3" id="matchType">
+                  <SelectValue placeholder="Select match type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="Friendly">Friendly</SelectItem>
+                    <SelectItem value="League">League</SelectItem>
+                    <SelectItem value="Tournament">Tournament</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              {errors.matchType && <p className="text-red-500 text-sm col-span-4 text-right">{errors.matchType}</p>}
+            </div>
+
+            {/* Overs Input */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="overs" className="text-right">
+                Overs (Optional)
+              </Label>
+              <Input
+                id="overs"
+                name="overs"
+                type="number"
+                value={formData.overs === undefined ? '' : formData.overs} // Handle undefined for input value
+                onChange={handleOversChange}
+                className="col-span-3"
+                placeholder="Enter number of overs"
+                min="1"
               />
+              {errors.overs && <p className="text-red-500 text-sm col-span-4 text-right">{errors.overs}</p>}
+            </div>
 
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select match status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {fixtureStatuses.map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {status}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="umpires"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Umpires (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter umpire names, separated by commas (e.g., Mr. A Smith, Ms. B Jones)"
-                        className="min-h-[80px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Age Group Input */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="ageGroup" className="text-right">
+                Age Group (Optional)
+              </Label>
+              <Input id="ageGroup" name="ageGroup" value={formData.ageGroup || ''} onChange={handleChange} className="col-span-3" placeholder="e.g., U14, U16, Open" />
+              {errors.ageGroup && <p className="text-red-500 text-sm col-span-4 text-right">{errors.ageGroup}</p>}
+            </div>
 
-              <FormField
-                control={form.control}
-                name="scorers"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Scorers (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter scorer names, separated by commas (e.g., Mr. C Davis (Team A), Ms. D Wilson (Team B))"
-                        className="min-h-[80px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+             {/* Division Input */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="division" className="text-right">
+                Division (Optional)
+              </Label>
+              <Input id="division" name="division" value={formData.division || ''} onChange={handleChange} className="col-span-3" placeholder="e.g., Division 1, Plate" />
+              {errors.division && <p className="text-red-500 text-sm col-span-4 text-right">{errors.division}</p>}
+            </div>
 
-              <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
-                {isLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                )}
-                Create Fixture
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-    </div>
+
+            {/* Away Team School Input */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="awayTeamSchoolId" className="text-right">
+                Away School (Opt.)
+              </Label>
+              <Select
+                onValueChange={(value) => handleSelectChange('awayTeamSchoolId', value)}
+                value={formData.awayTeamSchoolId}
+              >
+                <SelectTrigger className="col-span-3" id="awayTeamSchoolId">
+                  <SelectValue placeholder="Select away team school (if different)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="">N/A or Same School</SelectItem> {/* Option for no specific other school */}
+                    {schools.map((school) => (
+                      <SelectItem key={school.id} value={school.id.toString()}>
+                        {school.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              {errors.awayTeamSchoolId && <p className="text-red-500 text-sm col-span-4 text-right">{errors.awayTeamSchoolId}</p>}
+            </div>
+
+
+            {/* Location Input */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="location" className="text-right">
+                Location
+              </Label>
+              <Input id="location" name="location" value={formData.location} onChange={handleChange} className="col-span-3" placeholder="Enter venue or location" />
+              {errors.location && <p className="text-red-500 text-sm col-span-4 text-right">{errors.location}</p>}
+            </div>
+
+            {/* Umpires Input */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="umpires" className="text-right">
+                Umpires (Optional)
+              </Label>
+              <Input id="umpires" name="umpires" value={formData.umpires} onChange={handleChange} className="col-span-3" placeholder="Enter umpire names (comma-separated)" />
+              {errors.umpires && <p className="text-red-500 text-sm col-span-4 text-right">{errors.umpires}</p>}
+            </div>
+
+            {/* Submit Error Display */}
+            {errors.submit && <p className="text-red-500 text-sm col-span-4 text-center py-2">{errors.submit}</p>}
+          </div>
+          <Button type="submit" className="w-full mt-4" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating...' : 'Create Fixture'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

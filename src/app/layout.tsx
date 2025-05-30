@@ -10,9 +10,9 @@ import {
   SidebarContent,
   SidebarInset,
 } from "@/components/ui/sidebar";
-import { SidebarNav } from "@/components/layout/SidebarNav";
 import { Header } from "@/components/layout/Header";
 import { AppLogo } from "@/components/layout/AppLogo";
+import SidebarNav from "@/components/layout/SidebarNav";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 
 const geistSans = Geist({
@@ -44,9 +44,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SidebarProvider defaultOpen collapsible="icon"> {/* Sidebar open by default on desktop, icon mode when collapsed */}
+          <SidebarProvider defaultOpen> {/* Sidebar open by default on desktop, icon mode when collapsed */}
             <div className="flex min-h-screen w-full">
-              <Sidebar className="border-r bg-sidebar text-sidebar-foreground">
+              <Sidebar className="border-r bg-sidebar text-sidebar-foreground" collapsible="icon">
                 <UiSidebarHeader className="p-4 sticky top-0 bg-sidebar z-20 flex items-center justify-between h-16 border-b border-sidebar-border">
                   <div className="group-data-[state=expanded]/sidebar-wrapper:block hidden">
                     <AppLogo />
