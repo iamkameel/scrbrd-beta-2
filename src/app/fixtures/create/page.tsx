@@ -392,7 +392,7 @@ export default function CreateFixturePage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="">N/A or Same School</SelectItem> {/* Option for no specific other school */}
+                    <SelectItem value="none">N/A or Same School</SelectItem> {/* Option for no specific other school */}
                     {schools.map((school) => (
                       <SelectItem key={school.id} value={school.id.toString()}>
                         {school.name}
