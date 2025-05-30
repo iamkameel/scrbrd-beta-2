@@ -14,6 +14,7 @@ import { Header } from "@/components/layout/Header";
 import { AppLogo } from "@/components/layout/AppLogo";
 import SidebarNav from "@/components/layout/SidebarNav";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
+import Providers from '@/components/layout/Providers'; // Import the new Providers component
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -38,36 +39,38 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <SidebarProvider defaultOpen> {/* Sidebar open by default on desktop, icon mode when collapsed */}
-            <div className="flex min-h-screen w-full">
-              <Sidebar className="border-r bg-sidebar text-sidebar-foreground" collapsible="icon">
-                <UiSidebarHeader className="p-4 sticky top-0 bg-sidebar z-20 flex items-center justify-between h-16 border-b border-sidebar-border">
-                  <div className="group-data-[state=expanded]/sidebar-wrapper:block hidden">
-                    <AppLogo />
-                  </div>
-                  <div className="group-data-[state=expanded]/sidebar-wrapper:hidden md:group-data-[state=collapsed]/sidebar-wrapper:block">
-                    <AppLogo /> {/* Simplified or just icon when collapsed, handled by AppLogo or here */}
-                  </div>
-                </UiSidebarHeader>
-                <SidebarContent className="p-2 flex-1 overflow-y-auto">
-                  <SidebarNav />
-                </SidebarContent>
-              </Sidebar>
-              <SidebarInset>
-                <Header />
-                <main className="flex-1 p-4 sm:p-6 md:p-8">
-                  {children}
-                </main>
-              </SidebarInset>
-            </div>
-          </SidebarProvider>
-        </ThemeProvider>
+        <Providers> {/* Wrap ThemeProvider and the rest with Providers */}
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <SidebarProvider defaultOpen> {/* Sidebar open by default on desktop, icon mode when collapsed */}
+              <div className="flex min-h-screen w-full">
+                <Sidebar className="border-r bg-sidebar text-sidebar-foreground" collapsible="icon">
+                  <UiSidebarHeader className="p-4 sticky top-0 bg-sidebar z-20 flex items-center justify-between h-16 border-b border-sidebar-border">
+                    <div className="group-data-[state=expanded]/sidebar-wrapper:block hidden">
+                      <AppLogo />
+                    </div>
+                    <div className="group-data-[state=expanded]/sidebar-wrapper:hidden md:group-data-[state=collapsed]/sidebar-wrapper:block">
+                      <AppLogo /> {/* Simplified or just icon when collapsed, handled by AppLogo or here */}
+                    </div>
+                  </UiSidebarHeader>
+                  <SidebarContent className="p-2 flex-1 overflow-y-auto">
+                    <SidebarNav />
+                  </SidebarContent>
+                </Sidebar>
+                <SidebarInset>
+                  <Header />
+                  <main className="flex-1 p-4 sm:p-6 md:p-8">
+                    {children}
+                  </main>
+                </SidebarInset>
+              </div>
+            </SidebarProvider>
+          </ThemeProvider>
+        </Providers>
         <Toaster />
       </body>
     </html>
