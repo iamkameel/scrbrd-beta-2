@@ -5,6 +5,7 @@ import {
   SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { LucideIcon } from 'lucide-react'; // Assuming LucideIcon is used for icons
+import { cn } from '@/lib/utils'; // Import cn
 import { NavLink } from '@/lib/nav-links'; // Import the NavLink type
 
 const SidebarNav: React.FC = () => {
@@ -15,8 +16,12 @@ const SidebarNav: React.FC = () => {
           <SidebarSeparator key={link.href} />
         ) : (
           <SidebarMenuItem key={link.href}>
-            <SidebarMenuButton asChild>
-              <Link href={link.href}>{link.icon && (
+            <SidebarMenuButton asChild >
+              <Link
+                href={link.disabled ? '#' : link.href} // Link to # if disabled
+                className={cn(link.disabled && 'opacity-50 cursor-not-allowed')} // Apply greyed out class if disabled
+                {...(link.disabled ? { 'aria-disabled': true, tabIndex: -1 } : {})} // Accessibility for disabled state
+              >{link.icon && ( // Render the icon if it exists
                   // Render the icon if it exists
                   React.createElement(link.icon as LucideIcon, { className: "size-4" })
                 )}
@@ -34,9 +39,12 @@ const SidebarNav: React.FC = () => {
       {/* Render bottom navigation links */}
       {bottomNavLinks.map((link: NavLink) => (
         <SidebarMenuItem key={link.href}>
-          <SidebarMenuButton asChild>
-            <Link href={link.href}>{link.icon && (
-                // Render the icon if it exists, safely cast to LucideIcon
+          <SidebarMenuButton asChild >
+            <Link
+              href={link.disabled ? '#' : link.href} // Link to # if disabled
+              className={cn(link.disabled && 'opacity-50 cursor-not-allowed')} // Apply greyed out class if disabled
+              {...(link.disabled ? { 'aria-disabled': true, tabIndex: -1 } : {})} // Accessibility for disabled state
+            >{link.icon && ( // Render the icon if it exists, safely cast to LucideIcon
                 React.createElement(link.icon as LucideIcon, { className: "size-4" })
               )}
 

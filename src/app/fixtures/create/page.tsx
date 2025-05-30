@@ -7,7 +7,6 @@ import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label'; // Will be replaced by FormLabel
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Select,
@@ -21,6 +20,10 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { schoolsData as allSchools, type SchoolProfile as School } from '@/lib/schools-data';
 import { detailedTeamsData as allTeams, type Team as TeamData } from '@/lib/team-data';
+// Assuming scorer and umpire data will eventually come from a users collection or dedicated collections
+// For now, we'll use the existing data for selection if needed, but the schema asks for IDs
+// import { scorersData as allScorers, type ScorerProfile as Scorer } from '@/lib/scorer-data';
+// import { umpiresData as allUmpires, type UmpireProfile as Umpire } from '@/lib/umpire-data';
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,6 +40,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Loader2 } from 'lucide-react';
 
+// Schema for Fixture as defined by user, adapted for form
 const fixtureFormSchema = z.object({
   matchType: z.enum(['T20', 'ODI', 'Test'], { required_error: "Match type is required."}),
   overs: z.number().min(1, "Overs must be at least 1.").optional(),
@@ -44,11 +48,14 @@ const fixtureFormSchema = z.object({
   homeTeamId: z.string().min(1, "Home team is required."),
   ageGroup: z.string().min(1, "Age group is required (auto-filled)."),
   awayTeamId: z.string().min(1, "Away team is required."),
-  date: z.date({ required_error: "Date is required."}),
+  scheduledDate: z.date({ required_error: "Date is required."}).nullable(),
   time: z.string().min(1, "Time is required."),
-  selectedField: z.string().min(1, "Location/Field is required."),
+  venueId: z.string().min(1, "Location/Field is required."), // Will store field name for now, schema wants venueId
   division: z.string().optional(),
-  umpires: z.string().optional(),
+  umpireIdsInput: z.string().optional(), // Comma-separated string of umpire IDs
+  scorerIdInput: z.string().optional(),   // Single scorer ID
+  leagueId: z.string().optional(), // For future use
+  provinceId: z.string().optional(), // For future use
 });
 
 type FixtureFormData = z.infer<typeof fixtureFormSchema>;
@@ -60,11 +67,14 @@ const initialDefaultValues: Partial<FixtureFormData> = {
   homeTeamId: '',
   ageGroup: '',
   awayTeamId: '',
-  date: null as Date | null, // Explicitly type null
+  scheduledDate: null as Date | null,
   time: '',
-  selectedField: '',
+  venueId: '',
   division: '',
-  umpires: '',
+  umpireIdsInput: '',
+  scorerIdInput: '',
+  leagueId: '',
+  provinceId: '',
 };
 
 
@@ -77,7 +87,7 @@ export default function CreateFixturePage() {
 
   const form = useForm<FixtureFormData>({
     resolver: zodResolver(fixtureFormSchema),
-    defaultValues: initialDefaultValues as FixtureFormData, // Cast because date can be null initially
+    defaultValues: initialDefaultValues as FixtureFormData,
   });
 
   const watchHomeTeamSchoolId = form.watch('homeTeamSchoolId');
@@ -96,13 +106,13 @@ export default function CreateFixturePage() {
       }
       form.setValue('homeTeamId', '');
       form.setValue('ageGroup', '');
-      form.setValue('selectedField', '');
+      form.setValue('venueId', '');
     } else {
       setAvailableHomeTeams([]);
       setAvailableFields([]);
       form.setValue('homeTeamId', '');
       form.setValue('ageGroup', '');
-      form.setValue('selectedField', '');
+      form.setValue('venueId', '');
     }
   }, [watchHomeTeamSchoolId, form]);
 
@@ -125,8 +135,7 @@ export default function CreateFixturePage() {
     } else if (watchMatchType === 'ODI') {
       form.setValue('overs', 50); // Example for ODI
     } else {
-      // For 'Test' or other types, maybe clear it or allow manual input
-      form.setValue('overs', undefined);
+      form.setValue('overs', undefined); // Allow manual input for Test
     }
   }, [watchMatchType, form]);
 
@@ -134,26 +143,33 @@ export default function CreateFixturePage() {
   const onSubmit = async (data: FixtureFormData) => {
     setIsSubmitting(true);
     try {
-      const fixtureDate = data.date ? Timestamp.fromDate(data.date) : null;
-      const homeTeamName = allTeams.find(t => t.id.toString() === data.homeTeamId)?.teamName;
-      const awayTeamName = allTeams.find(t => t.id.toString() === data.awayTeamId)?.teamName;
-      
+      const scheduledTimestamp = data.scheduledDate ? Timestamp.fromDate(data.scheduledDate) : null;
+      const homeTeamDetails = allTeams.find(t => t.id.toString() === data.homeTeamId);
+      const awayTeamDetails = allTeams.find(t => t.id.toString() === data.awayTeamId);
+
       const newFixtureData = {
-        matchType: data.matchType,
-        overs: data.overs,
-        homeTeamSchoolId: data.homeTeamSchoolId,
+        // fixtureId will be auto-generated by Firestore
         homeTeamId: data.homeTeamId,
-        homeTeamName: homeTeamName || 'N/A',
-        ageGroup: data.ageGroup,
+        // homeTeamName: homeTeamDetails?.teamName || 'N/A', // Optional: store name for easier reads, or join later
         awayTeamId: data.awayTeamId,
-        awayTeamName: awayTeamName || 'N/A',
-        date: fixtureDate,
-        time: data.time,
-        location: data.selectedField,
+        // awayTeamName: awayTeamDetails?.teamName || 'N/A', // Optional
+        matchType: data.matchType,
+        venueId: data.venueId, // Storing field name for now. TODO: Convert to actual venue ID from a Grounds collection.
+        scheduledDate: scheduledTimestamp,
+        overs: data.overs,
+        ageGroup: data.ageGroup,
+        status: 'Scheduled' as 'Scheduled' | 'Team Confirmed' | 'Ground Ready' | 'Live' | 'Completed', // Default status
+        umpireIds: data.umpireIdsInput ? data.umpireIdsInput.split(',').map(id => id.trim()).filter(id => id) : [],
+        scorerId: data.scorerIdInput || null, // Store as null if empty
         division: data.division || null,
-        umpires: data.umpires ? data.umpires.split(',').map(s => s.trim()).filter(s => s) : [],
-        status: 'Scheduled',
-        createdAt: Timestamp.now(),
+        // Optional fields from schema, not yet in form:
+        transportId: null,
+        createdBy: null, // This would come from logged-in user context
+        groundkeeperId: null,
+        toss: null,
+        leagueId: data.leagueId || null, // For future use
+        provinceId: data.provinceId || null, // For future use
+        createdAt: Timestamp.now(), // Keep track of when the fixture was created
       };
 
       const docRef = await addDoc(collection(db, 'fixtures'), newFixtureData);
@@ -188,7 +204,6 @@ export default function CreateFixturePage() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             
-            {/* Section 1: Match Details */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Match Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -206,8 +221,8 @@ export default function CreateFixturePage() {
                         </FormControl>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value="T20">T20 (20 Overs)</SelectItem>
-                            <SelectItem value="ODI">ODI (50 Overs)</SelectItem>
+                            <SelectItem value="T20">T20</SelectItem>
+                            <SelectItem value="ODI">ODI</SelectItem>
                             <SelectItem value="Test">Test Match</SelectItem>
                           </SelectGroup>
                         </SelectContent>
@@ -230,7 +245,7 @@ export default function CreateFixturePage() {
                           onChange={e => field.onChange(parseInt(e.target.value, 10) || undefined)}
                           readOnly={watchMatchType === 'T20' || watchMatchType === 'ODI'}
                           className={ (watchMatchType === 'T20' || watchMatchType === 'ODI') ? "bg-muted/50" : ""}
-                          placeholder="Enter overs if not T20/ODI"
+                          placeholder="Enter overs"
                         />
                       </FormControl>
                       <FormMessage />
@@ -242,7 +257,6 @@ export default function CreateFixturePage() {
 
             <Separator />
 
-            {/* Section 2: Team Information */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Team Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -305,7 +319,7 @@ export default function CreateFixturePage() {
                     <FormItem>
                       <FormLabel>Age Group *</FormLabel>
                       <FormControl>
-                        <Input {...field} readOnly className="bg-muted/50" placeholder="Auto-filled from Home Team"/>
+                        <Input {...field} readOnly className="bg-muted/50" placeholder="Auto-filled"/>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -342,13 +356,12 @@ export default function CreateFixturePage() {
 
             <Separator />
 
-            {/* Section 3: Scheduling & Venue */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Scheduling & Venue</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="date"
+                  name="scheduledDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Date *</FormLabel>
@@ -358,7 +371,7 @@ export default function CreateFixturePage() {
                           onChange={(date: Date | null) => field.onChange(date)}
                           dateFormat="yyyy/MM/dd"
                           minDate={new Date()}
-                          className="w-full border rounded-md px-3 py-2 text-sm h-10" // Adjusted for consistency
+                          className="w-full border rounded-md px-3 py-2 text-sm h-10"
                           placeholderText="Select fixture date"
                           autoComplete="off"
                         />
@@ -382,7 +395,7 @@ export default function CreateFixturePage() {
                 />
                 <FormField
                   control={form.control}
-                  name="selectedField"
+                  name="venueId"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
                       <FormLabel>Location/Field *</FormLabel>
@@ -402,6 +415,7 @@ export default function CreateFixturePage() {
                           </SelectGroup>
                         </SelectContent>
                       </Select>
+                      <FormDescription>This will eventually be a Venue ID from a Grounds collection.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -411,7 +425,6 @@ export default function CreateFixturePage() {
 
             <Separator />
             
-            {/* Section 4: Additional Details */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Additional Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -422,7 +435,7 @@ export default function CreateFixturePage() {
                     <FormItem>
                       <FormLabel>Division (Optional)</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="e.g., Division 1, Plate" />
+                        <Input {...field} value={field.value ?? ''} placeholder="e.g., Division 1, Plate" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -430,13 +443,56 @@ export default function CreateFixturePage() {
                 />
                 <FormField
                   control={form.control}
-                  name="umpires"
+                  name="umpireIdsInput"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Umpires (Optional)</FormLabel>
+                      <FormLabel>Umpire IDs (comma-separated, optional)</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter umpire names (comma-separated)" />
+                        <Input {...field} value={field.value ?? ''} placeholder="e.g., umpire-1, umpire-2" />
                       </FormControl>
+                      <FormDescription>Enter Umpire unique IDs, separated by commas.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="scorerIdInput"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Scorer ID (optional)</FormLabel>
+                      <FormControl>
+                         <Input {...field} value={field.value ?? ''} placeholder="e.g., scorer-1" />
+                      </FormControl>
+                      <FormDescription>Enter the Scorer's unique ID.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="leagueId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>League ID (Optional)</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ''} placeholder="Enter League ID if applicable" />
+                      </FormControl>
+                      <FormDescription>For future league management.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="provinceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Province ID (Optional)</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ''} placeholder="Enter Province ID if applicable" />
+                      </FormControl>
+                      <FormDescription>For future provincial organization.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -460,5 +516,3 @@ export default function CreateFixturePage() {
     </Card>
   );
 }
-
-    

@@ -1,28 +1,31 @@
-
 // src/app/teams/[teamId]/page.tsx
 "use client";
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { detailedTeamsData, type Team, type Player } from '@/lib/team-data';
+import { detailedTeamsData, type Team } from '@/lib/team-data';
+import { PlayerProfile } from '@/lib/player-data';
 import { fixtures as allFixtures, type Fixture } from '@/lib/fixtures-data';
 import { resultsData, type Result } from '@/lib/results-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Users, BarChartBig, CalendarDays, ShieldCheck, Trophy, TrendingUp, Crosshair, Hand, FileText, ClipboardList } from "lucide-react";
+import { ArrowLeft, Users, BarChartBig, CalendarDays, ShieldCheck, Trophy, TrendingUp, Crosshair, Hand, FileText, ClipboardList, Scale, Crown, Dices } from "lucide-react";
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+
+interface TeamWithPlayerProfiles extends Team {
+  squad: PlayerProfile[];
+}
 
 export default function TeamDetailsPage() {
   const params = useParams();
   const teamId = params.teamId ? parseInt(params.teamId as string, 10) : null;
 
-  const team: Team | undefined = detailedTeamsData.find(t => t.id === teamId);
-
-  const teamFixtures: Fixture[] = team ? allFixtures.filter(
+  const team: TeamWithPlayerProfiles | undefined = detailedTeamsData.find(t => t.id === teamId) as TeamWithPlayerProfiles | undefined;
+  const teamFixtures: Fixture[] = team ? (allFixtures as Fixture[]).filter(
     fixture =>
       (fixture.teamA.includes(team.affiliation) && fixture.teamA.includes(team.teamName)) ||
       (fixture.teamB.includes(team.affiliation) && fixture.teamB.includes(team.teamName))
@@ -57,14 +60,6 @@ export default function TeamDetailsPage() {
     return name.substring(0, 2).toUpperCase();
   };
 
-  const StatBox: React.FC<{ icon: React.ElementType, label: string, value: string | number | undefined, className?: string }> = ({ icon: Icon, label, value, className }) => (
-    <div className={cn("flex flex-col items-center justify-center p-3 bg-muted rounded-lg shadow-sm text-center", className)}>
-      <Icon className="h-5 w-5 mb-1 text-[hsl(var(--primary))]" />
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-md font-semibold text-foreground">{value !== undefined ? value : '-'}</p>
-    </div>
-  );
-
   const getStatusBadgeVariant = (status: Fixture["status"]): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case "Upcoming":
@@ -75,12 +70,20 @@ export default function TeamDetailsPage() {
       case "Live":
         return "destructive"; // Red
       case "Match Abandoned":
-        return "secondary"; 
+        return "secondary";
       case "Scheduled":
       default:
-        return "outline"; 
+        return "outline";
     }
   };
+
+  const StatBox: React.FC<{ icon: React.ElementType, label: string, value: string | number | undefined, className?: string }> = ({ icon: Icon, label, value, className }) => (
+    <div className={cn("flex flex-col items-center justify-center p-3 bg-muted rounded-lg shadow-sm text-center", className)}>
+      <Icon className="h-5 w-5 mb-1 text-[hsl(var(--primary))]" />
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-md font-semibold text-foreground">{value !== undefined ? value : '-'}</p>
+    </div>
+  );
 
   return (
     <div className="container mx-auto py-8 space-y-8">
@@ -126,23 +129,50 @@ export default function TeamDetailsPage() {
                 {team.squad.map((player) => (
                   <Card key={player.id} className="hover:shadow-md transition-shadow">
                     <CardHeader className="flex flex-row items-start gap-3 pb-3">
-                      <Avatar className="h-14 w-14 mt-1">
-                        <AvatarImage src={player.avatar} alt={player.name} data-ai-hint="player portrait" />
-                        <AvatarFallback>{getInitials(player.name)}</AvatarFallback>
-                      </Avatar>
+                      <Link href={`/players/${player.id}`}>
+                        <Avatar className="h-14 w-14 mt-1">
+                          <AvatarImage src={player.avatar} alt={player.name} data-ai-hint="player portrait" />
+                          <AvatarFallback>{getInitials(player.name)}</AvatarFallback>
+                        </Avatar>
+                      </Link>
                       <div className="flex-1">
-                        <CardTitle className="text-md mb-0.5">{player.name}</CardTitle>
+                        <Link href={`/players/${player.id}`} className="text-md font-semibold mb-0.5 hover:underline">
+                          {player.name}
+                        </Link>
                         <CardDescription className="text-xs">{player.role}</CardDescription>
                       </div>
                     </CardHeader>
                     <CardContent className="pt-0">
                       {player.stats && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 text-xs">
+                        <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+                           <StatBox icon={ClipboardList} label="Matches" value={player.stats.matchesPlayed} />
                            <StatBox icon={TrendingUp} label="Runs" value={player.stats.runs} />
+                           <StatBox icon={Scale} label="Avg" value={player.stats.average} />
                            <StatBox icon={Crosshair} label="Wickets" value={player.stats.wickets} />
+                           <StatBox icon={Scale} label="Bowl Avg" value={player.stats.bowlingAverage} />
+                           <StatBox icon={Scale} label="Econ" value={player.stats.economyRate} />
                            <StatBox icon={Hand} label="Catches" value={player.stats.catches} />
                         </div>
+                      )}                      
+                      {player.stats?.bestBatting && (
+                        <div className="mt-3 text-xs border-t pt-2">
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                             <Crown className="h-3 w-3" /> <span className="font-semibold">Best Batting:</span>
+                          </div>
+                          <p className="ml-4">{player.stats.bestBatting.value} vs {player.stats.bestBatting.opponent} ({player.stats.bestBatting.year})</p>
+                        </div>
                       )}
+
+                      {player.stats?.bestBowling && (
+                         <div className="mt-2 text-xs border-t pt-2">
+                           <div className="flex items-center gap-1 text-muted-foreground">
+                              <Dices className="h-3 w-3" /> <span className="font-semibold">Best Bowling:</span>
+                           </div>
+                           <p className="ml-4">
+                             {player.stats.bestBowling.value} vs {player.stats.bestBowling.opponent} ({player.stats.bestBowling.year}) at {player.stats.bestBowling.venue}
+                           </p>
+                         </div>
+                       )}
                     </CardContent>
                   </Card>
                 ))}

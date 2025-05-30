@@ -1,31 +1,39 @@
-
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CalendarDays, Clock, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { fixtures, type Fixture } from "@/lib/fixtures-data";
-import { format } from 'date-fns';
+import { format, isFuture, subDays, isWithinInterval } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 export default function FixturesPage() {
 
-  const getStatusBadgeVariant = (status: Fixture["status"]): "default" | "secondary" | "destructive" | "outline" => {
+  const getStatusBadgeVariant = (status: Fixture["status"], date: string): "default" | "secondary" | "destructive" | "outline" => {
+    const fixtureDate = new Date(date);
+    const today = new Date();
+    const fiveDaysFromNow = subDays(today, -5); // Calculate 5 days from now
+
+    if (status === "Scheduled" && isFuture(fixtureDate) && isWithinInterval(fixtureDate, { start: today, end: fiveDaysFromNow })) {
+      return "default"; // Use default for Upcoming within 5 days
+    }
+
     switch (status) {
-      case "Upcoming":
+      case "Upcoming": // This case will now only catch Upcoming that are not within 5 days and are not Scheduled
       case "Rain-Delay":
       case "Play Suspended":
-      case "Completed": 
-        return "default"; 
+      case "Completed":
+        return "default";
       case "Live":
-        return "destructive"; 
-      case "Match Abandoned": 
-        return "secondary"; 
+        return "destructive";
+      case "Match Abandoned":
+        return "secondary";
       case "Scheduled":
       default:
-        return "outline"; 
+        return "outline";
     }
   };
+
 
   return (
     <div className="space-y-6">
@@ -49,7 +57,7 @@ export default function FixturesPage() {
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{fixture.teamA} vs {fixture.teamB}</CardTitle>
                     <Badge
-                      variant={getStatusBadgeVariant(fixture.status)}
+                      variant={getStatusBadgeVariant(fixture.status, fixture.date)}
                       className={cn(
                         "whitespace-nowrap",
                         fixture.status === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground border-transparent",
@@ -57,10 +65,12 @@ export default function FixturesPage() {
                         fixture.status === "Live" && "bg-destructive text-destructive-foreground border-transparent animate-pulse",
                         fixture.status === "Rain-Delay" && "bg-[hsl(var(--primary))] text-primary-foreground border-transparent opacity-80",
                         fixture.status === "Play Suspended" && "bg-[hsl(var(--chart-3))] text-card-foreground border-transparent",
-                        fixture.status === "Match Abandoned" && "bg-[hsl(var(--secondary))] text-muted-foreground opacity-80 border-transparent"
+                        fixture.status === "Match Abandoned" && "bg-[hsl(var(--secondary))] text-muted-foreground opacity-80 border-transparent",
+                        // Add class for Scheduled status when it's within 5 days (now appearing as default variant)
+                         getStatusBadgeVariant(fixture.status, fixture.date) === "default" && fixture.status === "Scheduled" && isFuture(new Date(fixture.date)) && isWithinInterval(new Date(fixture.date), { start: new Date(), end: subDays(new Date(), -5) }) && "bg-[hsl(var(--accent))] text-accent-foreground border-transparent"
                       )}
                     >
-                      {fixture.status}
+                       {fixture.status === "Scheduled" && isFuture(new Date(fixture.date)) && isWithinInterval(new Date(fixture.date), { start: new Date(), end: subDays(new Date(), -5) }) ? "Upcoming" : fixture.status}
                     </Badge>
                   </div>
                 </CardHeader>

@@ -1,4 +1,3 @@
-
 export interface PlayerSkills {
   technical?: {
     battingTechnique?: number;
@@ -60,7 +59,8 @@ export interface PlayerStats {
   wickets?: number;
   bowlingAverage?: number | string;
   economyRate?: number | string;
-  bestBowling?: ScoreDetail;
+  bestBatting?: Omit<ScoreDetail, 'venue'>; // value, opponent, year
+  bestBowling?: ScoreDetail; // value, opponent, year, venue
   catches?: number;
   stumpings?: number;
 }
@@ -97,27 +97,20 @@ export const playersData: PlayerProfile[] = [
       runs: 1250,
       average: 31.25,
       strikeRate: 110.5,
-      highestScore: {
-        value: "102*",
-        opponent: "Panthers Academy",
-        year: 2023,
-        venue: "Northwood Main Oval",
+      highestScore: { // Keep highestScore as is if different from bestBatting
+        value: "102*", opponent: "Panthers Academy", year: 2023, venue: "Northwood Main Oval",
       },
-      hundreds: 1,
-      fifties: 7,
-      wickets: 65,
+      bestBatting: { // Add bestBatting as per instruction
+        value: "102*", opponent: "Panthers Academy", year: 2023,
+      },
       bowlingAverage: 22.5,
       economyRate: 4.75,
       bestBowling: {
-        value: "4/35",
-        opponent: "Lions College",
-        year: 2022,
-        venue: "City Stadium",
+        value: "4/35", opponent: "Lions College", year: 2022, venue: "City Stadium",
       },
-      catches: 25,
-      stumpings: 0,
+      catches: 25, stumpings: 0,
     },
-    skills: {
+    skills: { // Skills data for John Doe (player-1)
       technical: {
         battingTechnique: 82,
         shotSelection: 78,
@@ -167,13 +160,20 @@ export const playersData: PlayerProfile[] = [
       runs: 980,
       average: 28.0,
       strikeRate: 95.0,
-      highestScore: { value: "85" },
+      highestScore: { // Keep highestScore as is
+        value: "85", opponent: "Eagles High", year: 2022, venue: "Panthers Home Ground"
+      },
+      bestBatting: { // Add bestBatting
+        value: "85", opponent: "Eagles High", year: 2022,
+      },
+      // No bowling stats or bestBowling for Wicket-keeper Batsman example
+      // bestBowling: undefined,
       hundreds: 0,
       fifties: 5,
       catches: 40,
       stumpings: 15,
     },
-    skills: {
+    skills: { // Skills data for Jane Smith (player-2) - Will be replaced
       technical: {
         battingTechnique: 78,
         shotSelection: 80,
@@ -213,16 +213,18 @@ export const playersData: PlayerProfile[] = [
       runs: 2100,
       average: 42.0,
       strikeRate: 75.5,
-      highestScore: {
-        value: "150",
-        opponent: "Eagles High",
-        year: 2021,
-        venue: "Lions Main Ground"
+      highestScore: { // Keep highestScore as is
+        value: "150", opponent: "Eagles High", year: 2021, venue: "Lions Main Ground"
       },
+      bestBatting: { // Add bestBatting
+        value: "150", opponent: "Eagles High", year: 2021,
+      },
+      // No bowling stats or bestBowling for Opening Batsman example
+      // bestBowling: undefined,
       hundreds: 3,
       fifties: 12,
       catches: 12,
-    },
+    }, // Skills data for Mike Brown (player-3) - Will be replaced
     skills: {
       technical: {
         battingTechnique: 90,
@@ -264,17 +266,21 @@ export const playersData: PlayerProfile[] = [
       runs: 150,
       average: 10.0,
       wickets: 75,
+      highestScore: { // Keep highestScore as is (lower order)
+        value: "35*", opponent: "Lions College", year: 2022, venue: "Lions College Oval"
+      },
+      // No significant bestBatting for a tail-ender, so can be undefined or simple
+      bestBatting: {
+        value: "35*", opponent: "Lions College", year: 2022,
+      },
       bowlingAverage: 18.5,
       economyRate: 4.2,
-      bestBowling: {
-        value: "6/20",
-        opponent: "Panthers Academy",
-        year: 2023,
-        venue: "Academy Ground"
+      bestBowling: { // Update bestBowling
+        value: "6/20", opponent: "Panthers Academy", year: 2023, venue: "Academy Ground"
       },
       catches: 8,
     },
-    skills: {
+    skills: { // Skills data for Sarah Wilson (player-4) - Will be replaced
       technical: {
         bowlingAccuracy: 92,
         bowlingVariation: 75, // e.g., swing, seam

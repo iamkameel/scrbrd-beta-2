@@ -1,5 +1,7 @@
 "use client"
 
+"use client";
+
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
@@ -537,6 +539,7 @@ const SidebarMenuButton = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button"> & {
     asChild?: boolean
+ disabled?: boolean;
     isActive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
   } & VariantProps<typeof sidebarMenuButtonVariants>
@@ -549,6 +552,7 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
+ disabled,
       ...props
     },
     ref
@@ -562,7 +566,12 @@ const SidebarMenuButton = React.forwardRef<
         data-sidebar="menu-button"
         data-size={size}
         data-active={isActive}
-        className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
+ className={cn(
+ sidebarMenuButtonVariants({ variant, size }),
+ disabled && 'opacity-50 cursor-not-allowed', // Add disabled styling
+ className
+ )}
+ aria-disabled={disabled} // Add aria-disabled attribute
         {...props}
       />
     )

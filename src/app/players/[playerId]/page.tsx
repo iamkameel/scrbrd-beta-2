@@ -144,21 +144,20 @@ export default function PlayerProfilePage() {
   const overallRating = calculateOverallRating(player.skills);
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-8 space-y-6 print:space-y-0">
       <Button variant="outline" asChild className="mb-6 print:hidden">
-        <Link href="/players">
-          <ArrowLeft className="mr-2 h-4 w-4" />
+ <Link href="/players">
+ <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Players List
-        </Link>
+ </Link>
       </Button>
-
       {/* Player Card Overview */}
-      <Card className="overflow-hidden shadow-xl bg-card border-2 border-primary/20 rounded-xl">
-        <div className="relative p-6 bg-gradient-to-br from-primary/90 to-primary/70 text-primary-foreground rounded-t-lg">
+      {player && ( <> <Card className="overflow-hidden shadow-xl bg-card border-2 border-primary/20 rounded-xl"> <div className="relative p-6 bg-gradient-to-br from-primary/90 to-primary/70 text-primary-foreground rounded-t-lg">
           {/* Top section: Rating, Role, Team Logos (simplified) */}
           <div className="flex items-start justify-between mb-4">
             <div className="text-left">
               <p className="text-xs text-primary-foreground/80 mb-0.5">Overall Rating</p>
+
               <p className="text-4xl font-bold leading-none">
                 {overallRating}
               </p>
@@ -183,39 +182,58 @@ export default function PlayerProfilePage() {
           </div>
         </div>
         
-        {/* Player Name */}
+ {/* Player Name */}
         <div className="text-center py-4 bg-card border-t border-b border-border">
           <h1 className="text-3xl font-bold text-foreground">{player.name}</h1>
           <p className="text-sm text-muted-foreground">{player.role} {player.careerSpan && `| ${player.careerSpan}`}</p>
         </div>
 
+
+
         {/* Stats Grid */}
-        <div className="p-6 bg-card rounded-b-lg">
-          <div className="space-y-5">
+ <div className="p-6 bg-card rounded-b-lg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
+          {/* Batting Stats Bento */}
+ <div className="col-span-1 sm:col-span-2 lg:col-span-2 p-4 bg-accent/10 rounded-lg border border-border flex items-center justify-around">
+            <PlayerStatDisplay label="Mat" value={player.stats.matchesPlayed} />
+ <PlayerStatDisplay label="Runs" value={player.stats.runs} />
+ <PlayerStatDisplay label="Bat Avg" value={player.stats.average} />
+ <PlayerStatDisplay label="SR" value={player.stats.strikeRate} />
+ </div>
+
+          {/* Batting Milestones Bento */}
+ {(player.stats.hundreds !== undefined || player.stats.fifties !== undefined) && (
+ <div className="col-span-1 p-4 bg-accent/10 rounded-lg border border-border flex items-center justify-around">
+ <PlayerStatDisplay label="100s" value={player.stats.hundreds} />
+ <PlayerStatDisplay label="50s" value={player.stats.fifties} />
+ </div>
+ )}
+
+ {/* Fielding Stats Bento */}
+ {(player.stats.catches !== undefined || player.stats.stumpings !== undefined) && (
+ <div className="col-span-1 p-4 bg-accent/10 rounded-lg border border-border flex items-center justify-around">
+ <PlayerStatDisplay label="Catches" value={player.stats.catches} />
+ <PlayerStatDisplay label="Stumpings" value={player.stats.stumpings} />
+ </div>
+ )}
+
+ {/* Bowling Stats Bento */}
+ {(player.stats.wickets !== undefined || player.stats.bowlingAverage !== undefined || player.stats.economyRate !== undefined) && (
+ <div className="col-span-1 sm:col-span-2 lg:col-span-2 p-4 bg-accent/10 rounded-lg border border-border flex items-center justify-around">
+ <PlayerStatDisplay label="Wkts" value={player.stats.wickets} />
+ <PlayerStatDisplay label="Bowl Avg" value={player.stats.bowlingAverage} />
+ <PlayerStatDisplay label="Econ" value={player.stats.economyRate} />
+ </div>
+ )}
             {/* Batting Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <PlayerStatDisplay label="Mat" value={player.stats.matchesPlayed} />
-              <PlayerStatDisplay label="Runs" value={player.stats.runs} />
-              <PlayerStatDisplay label="Bat Avg" value={player.stats.average} />
-              <PlayerStatDisplay label="SR" value={player.stats.strikeRate} />
-            </div>
-            {/* Bowling Stats & Fielding */}
-            {(player.stats.wickets !== undefined || player.stats.bowlingAverage !== undefined || player.stats.economyRate !== undefined || player.stats.catches !== undefined) && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-border/50">
-                <PlayerStatDisplay label="Wkts" value={player.stats.wickets} />
-                <PlayerStatDisplay label="Bowl Avg" value={player.stats.bowlingAverage} />
-                <PlayerStatDisplay label="Econ" value={player.stats.economyRate} />
-                <PlayerStatDisplay label="Catches" value={player.stats.catches} />
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
+
+ </div>
+
 
       {/* Original Content: Bio, Detailed Stats Tabs, Skills etc. */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           {player.bio && (
+
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl flex items-center gap-2">
@@ -227,6 +245,7 @@ export default function PlayerProfilePage() {
               </CardContent>
             </Card>
           )}
+
 
           <Card>
             <CardHeader>
@@ -303,6 +322,7 @@ export default function PlayerProfilePage() {
           )}
         </div>
 
+
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -312,14 +332,14 @@ export default function PlayerProfilePage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <StatItem label="Full Name" value={player.name} icon={AtSign} />
-              <StatItem label="Team" value={player.team} icon={ShieldCheck}/>
+              <StatItem label="Team" value={player.team} icon={ShieldCheck} />
               <StatItem label="Role" value={player.role} />
               {player.dateOfBirth && <StatItem label="Date of Birth" value={format(new Date(player.dateOfBirth), "MMMM d, yyyy")} icon={CalendarDays} />}
               {player.battingStyle && <StatItem label="Batting Style" value={player.battingStyle} />}
               {player.bowlingStyle && <StatItem label="Bowling Style" value={player.bowlingStyle} />}
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle className="text-xl flex items-center gap-2">
@@ -332,7 +352,7 @@ export default function PlayerProfilePage() {
           </Card>
         </div>
       </div>
+    )}
     </div>
   );
 }
-
