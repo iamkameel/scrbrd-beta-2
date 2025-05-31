@@ -83,7 +83,7 @@ export default function PlayersPage() {
     if (!players) {
       return ["all"];
     }
-    const teamsSet = new Set(players.map(player => player.team).filter(Boolean as unknown as (value: string | undefined) => value is string));
+    const teamsSet = new Set(players.map(player => player.team).filter(team => typeof team === 'string') as string[]);
     return ["all", ...Array.from(teamsSet).sort()];
   }, [players]);
 
@@ -91,7 +91,7 @@ export default function PlayersPage() {
     if (!players) {
       return ["all"];
     }
-    const rolesSet = new Set(players.map(player => player.role).filter(Boolean as unknown as (value: string | undefined) => value is string));
+    const rolesSet = new Set(players.map(player => player.role).filter(role => typeof role === 'string') as string[]);
     return ["all", ...Array.from(rolesSet).sort()];
   }, [players]);
 
@@ -248,7 +248,7 @@ export default function PlayersPage() {
               })}
             </div>
           ) : (
-            <p className="text-center text-muted-foreground py-4">
+             <p className="text-center text-muted-foreground py-4">
               { (!players || players.length === 0) && !isLoading ? "No players found in the database." : "No players match your search or filter criteria."}
             </p>
           )}
