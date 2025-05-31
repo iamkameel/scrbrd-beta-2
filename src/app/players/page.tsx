@@ -31,7 +31,9 @@ const CompactStatDisplay: React.FC<{ label: string; value: string | number | und
 );
 
 const calculateOverallRating = (skills: PlayerSkills | undefined): string | number => {
-  if (!skills) return 'N/A';
+  if (!skills) {
+    return 'N/A';
+  }
   let totalScore = 0;
   let skillCount = 0;
 
@@ -51,7 +53,9 @@ const calculateOverallRating = (skills: PlayerSkills | undefined): string | numb
   processSkillCategory(skills.physicalMental);
   processSkillCategory(skills.teamLeadership);
 
-  if (skillCount === 0) return 'N/A';
+  if (skillCount === 0) {
+    return 'N/A';
+  }
   return Math.round(totalScore / skillCount);
 };
 
@@ -66,9 +70,9 @@ const fetchPlayers = async (): Promise<PlayerProfile[]> => {
 };
 
 export default function PlayersPage() {
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const [teamFilter, setTeamFilter] = React.useState("all");
-  const [roleFilter, setRoleFilter] = React.useState("all");
+  const [searchTerm, setSearchTerm] = React.useState<string>("");
+  const [teamFilter, setTeamFilter] = React.useState<string>("all");
+  const [roleFilter, setRoleFilter] = React.useState<string>("all");
 
   const { data: players, isLoading, isError, error } = useQuery<PlayerProfile[], Error>({
     queryKey: ['players'],
@@ -76,14 +80,18 @@ export default function PlayersPage() {
   });
 
   const uniqueTeams = React.useMemo(() => {
-    if (!players) return ["all"];
-    const teamsSet = new Set(players.map(player => player.team));
+    if (!players) {
+      return ["all"];
+    }
+    const teamsSet = new Set(players.map(player => player.team).filter(Boolean as unknown as (value: string | undefined) => value is string));
     return ["all", ...Array.from(teamsSet).sort()];
   }, [players]);
 
   const uniqueRoles = React.useMemo(() => {
-    if (!players) return ["all"];
-    const rolesSet = new Set(players.map(player => player.role));
+    if (!players) {
+      return ["all"];
+    }
+    const rolesSet = new Set(players.map(player => player.role).filter(Boolean as unknown as (value: string | undefined) => value is string));
     return ["all", ...Array.from(rolesSet).sort()];
   }, [players]);
 
@@ -107,7 +115,7 @@ export default function PlayersPage() {
 
       return matchesSearch && matchesTeam && matchesRole;
     });
-  }, [searchTerm, teamFilter, roleFilter, players]);
+  }, [players, searchTerm, teamFilter, roleFilter]);
 
   if (isLoading) {
     return (
@@ -206,19 +214,19 @@ export default function PlayersPage() {
                   <Card key={player.id} className="hover:shadow-lg transition-shadow flex flex-col">
                     <CardHeader className="flex flex-row items-start gap-4 pb-3">
                       <Avatar className="h-16 w-16 mt-1">
-                        <AvatarImage src={player.avatar} alt={player.name} data-ai-hint="player portrait"/>
+                        <AvatarImage src={player.avatar} alt={player.name || 'Player'} data-ai-hint="player portrait"/>
                         <AvatarFallback>{player.name ? player.name.substring(0,2).toUpperCase() : 'P'}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">{player.name}</CardTitle>
+                          <CardTitle className="text-lg">{player.name || 'Unknown Player'}</CardTitle>
                           {overallRating !== 'N/A' && (
                             <Badge variant="secondary" className="ml-2">
                               {overallRating}
                             </Badge>
                           )}
                         </div>
-                        <CardDescription>{player.team} - {player.role}</CardDescription>
+                        <CardDescription>{player.team || 'N/A Team'} - {player.role || 'N/A Role'}</CardDescription>
                       </CardHeader>
                     <CardContent className="flex-grow py-3">
                       <div className="grid grid-cols-3 gap-2">
