@@ -2,12 +2,15 @@
 "use client";
 
 import * as React from 'react';
-import Link from 'next/link'; // Import Link
+import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import { collection, getDocs, query as firestoreQuery, where, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Search, Filter as FilterIcon, ListTree, School as SchoolIcon } from "lucide-react";
+import { MapPin, Search, Filter as FilterIcon, ListTree, School as SchoolIcon, Loader2, AlertTriangle } from "lucide-react";
 import Image from "next/image";
 import {
   DropdownMenu,
@@ -18,20 +21,52 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { schoolsData } from '@/lib/schools-data'; // Import data from lib
-import { cn } from '@/lib/utils';
+// Assuming SchoolProfile from schools-data.ts is the target structure for display
+import type { SchoolProfile, SchoolTeam } from '@/lib/schools-data'; 
+
+interface FirestoreSchoolDoc {
+  id: string; // Firestore document ID
+  name: string;
+  location: string;
+  crestUrl: string;
+  fields: string[];
+  bannerImageUrl?: string;
+  about?: string;
+  awardsAndAccolades?: string[];
+  teams?: SchoolTeam[];
+  records?: string[];
+  divisionId?: string;
+  // other fields from your Firestore schema for schools
+}
+
+const fetchSchools = async (): Promise<FirestoreSchoolDoc[]> => {
+  const schoolsCollectionRef = collection(db, 'schools');
+  const q = firestoreQuery(schoolsCollectionRef, orderBy('name')); // Order by name for consistent listing
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...(doc.data() as Omit<FirestoreSchoolDoc, 'id'>),
+  }));
+};
 
 export default function SchoolsPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [locationFilter, setLocationFilter] = React.useState("all");
 
+  const { data: schools, isLoading, isError, error } = useQuery<FirestoreSchoolDoc[], Error>({
+    queryKey: ['schools'],
+    queryFn: fetchSchools,
+  });
+
   const uniqueLocations = React.useMemo(() => {
-    const locations = new Set(schoolsData.map(school => school.location));
+    if (!schools) return ["all"];
+    const locations = new Set(schools.map(school => school.location));
     return ["all", ...Array.from(locations).sort()];
-  }, []);
+  }, [schools]);
 
   const filteredSchools = React.useMemo(() => {
-    return schoolsData.filter(school => {
+    if (!schools) return [];
+    return schools.filter(school => {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch =
         searchTerm === "" ||
@@ -43,7 +78,32 @@ export default function SchoolsPage() {
 
       return matchesSearch && matchesLocation;
     });
-  }, [searchTerm, locationFilter]);
+  }, [searchTerm, locationFilter, schools]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2 text-muted-foreground">Loading schools...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card className="border-destructive">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-6 w-6" /> Error Loading Schools
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-destructive-foreground">There was a problem fetching schools from the database.</p>
+          <p className="text-xs text-muted-foreground mt-2">Details: {error?.message}</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -103,7 +163,7 @@ export default function SchoolsPage() {
                   />
                   <CardHeader className="flex flex-row items-center gap-3 pb-3 pt-4">
                      <Image
-                      src={school.crestUrl}
+                      src={school.crestUrl || 'https://placehold.co/80x80.png'}
                       alt={`${school.name} crest`}
                       width={50}
                       height={50}
@@ -122,16 +182,18 @@ export default function SchoolsPage() {
                     <div className="flex items-center">
                       <ListTree className="mr-2 h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">
-                        {school.fields.length} Playing Field{school.fields.length !== 1 ? 's' : ''}
+                        {school.fields?.length || 0} Playing Field{school.fields?.length !== 1 ? 's' : ''}
                       </span>
                     </div>
-                    <div>
-                      <p className="font-medium text-xs text-muted-foreground mb-0.5">Fields:</p>
-                      <ul className="list-disc list-inside pl-1 space-y-0.5 text-xs">
-                        {school.fields.slice(0, 2).map(field => <li key={field} className="truncate" title={field}>{field}</li>)}
-                        {school.fields.length > 2 && <li className="text-muted-foreground/80 text-xs">...and {school.fields.length - 2} more</li>}
-                      </ul>
-                    </div>
+                    {school.fields && school.fields.length > 0 && (
+                      <div>
+                        <p className="font-medium text-xs text-muted-foreground mb-0.5">Fields:</p>
+                        <ul className="list-disc list-inside pl-1 space-y-0.5 text-xs">
+                          {school.fields.slice(0, 2).map(field => <li key={field} className="truncate" title={field}>{field}</li>)}
+                          {school.fields.length > 2 && <li className="text-muted-foreground/80 text-xs">...and {school.fields.length - 2} more</li>}
+                        </ul>
+                      </div>
+                    )}
                   </CardContent>
                    <CardContent className="pt-3 pb-4 border-t mt-auto">
                      <Button asChild variant="outline" size="sm" className="w-full text-primary hover:bg-primary/10">
