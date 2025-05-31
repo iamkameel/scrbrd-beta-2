@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, User, Filter, Users as TeamIcon, Briefcase, Loader2, AlertTriangle } from "lucide-react";
-import type { PlayerProfile, PlayerSkills } from "@/lib/player-data"; // Keep type for structure
+import type { PlayerProfile, PlayerSkills } from "@/lib/player-data";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,7 +54,7 @@ const calculateOverallRating = (skills: PlayerSkills | undefined): string | numb
 
 const fetchPlayers = async (): Promise<PlayerProfile[]> => {
   const playersCollectionRef = collection(db, 'players');
-  const q = firestoreQuery(playersCollectionRef, orderBy('name')); // Order by name
+  const q = firestoreQuery(playersCollectionRef, orderBy('name'));
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({
     id: doc.id,
@@ -74,7 +74,7 @@ export default function PlayersPage() {
 
   const uniqueTeams = React.useMemo(() => {
     if (!players) return ["all"];
-    const teams = new Set(players.map(player => player.team)); // player.team is a string name
+    const teams = new Set(players.map(player => player.team));
     return ["all", ...Array.from(teams).sort()];
   }, [players]);
 
@@ -91,7 +91,7 @@ export default function PlayersPage() {
       const matchesSearch =
         searchTerm === "" ||
         player.name.toLowerCase().includes(searchLower) ||
-        player.team.toLowerCase().includes(searchLower) || // player.team is a string name
+        player.team.toLowerCase().includes(searchLower) ||
         player.role.toLowerCase().includes(searchLower);
 
       const matchesTeam =
