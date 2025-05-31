@@ -1,15 +1,18 @@
 
-"use client"; // Required for using hooks like useState
+"use client";
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import { collection, getDocs, query as firestoreQuery, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, User, Filter, Users as TeamIcon, Briefcase } from "lucide-react";
-import { playersData, type PlayerProfile, type PlayerSkills } from "@/lib/player-data";
+import { Search, User, Filter, Users as TeamIcon, Briefcase, Loader2, AlertTriangle } from "lucide-react";
+import type { PlayerProfile, PlayerSkills } from "@/lib/player-data"; // Keep type for structure
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,13 +30,10 @@ const CompactStatDisplay: React.FC<{ label: string; value: string | number | und
   </div>
 );
 
-// Helper function to calculate overall rating from skills
 const calculateOverallRating = (skills: PlayerSkills | undefined): string | number => {
   if (!skills) return 'N/A';
-
   let totalScore = 0;
   let skillCount = 0;
-
   const processSkillCategory = (category: Record<string, number | undefined> | undefined) => {
     if (category) {
       Object.values(category).forEach(score => {
@@ -44,39 +44,54 @@ const calculateOverallRating = (skills: PlayerSkills | undefined): string | numb
       });
     }
   };
-
   processSkillCategory(skills.technical);
   processSkillCategory(skills.tactical);
   processSkillCategory(skills.physicalMental);
   processSkillCategory(skills.teamLeadership);
-
   if (skillCount === 0) return 'N/A';
   return Math.round(totalScore / skillCount);
 };
 
+const fetchPlayers = async (): Promise<PlayerProfile[]> => {
+  const playersCollectionRef = collection(db, 'players');
+  const q = firestoreQuery(playersCollectionRef, orderBy('name')); // Order by name
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...(doc.data() as Omit<PlayerProfile, 'id'>),
+  }));
+};
 
 export default function PlayersPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [teamFilter, setTeamFilter] = React.useState("all");
   const [roleFilter, setRoleFilter] = React.useState("all");
 
+  const { data: players, isLoading, isError, error } = useQuery<PlayerProfile[], Error>({
+    queryKey: ['players'],
+    queryFn: fetchPlayers,
+  });
+
   const uniqueTeams = React.useMemo(() => {
-    const teams = new Set(playersData.map(player => player.team));
+    if (!players) return ["all"];
+    const teams = new Set(players.map(player => player.team)); // player.team is a string name
     return ["all", ...Array.from(teams).sort()];
-  }, []);
+  }, [players]);
 
   const uniqueRoles = React.useMemo(() => {
-    const roles = new Set(playersData.map(player => player.role));
+    if (!players) return ["all"];
+    const roles = new Set(players.map(player => player.role));
     return ["all", ...Array.from(roles).sort()];
-  }, []);
+  }, [players]);
 
   const filteredPlayers = React.useMemo(() => {
-    return playersData.filter(player => {
+    if (!players) return [];
+    return players.filter(player => {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch =
-        searchTerm === "" || // If search term is empty, it's a match for this part
+        searchTerm === "" ||
         player.name.toLowerCase().includes(searchLower) ||
-        player.team.toLowerCase().includes(searchLower) ||
+        player.team.toLowerCase().includes(searchLower) || // player.team is a string name
         player.role.toLowerCase().includes(searchLower);
 
       const matchesTeam =
@@ -87,7 +102,32 @@ export default function PlayersPage() {
 
       return matchesSearch && matchesTeam && matchesRole;
     });
-  }, [searchTerm, teamFilter, roleFilter]);
+  }, [searchTerm, teamFilter, roleFilter, players]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2 text-muted-foreground">Loading players...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card className="border-destructive">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-6 w-6" /> Error Loading Players
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-destructive-foreground">There was a problem fetching players from the database.</p>
+          <p className="text-xs text-muted-foreground mt-2">Details: {error?.message}</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -97,14 +137,14 @@ export default function PlayersPage() {
             <User className="h-6 w-6 text-[hsl(var(--primary))]" />
             Player Profiles
           </CardTitle>
-          <CardDescription>Discover player statistics and career highlights. Filter by team and role.</CardDescription>
+          <CardDescription>Discover player statistics and career highlights from the database. Filter by team and role.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-grow">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                placeholder="Search by name..."
+                placeholder="Search by name, team, or role..."
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -174,8 +214,7 @@ export default function PlayersPage() {
                           )}
                         </div>
                         <CardDescription>{player.team} - {player.role}</CardDescription>
-                      </div>
-                    </CardHeader>
+                      </CardHeader>
                     <CardContent className="flex-grow py-3">
                       <div className="grid grid-cols-3 gap-2">
                         <CompactStatDisplay label="Mat" value={player.stats.matchesPlayed} />
@@ -196,7 +235,7 @@ export default function PlayersPage() {
               })}
             </div>
           ) : (
-            <p className="text-center text-muted-foreground py-4">No players found matching your search or filters.</p>
+            <p className="text-center text-muted-foreground py-4">No players found matching your search or filters in the database.</p>
           )}
         </CardContent>
       </Card>

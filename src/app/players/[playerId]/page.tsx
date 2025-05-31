@@ -3,13 +3,15 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
-import { playersData, type PlayerProfile, type PlayerSkills, type ScoreDetail } from '@/lib/player-data';
+import { useQuery } from '@tanstack/react-query';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { PlayerProfile, PlayerSkills, ScoreDetail } from '@/lib/player-data'; // Keep type for structure
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, BarChart3, Briefcase, Info, ShieldCheck, Star, Target, Zap, Brain, CalendarDays, Hash, AtSign, Activity, TrendingUp, Crosshair, Users, Shirt, ShieldQuestion } from "lucide-react";
+import { ArrowLeft, BarChart3, Briefcase, Info, ShieldCheck, Star, Target, Zap, Brain, CalendarDays, Hash, AtSign, Activity, TrendingUp, Crosshair, Users, Shirt, ShieldQuestion, Loader2, AlertTriangle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -89,10 +91,8 @@ const PlayerStatDisplay: React.FC<{ label: string; value: string | number | unde
 
 const calculateOverallRating = (skills: PlayerSkills | undefined): string | number => {
   if (!skills) return 'N/A';
-
   let totalScore = 0;
   let skillCount = 0;
-
   const processSkillCategory = (category: Record<string, number | undefined> | undefined) => {
     if (category) {
       Object.values(category).forEach(score => {
@@ -103,37 +103,66 @@ const calculateOverallRating = (skills: PlayerSkills | undefined): string | numb
       });
     }
   };
-
   processSkillCategory(skills.technical);
   processSkillCategory(skills.tactical);
   processSkillCategory(skills.physicalMental);
   processSkillCategory(skills.teamLeadership);
-
   if (skillCount === 0) return 'N/A';
   return Math.round(totalScore / skillCount);
 };
 
+const fetchPlayer = async (playerId: string): Promise<PlayerProfile | null> => {
+  if (!playerId) return null;
+  const playerDocRef = doc(db, 'players', playerId);
+  const playerSnap = await getDoc(playerDocRef);
+  if (playerSnap.exists()) {
+    return { id: playerSnap.id, ...playerSnap.data() } as PlayerProfile;
+  }
+  return null;
+};
 
 export default function PlayerProfilePage() {
   const params = useParams();
   const router = useRouter();
   const playerId = params.playerId as string;
 
-  const player = playersData.find(p => p.id === playerId);
+  const { data: player, isLoading, isError, error } = useQuery<PlayerProfile | null, Error>({
+    queryKey: ['player', playerId],
+    queryFn: () => fetchPlayer(playerId),
+    enabled: !!playerId, // Only run query if playerId is available
+  });
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-3 text-muted-foreground">Loading player profile...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="container mx-auto py-8 text-center">
+        <Card className="max-w-md mx-auto border-destructive">
+          <CardHeader><CardTitle className="flex items-center gap-2 text-destructive"><AlertTriangle />Error</CardTitle></CardHeader>
+          <CardContent>
+            <p className="text-destructive-foreground mb-4">Could not load player data: {error?.message}</p>
+            <Button onClick={() => router.push('/players')}><ArrowLeft className="mr-2 h-4 w-4" />Back to Players List</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   if (!player) {
     return (
       <div className="container mx-auto py-8 text-center">
         <Card className="max-w-md mx-auto">
-          <CardHeader>
-            <CardTitle>Player Not Found</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Player Not Found</CardTitle></CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-4">Sorry, we couldn't find details for this player.</p>
-            <Button onClick={() => router.push('/players')}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Players List
-            </Button>
+            <p className="text-muted-foreground mb-4">Sorry, we couldn't find details for this player in the database.</p>
+            <Button onClick={() => router.push('/players')}><ArrowLeft className="mr-2 h-4 w-4" />Back to Players List</Button>
           </CardContent>
         </Card>
       </div>
@@ -146,34 +175,26 @@ export default function PlayerProfilePage() {
   return (
     <div className="container mx-auto py-8 space-y-6 print:space-y-0">
       <Button variant="outline" asChild className="mb-6 print:hidden">
- <Link href="/players">
- <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Players List
- </Link>
+         <Link href="/players">
+           <ArrowLeft className="mr-2 h-4 w-4" />
+           Back to Players List
+         </Link>
       </Button>
-      {/* Player Card Overview */}
-      {player && ( <> <Card className="overflow-hidden shadow-xl bg-card border-2 border-primary/20 rounded-xl"> <div className="relative p-6 bg-gradient-to-br from-primary/90 to-primary/70 text-primary-foreground rounded-t-lg">
-          {/* Top section: Rating, Role, Team Logos (simplified) */}
+      <Card className="overflow-hidden shadow-xl bg-card border-2 border-primary/20 rounded-xl">
+        <div className="relative p-6 bg-gradient-to-br from-primary/90 to-primary/70 text-primary-foreground rounded-t-lg">
           <div className="flex items-start justify-between mb-4">
             <div className="text-left">
               <p className="text-xs text-primary-foreground/80 mb-0.5">Overall Rating</p>
-
-              <p className="text-4xl font-bold leading-none">
-                {overallRating}
-              </p>
+              <p className="text-4xl font-bold leading-none">{overallRating}</p>
               <p className="text-lg font-semibold uppercase tracking-wider">{roleAbbreviation}</p>
             </div>
             <div className="flex flex-col items-end space-y-1">
-               {/* Simplified Team display */}
               <div className="flex items-center gap-2 p-2 bg-black/20 rounded-md">
-                <ShieldQuestion className="h-5 w-5" /> {/* Placeholder for team logo */}
+                <ShieldQuestion className="h-5 w-5" />
                 <span className="text-xs font-medium">{player.team}</span>
               </div>
-              {/* Placeholder for national team if data was available */}
             </div>
           </div>
-
-          {/* Player Image */}
           <div className="flex justify-center mb-2">
             <Avatar className="h-40 w-40 border-4 border-background shadow-2xl">
               <AvatarImage src={player.avatar} alt={player.name} data-ai-hint="player action" className="object-cover"/>
@@ -182,58 +203,43 @@ export default function PlayerProfilePage() {
           </div>
         </div>
         
- {/* Player Name */}
         <div className="text-center py-4 bg-card border-t border-b border-border">
           <h1 className="text-3xl font-bold text-foreground">{player.name}</h1>
           <p className="text-sm text-muted-foreground">{player.role} {player.careerSpan && `| ${player.careerSpan}`}</p>
         </div>
 
-
-
-        {/* Stats Grid */}
- <div className="p-6 bg-card rounded-b-lg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
-          {/* Batting Stats Bento */}
- <div className="col-span-1 sm:col-span-2 lg:col-span-2 p-4 bg-accent/10 rounded-lg border border-border flex items-center justify-around">
+        <div className="p-6 bg-card rounded-b-lg grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
+          <div className="col-span-1 sm:col-span-2 lg:col-span-2 p-4 bg-accent/10 rounded-lg border border-border flex items-center justify-around">
             <PlayerStatDisplay label="Mat" value={player.stats.matchesPlayed} />
- <PlayerStatDisplay label="Runs" value={player.stats.runs} />
- <PlayerStatDisplay label="Bat Avg" value={player.stats.average} />
- <PlayerStatDisplay label="SR" value={player.stats.strikeRate} />
- </div>
+            <PlayerStatDisplay label="Runs" value={player.stats.runs} />
+            <PlayerStatDisplay label="Bat Avg" value={player.stats.average} />
+            <PlayerStatDisplay label="SR" value={player.stats.strikeRate} />
+          </div>
+          {(player.stats.hundreds !== undefined || player.stats.fifties !== undefined) && (
+            <div className="col-span-1 p-4 bg-accent/10 rounded-lg border border-border flex items-center justify-around">
+              <PlayerStatDisplay label="100s" value={player.stats.hundreds} />
+              <PlayerStatDisplay label="50s" value={player.stats.fifties} />
+            </div>
+          )}
+          {(player.stats.catches !== undefined || player.stats.stumpings !== undefined) && (
+            <div className="col-span-1 p-4 bg-accent/10 rounded-lg border border-border flex items-center justify-around">
+              <PlayerStatDisplay label="Catches" value={player.stats.catches} />
+              <PlayerStatDisplay label="Stumpings" value={player.stats.stumpings} />
+            </div>
+          )}
+          {(player.stats.wickets !== undefined || player.stats.bowlingAverage !== undefined || player.stats.economyRate !== undefined) && (
+            <div className="col-span-1 sm:col-span-2 lg:col-span-2 p-4 bg-accent/10 rounded-lg border border-border flex items-center justify-around">
+              <PlayerStatDisplay label="Wkts" value={player.stats.wickets} />
+              <PlayerStatDisplay label="Bowl Avg" value={player.stats.bowlingAverage} />
+              <PlayerStatDisplay label="Econ" value={player.stats.economyRate} />
+            </div>
+          )}
+        </div>
+      </Card>
 
-          {/* Batting Milestones Bento */}
- {(player.stats.hundreds !== undefined || player.stats.fifties !== undefined) && (
- <div className="col-span-1 p-4 bg-accent/10 rounded-lg border border-border flex items-center justify-around">
- <PlayerStatDisplay label="100s" value={player.stats.hundreds} />
- <PlayerStatDisplay label="50s" value={player.stats.fifties} />
- </div>
- )}
-
- {/* Fielding Stats Bento */}
- {(player.stats.catches !== undefined || player.stats.stumpings !== undefined) && (
- <div className="col-span-1 p-4 bg-accent/10 rounded-lg border border-border flex items-center justify-around">
- <PlayerStatDisplay label="Catches" value={player.stats.catches} />
- <PlayerStatDisplay label="Stumpings" value={player.stats.stumpings} />
- </div>
- )}
-
- {/* Bowling Stats Bento */}
- {(player.stats.wickets !== undefined || player.stats.bowlingAverage !== undefined || player.stats.economyRate !== undefined) && (
- <div className="col-span-1 sm:col-span-2 lg:col-span-2 p-4 bg-accent/10 rounded-lg border border-border flex items-center justify-around">
- <PlayerStatDisplay label="Wkts" value={player.stats.wickets} />
- <PlayerStatDisplay label="Bowl Avg" value={player.stats.bowlingAverage} />
- <PlayerStatDisplay label="Econ" value={player.stats.economyRate} />
- </div>
- )}
-            {/* Batting Stats */}
-
- </div>
-
-
-      {/* Original Content: Bio, Detailed Stats Tabs, Skills etc. */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           {player.bio && (
-
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl flex items-center gap-2">
@@ -245,7 +251,6 @@ export default function PlayerProfilePage() {
               </CardContent>
             </Card>
           )}
-
 
           <Card>
             <CardHeader>
@@ -322,7 +327,6 @@ export default function PlayerProfilePage() {
           )}
         </div>
 
-
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -347,12 +351,11 @@ export default function PlayerProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Player achievements will be listed here. (Coming Soon)</p>
+              <p className="text-muted-foreground">Player achievements will be listed here. (Data to be added)</p>
             </CardContent>
           </Card>
         </div>
       </div>
-    )}
     </div>
   );
 }
