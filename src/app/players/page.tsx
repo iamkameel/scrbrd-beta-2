@@ -83,7 +83,7 @@ export default function PlayersPage() {
     if (!players) {
       return ["all"];
     }
-    const teamsSet = new Set(players.map(player => player.team).filter(team => typeof team === 'string') as string[]);
+    const teamsSet = new Set(players.map(player => player.team).filter(team => typeof team === 'string'));
     return ["all", ...Array.from(teamsSet).sort()];
   }, [players]);
 
@@ -91,7 +91,7 @@ export default function PlayersPage() {
     if (!players) {
       return ["all"];
     }
-    const rolesSet = new Set(players.map(player => player.role).filter(role => typeof role === 'string') as string[]);
+    const rolesSet = new Set(players.map(player => player.role).filter(role => typeof role === 'string'));
     return ["all", ...Array.from(rolesSet).sort()];
   }, [players]);
 
