@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -17,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
 import { UserCog, Edit3, Search, Building, ListChecks } from "lucide-react"; // Added Building, ListChecks
+import { schoolsData, SchoolProfile } from '@/lib/schools-data'; // Import schoolsData
 
 const ALL_ROLES = [
   "Admin", "School", "Coach", "Player", "Parent", "Captain",
@@ -38,35 +38,48 @@ interface AdminUser {
   email: string;
   role: UserRole;
   status: 'Active' | 'Suspended';
-  school?: string; // Added school
+  schoolId?: string; // Changed to schoolId string
 }
 
 const initialSampleUsers: AdminUser[] = [
-  { id: 'user1', name: 'Alice Admin', email: 'alice@example.com', role: 'Admin', status: 'Active', school: 'Central Admin Dept.' },
-  { id: 'user2', name: 'Bob Coach', email: 'bob@example.com', role: 'Coach', status: 'Active', school: 'Northwood School' },
-  { id: 'user3', name: 'Charlie Player', email: 'charlie@example.com', role: 'Player', status: 'Suspended', school: 'Hilton College' },
-  { id: 'user4', name: 'Diana Parent', email: 'diana@example.com', role: 'Parent', status: 'Active', school: 'Northwood School' },
-  { id: 'user5', name: 'Edward Scorer', email: 'edward@example.com', role: 'Scorer', status: 'Active', school: 'KZN Cricket Union' },
-  { id: 'user6', name: 'Fiona Groundskeeper', email: 'fiona@example.com', role: 'Groundskeeper', status: 'Active', school: 'City Stadiums' },
-  { id: 'user7', name: 'George Umpire', email: 'george@example.com', role: 'Umpire', status: 'Suspended', school: 'KZN Cricket Union' },
-  { id: 'user8', name: 'Hannah SchoolAdmin', email: 'hannah@school.com', role: 'School', status: 'Active', school: 'Westville Boys\' High' },
-  { id: 'user9', name: 'Ian Player', email: 'ian.player@example.com', role: 'Player', status: 'Active', school: 'Northwood School' },
-  { id: 'user10', name: 'Julia Coach', email: 'julia.coach@example.com', role: 'Coach', status: 'Suspended', school: 'Hilton College' },
-  { id: 'user11', name: 'Kevin Sportmaster', email: 'kevin.sm@school.com', role: 'Sportmaster', status: 'Active', school: 'Westville Boys\' High' },
-  { id: 'user12', name: 'Laura Driver', email: 'laura.driver@transport.com', role: 'Driver', status: 'Active', school: 'Northwood School Transport' },
+  { id: 'user1', name: 'Alice Admin', email: 'alice@example.com', role: 'Admin', status: 'Active', schoolId: undefined }, // Admin user not tied to a school
+  { id: 'user2', name: 'Bob Coach', email: 'bob@example.com', role: 'Coach', status: 'Active', schoolId: 'school-8' }, // Northwood School
+  { id: 'user3', name: 'Charlie Player', email: 'charlie@example.com', role: 'Player', status: 'Suspended', schoolId: 'school-2' }, // Hilton College
+  { id: 'user4', name: 'Diana Parent', email: 'diana@example.com', role: 'Parent', status: 'Active', schoolId: 'school-8' }, // Northwood School
+  { id: 'user5', name: 'Edward Scorer', email: 'edward@example.com', role: 'Scorer', status: 'Active', schoolId: undefined }, // Not tied to a school
+  { id: 'user6', name: 'Fiona Groundskeeper', email: 'fiona@example.com', role: 'Groundskeeper', status: 'Active', schoolId: undefined }, // Not tied to a school
+  { id: 'user7', name: 'George Umpire', email: 'george@example.com', role: 'Umpire', status: 'Suspended', schoolId: undefined }, // Not tied to a school
+  { id: 'user8', name: 'Hannah SchoolAdmin', email: 'hannah@school.com', role: 'School', status: 'Active', schoolId: 'school-7' }, // Westville Boys' High
+  { id: 'user9', name: 'Ian Player', email: 'ian.player@example.com', role: 'Player', status: 'Active', schoolId: 'school-8' }, // Northwood School
+  { id: 'user10', name: 'Julia Coach', email: 'julia.coach@example.com', role: 'Coach', status: 'Suspended', schoolId: 'school-2' }, // Hilton College
+  { id: 'user11', name: 'Kevin Sportmaster', email: 'kevin.sm@school.com', role: 'Sportmaster', status: 'Active', schoolId: 'school-7' }, // Westville Boys' High
+  { id: 'user12', name: 'Laura Driver', email: 'laura.driver@transport.com', role: 'Driver', status: 'Active', schoolId: undefined }, // Not tied to a school
 ];
 
 export default function UserManagementPage() {
   const [users, setUsers] = React.useState<AdminUser[]>(initialSampleUsers);
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [schoolFilter, setSchoolFilter] = React.useState<string>("All");
+  const [schoolFilter, setSchoolFilter] = React.useState<string>("All"); // Use schoolId for filter
   const [roleFilter, setRoleFilter] = React.useState<UserRoleFilter>("All");
   const [statusFilter, setStatusFilter] = React.useState<UserStatusFilter>("All");
 
-  const uniqueSchools = React.useMemo(() => {
-    const schools = new Set(users.map(user => user.school).filter(Boolean) as string[]);
-    return ["All", ...Array.from(schools).sort()];
+  const schoolOptions = React.useMemo(() => {
+    const schoolsMap = new Map<string, string>();
+    schoolsData.forEach(school => schoolsMap.set(school.id.toString(), school.name));
+    const uniqueSchoolIds = new Set(users.map(user => user.schoolId).filter(Boolean) as string[]);
+    const sortedSchoolIds = Array.from(uniqueSchoolIds).sort((a, b) => {
+       const nameA = schoolsMap.get(a) || '';
+       const nameB = schoolsMap.get(b) || '';
+       return nameA.localeCompare(nameB);
+    });
+    return ["All", ...sortedSchoolIds]; // Store IDs, map to names for display
   }, [users]);
+
+  const getSchoolNameById = React.useCallback((schoolId?: string): string => {
+    if (!schoolId) return 'N/A';
+    const school = schoolsData.find(s => s.id.toString() === schoolId);
+    return school ? school.name : 'Unknown School';
+  }, []);
 
   const handleRoleChange = (userId: string, newRole: UserRole) => {
     setUsers(prevUsers =>
@@ -93,14 +106,17 @@ export default function UserManagementPage() {
         user.name.toLowerCase().includes(lowercasedSearchTerm) ||
         user.email.toLowerCase().includes(lowercasedSearchTerm);
 
-      const matchesSchool = schoolFilter === "All" || user.school === schoolFilter;
+      const matchesSchool = schoolFilter === "All" || user.schoolId === schoolFilter;
       const matchesRole = roleFilter === "All" || user.role === roleFilter;
       const matchesStatus = statusFilter === "All" || user.status === statusFilter;
 
       return matchesSearch && matchesSchool && matchesRole && matchesStatus;
     });
   }, [users, searchTerm, schoolFilter, roleFilter, statusFilter]);
-  
+
+  // Map school IDs to names for display in the dropdown trigger
+  const currentSchoolFilterName = schoolFilter === "All" ? "All Schools" : getSchoolNameById(schoolFilter);
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -131,16 +147,16 @@ export default function UserManagementPage() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex-grow sm:flex-grow-0">
                     <Building className="mr-2 h-4 w-4" />
-                    School: {schoolFilter === "All" ? "All" : schoolFilter}
+                    School: {currentSchoolFilterName}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56">
                   <DropdownMenuLabel>Filter by School</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuRadioGroup value={schoolFilter} onValueChange={setSchoolFilter}>
-                    {uniqueSchools.map(school => (
-                      <DropdownMenuRadioItem key={school} value={school}>
-                        {school === "All" ? "All Schools" : school}
+                    {schoolOptions.map(schoolId => (
+                      <DropdownMenuRadioItem key={schoolId} value={schoolId}>
+                        {schoolId === "All" ? "All Schools" : getSchoolNameById(schoolId)}
                       </DropdownMenuRadioItem>
                     ))}
                   </DropdownMenuRadioGroup>
@@ -198,7 +214,7 @@ export default function UserManagementPage() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg">{user.name}</CardTitle>
                     <CardDescription className="text-xs">{user.email}</CardDescription>
-                     {user.school && <CardDescription className="text-xs pt-1">School: {user.school}</CardDescription>}
+                     {user.schoolId && <CardDescription className="text-xs pt-1">School: {getSchoolNameById(user.schoolId)}</CardDescription>}
                   </CardHeader>
                   <CardContent className="space-y-2 flex-grow">
                     <div className="flex items-center justify-between text-sm">

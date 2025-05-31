@@ -1,9 +1,8 @@
-// src/app/teams/[teamId]/page.tsx
 "use client";
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+// import Image from 'next/image'; // Temporarily commented out due to missing crestUrl in data
 import { detailedTeamsData, type Team } from '@/lib/team-data';
 import { PlayerProfile } from '@/lib/player-data';
 import { fixtures as allFixtures, type Fixture } from '@/lib/fixtures-data';
@@ -15,20 +14,20 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Users, BarChartBig, CalendarDays, ShieldCheck, Trophy, TrendingUp, Crosshair, Hand, FileText, ClipboardList, Scale, Crown, Dices } from "lucide-react";
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import Image from 'next/image';
 
 interface TeamWithPlayerProfiles extends Team {
   squad: PlayerProfile[];
 }
-
 export default function TeamDetailsPage() {
   const params = useParams();
-  const teamId = params.teamId ? parseInt(params.teamId as string, 10) : null;
+  const teamIdString = Array.isArray(params.teamId) ? params.teamId[0] : params.teamId;
 
-  const team: TeamWithPlayerProfiles | undefined = detailedTeamsData.find(t => t.id === teamId) as TeamWithPlayerProfiles | undefined;
+
+  const team: TeamWithPlayerProfiles | undefined = detailedTeamsData.find(t => t.id === teamIdString);
   const teamFixtures: Fixture[] = team ? (allFixtures as Fixture[]).filter(
     fixture =>
-      (fixture.teamA.includes(team.affiliation) && fixture.teamA.includes(team.teamName)) ||
-      (fixture.teamB.includes(team.affiliation) && fixture.teamB.includes(team.teamName))
+      fixture.teamAId === team.id || fixture.teamBId === team.id
   ) : [];
 
   if (!team) {
@@ -97,16 +96,16 @@ export default function TeamDetailsPage() {
       <Card className="overflow-hidden">
         <div className="relative h-48 md:h-64 bg-muted">
           <Image
-            src={`https://placehold.co/1200x400.png`}
-            alt={`${team.affiliation} ${team.teamName} Banner`}
+            src={`https://placehold.co/1200x400`} // Placeholder for banner image
+            alt={`${team.schoolId} ${team.teamName} banner`}
             fill
             style={{objectFit: "cover"}}
             data-ai-hint="team banner sport"
           />
           <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center p-4">
-            <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight">
-              {team.affiliation}
-            </h1>
+ <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight">
+ {team.schoolId}
+            </h1>{/* This still uses affiliation, assuming it might be a display name or will be fetched from school data */}
             <h2 className="text-2xl md:text-4xl font-semibold text-primary-foreground/90">
               {team.teamName} {team.mascot && `(${team.mascot})`}
             </h2>
@@ -195,11 +194,10 @@ export default function TeamDetailsPage() {
                     const matchResult = fixture.status === "Completed"
                       ? resultsData.find(r => r.fixtureId === fixture.id)
                       : undefined;
-
                     return (
                       <div key={fixture.id} className="p-4 border rounded-lg bg-muted/50 shadow-sm space-y-3">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                          <p className="font-semibold text-md mb-1 sm:mb-0">{fixture.teamA} vs {fixture.teamB}</p>
+                          <p className="font-semibold text-md mb-1 sm:mb-0">{fixture.teamAId} vs {fixture.teamBId}</p>
                           <Badge
                             variant={getStatusBadgeVariant(fixture.status)}
                             className={cn(
@@ -220,7 +218,7 @@ export default function TeamDetailsPage() {
 
                         {matchResult && (
                           <div className="text-sm space-y-1 pt-1">
-                            <p><span className="font-medium">{matchResult.teamA}:</span> {matchResult.teamAScore} &nbsp;&nbsp; <span className="font-medium">{matchResult.teamB}:</span> {matchResult.teamBScore}</p>
+                            <p><span className="font-medium">{matchResult.teamAId}:</span> {matchResult.teamAScore} &nbsp;&nbsp; <span className="font-medium">{matchResult.teamBId}:</span> {matchResult.teamBScore}</p>
                             <p className="font-semibold text-[hsl(var(--accent))]">{matchResult.winner} won by {matchResult.margin}</p>
                           </div>
                         )}
@@ -263,7 +261,7 @@ export default function TeamDetailsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              <div><strong>Affiliation:</strong> {team.affiliation}</div>
+              <div><strong>School ID:</strong> {team.schoolId}</div>{/* Changed from Affiliation to School ID */}
               <div><strong>Team Name:</strong> {team.teamName}</div>
               {team.mascot && <div><strong>Mascot:</strong> {team.mascot}</div>}
               <div><strong>Age Group:</strong> <Badge variant="outline" className="text-xs">{team.ageGroup}</Badge></div>

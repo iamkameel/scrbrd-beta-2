@@ -1,8 +1,7 @@
-
 export interface Fixture {
   id: number;
-  teamA: string;
-  teamB: string;
+  teamAId: string;
+  teamBId: string;
   date: string;
   time: string;
   location: string;
@@ -12,68 +11,68 @@ export interface Fixture {
 }
 
 export const fixtures: Fixture[] = [
-  { 
-    id: 1, 
-    teamA: "Northwood School 1st XI", 
-    teamB: "Panthers Academy", 
-    date: "2024-09-15", 
-    time: "10:00 AM", 
-    location: "Northwood Main Oval", 
+  {
+    id: 1,
+    teamAId: "team_northwood_1st",
+    teamBId: "team_panthers_academy",
+    date: "2024-09-15",
+    time: "10:00 AM",
+    location: "Northwood Main Oval",
     status: "Upcoming",
     umpires: ["Mr. A. Smith", "Ms. B. Jones"],
     scorers: ["Mr. C. Davis (Northwood)", "Ms. D. Wilson (Panthers)"]
   },
-  { 
-    id: 2, 
-    teamA: "Hillcrest College U16", 
-    teamB: "Knights School", 
-    date: "2024-09-22", 
-    time: "02:00 PM", 
-    location: "Hillcrest College Green", 
+  {
+    id: 2,
+    teamAId: "team_hillcrest_u16",
+    teamBId: "team_knights_school",
+    date: "2024-09-22",
+    time: "02:00 PM",
+    location: "Hillcrest College Green",
     status: "Scheduled", // Changed from Upcoming
     umpires: ["Mr. E. Evans"],
     scorers: ["Mr. F. Green (Hillcrest)"]
   },
-  { 
-    id: 3, 
-    teamA: "Riverdale Cricket Club Seniors", 
-    teamB: "Sharks United", 
-    date: "2024-08-10", 
-    time: "09:30 AM", 
-    location: "City Stadium", 
+  {
+    id: 3,
+    teamAId: "team_riverdale_seniors",
+    teamBId: "team_sharks_united",
+    date: "2024-08-10",
+    time: "09:30 AM",
+    location: "City Stadium",
     status: "Completed" // Changed from Past
   },
-  { 
-    id: 4, 
-    teamA: "Michaelhouse Colts XI", 
-    teamB: "Northwood School U15A", 
-    date: "2024-09-29", 
-    time: "10:00 AM", 
-    location: "Michaelhouse Oval", 
-    status: "Upcoming" 
+  {
+    id: 4,
+    teamAId: "team_michaelhouse_colts",
+    teamBId: "team_northwood_u15a",
+    date: "2024-09-29",
+    time: "10:00 AM",
+    location: "Michaelhouse Oval",
+    status: "Upcoming"
   },
-  { 
-    id: 5, 
-    teamA: "Panthers Academy", 
-    teamB: "Hillcrest College U16", 
-    date: "2024-08-17", 
-    time: "01:00 PM", 
-    location: "Academy Ground", 
+  {
+    id: 5,
+    teamAId: "team_panthers_academy",
+    teamBId: "team_hillcrest_u16",
+    date: "2024-08-17",
+    time: "01:00 PM",
+    location: "Academy Ground",
     status: "Completed" // Changed from Past
   },
-  { 
-    id: 6, 
-    teamA: "Northwood School 1st XI", 
-    teamB: "Michaelhouse Colts XI", 
-    date: "2024-07-20", 
-    time: "10:00 AM", 
-    location: "Northwood Main Oval", 
+  {
+    id: 6,
+    teamAId: "team_northwood_1st",
+    teamBId: "team_michaelhouse_colts",
+    date: "2024-07-20",
+    time: "10:00 AM",
+    location: "Northwood Main Oval",
     status: "Completed" // Changed from Past
   },
   {
     id: 7,
-    teamA: "Durban High School (DHS) 1st XI",
-    teamB: "Glenwood High School 1st XI",
+    teamAId: "team_dhs_1st",
+    teamBId: "team_glenwood_1st",
     date: "2024-10-05",
     time: "09:00 AM",
     location: "DHS Memorial Ground",
@@ -83,17 +82,17 @@ export const fixtures: Fixture[] = [
   },
   {
     id: 8,
-    teamA: "Kearsney College U14A",
-    teamB: "Westville Boys' High U14A",
+    teamAId: "team_kearsney_u14a",
+    teamBId: "team_wbhs_u14a",
     date: "2024-10-12",
     time: "01:30 PM",
     location: "Kearsney AH Smith Oval",
-    status: "Rain-Delay" 
+    status: "Rain-Delay"
   },
    {
     id: 9,
-    teamA: "Clifton School U15A",
-    teamB: "St Charles College U15A",
+    teamAId: "team_clifton_u15a",
+    teamBId: "team_stcharles_u15a",
     date: "2024-08-25",
     time: "10:00 AM",
     location: "Clifton Riverside",
@@ -101,8 +100,8 @@ export const fixtures: Fixture[] = [
   },
   {
     id: 10,
-    teamA: "Maritzburg College 2nd XI",
-    teamB: "Hilton College 2nd XI",
+    teamAId: "team_maritzburg_2nd",
+    teamBId: "team_hilton_2nd",
     date: "2024-10-19",
     time: "09:45 AM",
     location: "Goldstones",

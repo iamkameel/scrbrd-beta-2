@@ -1,12 +1,11 @@
-
 export interface BatsmanScore {
   name: string;
-  dismissal: string; 
+  dismissal: string;
   runs: number;
   balls: number;
   fours: number;
   sixes: number;
-  strikeRate: string; 
+  strikeRate: string;
 }
 
 export interface BowlerScore {
@@ -32,10 +31,10 @@ export interface BallEvent {
 }
 
 export interface FallOfWicket {
-  score: number; 
-  wicket: number; 
+  score: number;
+  wicket: number;
   batsmanOut: string;
-  over: string; 
+  over: string;
 }
 
 export interface InningsData {
@@ -57,9 +56,9 @@ export interface InningsData {
 export interface Result {
   id: number; // Unique ID for the result itself
   fixtureId: number; // Corresponds to Fixture.id in fixtures-data.ts
-  teamA: string;
+  teamAId: string;
   teamAScore: string; // Summary score string
-  teamB: string;
+  teamBId: string;
   teamBScore: string; // Summary score string
   winner: string;
   margin: string;
@@ -71,8 +70,8 @@ export const resultsData: Result[] = [
   {
     id: 1,
     fixtureId: 3, // Corresponds to Riverdale Cricket Club Seniors vs Sharks United
-    teamA: "Riverdale Cricket Club Seniors", teamAScore: "185/7",
-    teamB: "Sharks United", teamBScore: "170/9",
+    teamAId: "team_a_id_1", teamAScore: "185/7",
+    teamBId: "team_b_id_1", teamBScore: "170/9",
     winner: "Riverdale Cricket Club Seniors", margin: "15 runs",
     playerOfTheMatch: "L. Walker (Riverdale - 55 runs, 2 wkts)",
     innings: [
@@ -188,8 +187,8 @@ export const resultsData: Result[] = [
   {
     id: 2,
     fixtureId: 5, // Corresponds to Panthers Academy vs Hillcrest College U16
-    teamA: "Panthers Academy", teamAScore: "150/8",
-    teamB: "Hillcrest College U16", teamBScore: "151/5",
+    teamAId: "team_a_id_2", teamAScore: "150/8",
+    teamBId: "team_b_id_2", teamBScore: "151/5",
     winner: "Hillcrest College U16", margin: "5 wickets",
     playerOfTheMatch: "Player HC 3 (Hillcrest - 65* runs)"
     // No detailed innings for this one yet
@@ -197,20 +196,19 @@ export const resultsData: Result[] = [
   {
     id: 3,
     fixtureId: 6, // Corresponds to Northwood School 1st XI vs Michaelhouse Colts XI
-    teamA: "Northwood School 1st XI", teamAScore: "205/4",
-    teamB: "Michaelhouse Colts XI", teamBScore: "180/9",
+    teamAId: "team_a_id_3", teamAScore: "205/4",
+    teamBId: "team_b_id_3", teamBScore: "180/9",
     winner: "Northwood School 1st XI", margin: "25 runs",
     playerOfTheMatch: "E. Miller (Northwood - 88* runs)"
     // No detailed innings for this one yet
   },
   {
     id: 4,
-    fixtureId: 2, 
-    teamA: "Hillcrest College U16", teamAScore: "170/6",
-    teamB: "Knights School", teamBScore: "165/8",
+    fixtureId: 2,
+    teamAId: "team_a_id_4", teamAScore: "170/6",
+    teamBId: "team_b_id_4", teamBScore: "165/8",
     winner: "Hillcrest College U16", margin: "5 runs",
     playerOfTheMatch: "Jane Doe (Hillcrest - 45 runs, 1 wkt)"
     // No detailed innings for this one yet
   }
 ];
-
