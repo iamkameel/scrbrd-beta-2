@@ -34,6 +34,7 @@ const calculateOverallRating = (skills: PlayerSkills | undefined): string | numb
   if (!skills) return 'N/A';
   let totalScore = 0;
   let skillCount = 0;
+
   const processSkillCategory = (category: Record<string, number | undefined> | undefined) => {
     if (category) {
       Object.values(category).forEach(score => {
@@ -44,10 +45,12 @@ const calculateOverallRating = (skills: PlayerSkills | undefined): string | numb
       });
     }
   };
+
   processSkillCategory(skills.technical);
   processSkillCategory(skills.tactical);
   processSkillCategory(skills.physicalMental);
   processSkillCategory(skills.teamLeadership);
+
   if (skillCount === 0) return 'N/A';
   return Math.round(totalScore / skillCount);
 };
@@ -74,31 +77,33 @@ export default function PlayersPage() {
 
   const uniqueTeams = React.useMemo(() => {
     if (!players) return ["all"];
-    const teams = new Set(players.map(player => player.team));
-    return ["all", ...Array.from(teams).sort()];
+    const teamsSet = new Set(players.map(player => player.team));
+    return ["all", ...Array.from(teamsSet).sort()];
   }, [players]);
 
   const uniqueRoles = React.useMemo(() => {
     if (!players) return ["all"];
-    const roles = new Set(players.map(player => player.role));
-    return ["all", ...Array.from(roles).sort()];
+    const rolesSet = new Set(players.map(player => player.role));
+    return ["all", ...Array.from(rolesSet).sort()];
   }, [players]);
 
   const filteredPlayers = React.useMemo(() => {
-    if (!players) return [];
+    if (!players) {
+      return [];
+    }
     return players.filter(player => {
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch =
         searchTerm === "" ||
-        player.name.toLowerCase().includes(searchLower) ||
-        player.team.toLowerCase().includes(searchLower) ||
-        player.role.toLowerCase().includes(searchLower);
+        (player.name && player.name.toLowerCase().includes(searchLower)) ||
+        (player.team && player.team.toLowerCase().includes(searchLower)) ||
+        (player.role && player.role.toLowerCase().includes(searchLower));
 
       const matchesTeam =
-        teamFilter === "all" || player.team === teamFilter;
+        teamFilter === "all" || (player.team && player.team === teamFilter);
 
       const matchesRole =
-        roleFilter === "all" || player.role === roleFilter;
+        roleFilter === "all" || (player.role && player.role === roleFilter);
 
       return matchesSearch && matchesTeam && matchesRole;
     });
@@ -123,7 +128,7 @@ export default function PlayersPage() {
         </CardHeader>
         <CardContent>
           <p className="text-destructive-foreground">There was a problem fetching players from the database.</p>
-          <p className="text-xs text-muted-foreground mt-2">Details: {error?.message}</p>
+          {error && <p className="text-xs text-muted-foreground mt-2">Details: {error.message}</p>}
         </CardContent>
       </Card>
     );
@@ -193,7 +198,7 @@ export default function PlayersPage() {
             </div>
           </div>
 
-          {filteredPlayers.length > 0 ? (
+          {filteredPlayers && filteredPlayers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPlayers.map((player) => {
                 const overallRating = calculateOverallRating(player.skills);
@@ -201,8 +206,8 @@ export default function PlayersPage() {
                   <Card key={player.id} className="hover:shadow-lg transition-shadow flex flex-col">
                     <CardHeader className="flex flex-row items-start gap-4 pb-3">
                       <Avatar className="h-16 w-16 mt-1">
-                        <AvatarImage src={player.avatar} alt={player.name} data-ai-hint="player portrait" />
-                        <AvatarFallback>{player.name.substring(0,2).toUpperCase()}</AvatarFallback>
+                        <AvatarImage src={player.avatar} alt={player.name} data-ai-hint="player portrait"/>
+                        <AvatarFallback>{player.name ? player.name.substring(0,2).toUpperCase() : 'P'}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
@@ -217,12 +222,12 @@ export default function PlayersPage() {
                       </CardHeader>
                     <CardContent className="flex-grow py-3">
                       <div className="grid grid-cols-3 gap-2">
-                        <CompactStatDisplay label="Mat" value={player.stats.matchesPlayed} />
-                        <CompactStatDisplay label="Runs" value={player.stats.runs} />
-                        <CompactStatDisplay label="Bat Avg" value={player.stats.average} />
-                        <CompactStatDisplay label="Wkts" value={player.stats.wickets} />
-                        <CompactStatDisplay label="Bowl Avg" value={player.stats.bowlingAverage} />
-                        <CompactStatDisplay label="Catches" value={player.stats.catches} />
+                        <CompactStatDisplay label="Mat" value={player.stats?.matchesPlayed} />
+                        <CompactStatDisplay label="Runs" value={player.stats?.runs} />
+                        <CompactStatDisplay label="Bat Avg" value={player.stats?.average} />
+                        <CompactStatDisplay label="Wkts" value={player.stats?.wickets} />
+                        <CompactStatDisplay label="Bowl Avg" value={player.stats?.bowlingAverage} />
+                        <CompactStatDisplay label="Catches" value={player.stats?.catches} />
                       </div>
                     </CardContent>
                     <CardContent className="pt-2 pb-4 mt-auto">
@@ -235,7 +240,9 @@ export default function PlayersPage() {
               })}
             </div>
           ) : (
-            <p className="text-center text-muted-foreground py-4">No players found matching your search or filters in the database.</p>
+            <p className="text-center text-muted-foreground py-4">
+              { (!players || players.length === 0) && !isLoading ? "No players found in the database." : "No players match your search or filter criteria."}
+            </p>
           )}
         </CardContent>
       </Card>
