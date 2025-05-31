@@ -101,17 +101,13 @@ export default function PlayersPage() {
     }
     return players.filter(player => {
       const searchLower = searchTerm.toLowerCase();
-      const matchesSearch =
-        searchTerm === "" ||
-        (player.name && player.name.toLowerCase().includes(searchLower)) ||
-        (player.team && player.team.toLowerCase().includes(searchLower)) ||
-        (player.role && player.role.toLowerCase().includes(searchLower));
-
-      const matchesTeam =
-        teamFilter === "all" || (player.team && player.team === teamFilter);
-
-      const matchesRole =
-        roleFilter === "all" || (player.role && player.role === roleFilter);
+      const nameMatch = player.name && player.name.toLowerCase().includes(searchLower);
+      const teamMatch = player.team && player.team.toLowerCase().includes(searchLower);
+      const roleMatch = player.role && player.role.toLowerCase().includes(searchLower);
+      
+      const matchesSearch = searchTerm === "" || nameMatch || teamMatch || roleMatch;
+      const matchesTeam = teamFilter === "all" || (player.team && player.team === teamFilter);
+      const matchesRole = roleFilter === "all" || (player.role && player.role === roleFilter);
 
       return matchesSearch && matchesTeam && matchesRole;
     });
