@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query as firestoreQuery, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { PlayerProfile } from '@/lib/player-data'; // Restored type, PlayerSkills still out for now
+import type { PlayerProfile } from '@/lib/player-data';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -44,9 +44,8 @@ const CompactStatDisplay: React.FC<{ label: string; value: string | number | und
   </div>
 );
 
-
-// calculateOverallRating function and PlayerSkills type are still commented out for now
 /*
+// calculateOverallRating function and PlayerSkills type are still commented out for now
 import type { PlayerSkills } from '@/lib/player-data';
 
 const calculateOverallRating = (skills: PlayerSkills | undefined): string | number => {
@@ -92,28 +91,42 @@ export default function PlayersPage() {
     queryFn: fetchPlayers,
   });
 
+  React.useEffect(() => {
+    if (isLoading) {
+      console.log("PlayersPage: Player data is loading...");
+    }
+    if (isError) {
+      console.error("PlayersPage: Error fetching players:", error);
+    }
+    if (players) {
+      console.log("PlayersPage: Fetched players data:", players);
+      if (players.length === 0) {
+        console.warn("PlayersPage: Fetched players data is an empty array. Ensure your 'players' collection in Firestore has documents, or run the migration script.");
+      }
+    }
+  }, [players, isLoading, isError, error]);
+
+
   const uniqueTeams = React.useMemo(() => {
     if (!players) return ["all"];
-    // Simplified for now
-    const teams = new Set(players.map(player => player.team).filter(Boolean));
+    const teams = new Set(players.map(player => player.team).filter(Boolean as (value: string | undefined) => value is string));
     return ["all", ...Array.from(teams).sort()];
   }, [players]);
 
   const uniqueRoles = React.useMemo(() => {
     if (!players) return ["all"];
-    // Simplified for now
-    const roles = new Set(players.map(player => player.role).filter(Boolean));
+    const roles = new Set(players.map(player => player.role).filter(Boolean as (value: string | undefined) => value is string));
     return ["all", ...Array.from(roles).sort()];
   }, [players]);
 
   const filteredPlayers = React.useMemo(() => {
     if (!players) return [];
-    // Simplified filtering for now, more advanced filtering was causing issues
     return players.filter(player => {
       const lowerSearchTerm = searchTerm.toLowerCase();
-      const matchesSearch = !searchTerm ||
-        (player.name && player.name.toLowerCase().includes(lowerSearchTerm)) ||
-        (player.team && player.team.toLowerCase().includes(lowerSearchTerm));
+      const nameMatch = player.name && typeof player.name === 'string' && player.name.toLowerCase().includes(lowerSearchTerm);
+      const teamNameMatch = player.team && typeof player.team === 'string' && player.team.toLowerCase().includes(lowerSearchTerm);
+      
+      const matchesSearch = !searchTerm || nameMatch || teamNameMatch;
       
       const matchesTeam = teamFilter === "all" || (player.team && player.team === teamFilter);
       const matchesRole = roleFilter === "all" || (player.role && player.role === roleFilter);
@@ -221,12 +234,12 @@ export default function PlayersPage() {
                   <Card key={player.id} className="hover:shadow-lg transition-shadow flex flex-col">
                     <CardHeader className="flex flex-row items-center gap-3 pb-2">
                       <Avatar className="h-16 w-16">
-                        <AvatarImage src={player.avatar} alt={player.name} data-ai-hint="player portrait" />
+                        <AvatarImage src={player.avatar} alt={player.name || 'Player'} data-ai-hint="player portrait" />
                         <AvatarFallback>{player.name ? player.name.substring(0, 2).toUpperCase() : 'P'}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <CardTitle className="text-lg leading-tight">{player.name}</CardTitle>
-                        <CardDescription className="text-xs">{player.role}</CardDescription>
+                        <CardTitle className="text-lg leading-tight">{player.name || 'Unnamed Player'}</CardTitle>
+                        <CardDescription className="text-xs">{player.role || 'N/A'}</CardDescription>
                       </div>
                       {/* Overall rating display is still out for now
                       <div className="text-center ml-auto">
@@ -268,3 +281,5 @@ export default function PlayersPage() {
     </div>
   );
 }
+
+    
