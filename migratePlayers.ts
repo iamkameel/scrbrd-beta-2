@@ -1,15 +1,16 @@
 
-// migratePlayers.js
-// Updated to be migratePlayers.ts and use ESM syntax if possible, or keep as JS if easier for user's setup.
-// For simplicity with user's current setup (node migrateSchools.js), keeping as JS.
-const admin = require('firebase-admin');
+import * as admin from 'firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore'; // Import Timestamp
 // IMPORTANT: Replace with the actual path to your downloaded Firebase Admin SDK JSON file.
-const serviceAccount = require('./scrbrd-beta-2-firebase-adminsdk-fbsvc-4c0a94b7bc.json'); 
+// The path seems correct relative to the project root based on previous context.
+import serviceAccount from './scrbrd-beta-2-firebase-adminsdk-fbsvc-4c0a94b7bc.json'; 
+import { playersData, type PlayerProfile } from './src/lib/player-data'; // Use direct import from .ts
 
 try {
   if (admin.apps.length === 0) {
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      // Type assertion for serviceAccount
+      credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
     });
     console.log('Firebase Admin SDK initialized successfully for player migration.');
   } else {
@@ -22,36 +23,47 @@ try {
 
 const db = admin.firestore();
 
-// Adjust the path if your schools-data.js is in a different location or structure
-// This assumes playersData is exported from the compiled JS version of player-data.ts
-// If using ts-node, this path can be direct to the .ts file.
-// For a simple node execution, we'll assume player-data.js exists in lib
-const { playersData } = require('./src/lib/player-data.js'); // Assuming player-data.ts is compiled to player-data.js
-
 async function migratePlayers() {
   console.log('Migrating player data to Firestore...');
   let successCount = 0;
   let errorCount = 0;
 
   if (!playersData || !Array.isArray(playersData)) {
-    console.error('Players data is not available or not in the expected format. Check src/lib/player-data.js export.');
+    console.error('Players data is not available or not in the expected format. Check src/lib/player-data.ts export.');
     process.exit(1);
   }
 
+  console.log(`Found ${playersData.length} players to migrate.`);
+
   for (const player of playersData) {
     try {
-      // Use the player.id (e.g., "player-1") as the document ID in Firestore
       const playerDocRef = db.collection('players').doc(player.id);
       
-      // Create a new object to ensure we only migrate intended fields
-      // and to handle any transformations if needed in the future.
-      // For now, it's a direct mapping.
-      const playerDocumentData = {
-        ...player
-        // If dateOfBirth needs to be a Timestamp:
-        // dateOfBirth: player.dateOfBirth ? admin.firestore.Timestamp.fromDate(new Date(player.dateOfBirth)) : null,
+      // Create a new object, ensuring only defined fields from PlayerProfile are migrated.
+      // Handle dateOfBirth transformation to Firestore Timestamp.
+      const playerDocumentData: Omit<PlayerProfile, 'id' | 'dateOfBirth'> & { dateOfBirth?: Timestamp | null } = {
+        name: player.name,
+        teamId: player.teamId, // Use teamId
+        avatar: player.avatar,
+        role: player.role,
+        battingStyle: player.battingStyle,
+        bowlingStyle: player.bowlingStyle,
+        bio: player.bio,
+        stats: player.stats, // Assuming stats object is Firestore compatible
+        careerSpan: player.careerSpan,
+        skills: player.skills, // Assuming skills object is Firestore compatible
+        dateOfBirth: player.dateOfBirth ? Timestamp.fromDate(new Date(player.dateOfBirth)) : null,
       };
+      
+      // Remove undefined fields to avoid Firestore errors
+      Object.keys(playerDocumentData).forEach(key => {
+        if ((playerDocumentData as any)[key] === undefined) {
+          delete (playerDocumentData as any)[key];
+        }
+      });
 
+
+      console.log(`Attempting to migrate player: ${player.name} (ID: ${player.id}) with data:`, JSON.stringify(playerDocumentData, null, 2));
       await playerDocRef.set(playerDocumentData);
       successCount++;
       console.log(`Successfully migrated player: ${player.name} (ID: ${player.id})`);

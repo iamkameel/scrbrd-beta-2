@@ -1,3 +1,4 @@
+
 export interface PlayerSkills {
   technical?: {
     battingTechnique?: number;
@@ -68,7 +69,7 @@ export interface PlayerStats {
 export interface PlayerProfile {
   id: string;
   name: string;
-  team: string;
+  teamId: string; // Changed from team to teamId
   avatar: string;
   role: string;
   dateOfBirth?: string;
@@ -84,7 +85,7 @@ export const playersData: PlayerProfile[] = [
   {
     id: "player-1",
     name: "John Doe",
-    team: "Eagles High School",
+    teamId: "1", // Corresponds to Northwood School 1st XI in detailedTeamsData
     avatar: "https://placehold.co/100x100.png",
     role: "All-rounder",
     dateOfBirth: "1998-05-15",
@@ -97,12 +98,13 @@ export const playersData: PlayerProfile[] = [
       runs: 1250,
       average: 31.25,
       strikeRate: 110.5,
-      highestScore: { // Keep highestScore as is if different from bestBatting
+      highestScore: {
         value: "102*", opponent: "Panthers Academy", year: 2023, venue: "Northwood Main Oval",
       },
-      bestBatting: { // Add bestBatting as per instruction
+      bestBatting: {
         value: "102*", opponent: "Panthers Academy", year: 2023,
       },
+      wickets: 60, // Added wickets for all-rounder
       bowlingAverage: 22.5,
       economyRate: 4.75,
       bestBowling: {
@@ -110,7 +112,7 @@ export const playersData: PlayerProfile[] = [
       },
       catches: 25, stumpings: 0,
     },
-    skills: { // Skills data for John Doe (player-1)
+    skills: {
       technical: {
         battingTechnique: 82,
         shotSelection: 78,
@@ -148,7 +150,7 @@ export const playersData: PlayerProfile[] = [
   {
     id: "player-2",
     name: "Jane Smith",
-    team: "Panthers Academy",
+    teamId: "3", // Corresponds to Riverdale Cricket Club Seniors in detailedTeamsData
     avatar: "https://placehold.co/100x100.png",
     role: "Wicket-keeper Batsman",
     dateOfBirth: "2000-02-20",
@@ -160,25 +162,23 @@ export const playersData: PlayerProfile[] = [
       runs: 980,
       average: 28.0,
       strikeRate: 95.0,
-      highestScore: { // Keep highestScore as is
+      highestScore: {
         value: "85", opponent: "Eagles High", year: 2022, venue: "Panthers Home Ground"
       },
-      bestBatting: { // Add bestBatting
+      bestBatting: {
         value: "85", opponent: "Eagles High", year: 2022,
       },
-      // No bowling stats or bestBowling for Wicket-keeper Batsman example
-      // bestBowling: undefined,
       hundreds: 0,
       fifties: 5,
       catches: 40,
       stumpings: 15,
     },
-    skills: { // Skills data for Jane Smith (player-2) - Will be replaced
+    skills: {
       technical: {
         battingTechnique: 78,
         shotSelection: 80,
         runningBetweenWickets: 72,
-        catchingTechnique: 90, // Wicket-keeper specific
+        catchingTechnique: 90,
         groundFielding: 75,
       },
       tactical: {
@@ -187,7 +187,7 @@ export const playersData: PlayerProfile[] = [
       },
       physicalMental: {
         speedAgility: 80,
-        flexibility: 70, // Good for keepers
+        flexibility: 70,
         reactionTime: 85,
         concentration: 82,
         composure: 75,
@@ -201,7 +201,7 @@ export const playersData: PlayerProfile[] = [
   {
     id: "player-3",
     name: "Mike Brown",
-    team: "Lions College",
+    teamId: "4", // Corresponds to Hillcrest College U16 in detailedTeamsData
     avatar: "https://placehold.co/100x100.png",
     role: "Opening Batsman",
     dateOfBirth: "1997-11-01",
@@ -213,23 +213,21 @@ export const playersData: PlayerProfile[] = [
       runs: 2100,
       average: 42.0,
       strikeRate: 75.5,
-      highestScore: { // Keep highestScore as is
+      highestScore: {
         value: "150", opponent: "Eagles High", year: 2021, venue: "Lions Main Ground"
       },
-      bestBatting: { // Add bestBatting
+      bestBatting: {
         value: "150", opponent: "Eagles High", year: 2021,
       },
-      // No bowling stats or bestBowling for Opening Batsman example
-      // bestBowling: undefined,
       hundreds: 3,
       fifties: 12,
       catches: 12,
-    }, // Skills data for Mike Brown (player-3) - Will be replaced
+    },
     skills: {
       technical: {
         battingTechnique: 90,
         shotSelection: 85,
-        powerHitting: 70, // More about placement and timing for him
+        powerHitting: 70,
         runningBetweenWickets: 65,
       },
       tactical: {
@@ -238,14 +236,14 @@ export const playersData: PlayerProfile[] = [
         oppositionAnalysis: 75,
       },
       physicalMental: {
-        endurance: 85, // For long innings
+        endurance: 85,
         concentration: 90,
         composure: 80,
         resilience: 70,
         decisionMaking: 82,
       },
       teamLeadership: {
-        leadership: 70, // Perhaps a senior player
+        leadership: 70,
         workEthic: 80,
       }
     },
@@ -253,7 +251,7 @@ export const playersData: PlayerProfile[] = [
    {
     id: "player-4",
     name: "Sarah Wilson",
-    team: "Eagles High School",
+    teamId: "1", // Corresponds to Northwood School 1st XI in detailedTeamsData
     avatar: "https://placehold.co/100x100.png",
     role: "Fast Bowler",
     dateOfBirth: "1999-07-22",
@@ -265,39 +263,39 @@ export const playersData: PlayerProfile[] = [
       matchesPlayed: 40,
       runs: 150,
       average: 10.0,
-      wickets: 75,
-      highestScore: { // Keep highestScore as is (lower order)
+      strikeRate: 80.0, // Added strike rate
+      highestScore: {
         value: "35*", opponent: "Lions College", year: 2022, venue: "Lions College Oval"
       },
-      // No significant bestBatting for a tail-ender, so can be undefined or simple
       bestBatting: {
         value: "35*", opponent: "Lions College", year: 2022,
       },
+      wickets: 75,
       bowlingAverage: 18.5,
       economyRate: 4.2,
-      bestBowling: { // Update bestBowling
+      bestBowling: {
         value: "6/20", opponent: "Panthers Academy", year: 2023, venue: "Academy Ground"
       },
       catches: 8,
     },
-    skills: { // Skills data for Sarah Wilson (player-4) - Will be replaced
+    skills: {
       technical: {
         bowlingAccuracy: 92,
-        bowlingVariation: 75, // e.g., swing, seam
-        powerHitting: 60, // For lower order batting
+        bowlingVariation: 75,
+        powerHitting: 60,
       },
       tactical: {
         matchAwareness: 78,
-        oppositionAnalysis: 80, // Key for a bowler
-        fieldPlacement: 70, // Understanding fields set for her
-        deathOversExecution: 75, // If she bowls at the death
+        oppositionAnalysis: 80,
+        fieldPlacement: 70,
+        deathOversExecution: 75,
       },
       physicalMental: {
-        speedAgility: 85, // For run-up and fielding
-        strengthPower: 80, // For bowling pace
+        speedAgility: 85,
+        strengthPower: 80,
         endurance: 70,
         concentration: 75,
-        resilience: 85, // Important for bowlers after being hit
+        resilience: 85,
         coachability: 78,
       },
       teamLeadership: {
