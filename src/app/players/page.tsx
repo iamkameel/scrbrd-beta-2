@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, User, Filter, Users as TeamIcon, Briefcase, Loader2, AlertTriangle } from "lucide-react";
-import type { PlayerProfile, PlayerSkills } from "@/lib/player-data";
+import type { PlayerProfile, PlayerSkills } from "@/lib/player-data"; // Ensure PlayerSkills is imported
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -208,7 +208,7 @@ export default function PlayersPage() {
           {filteredPlayers && filteredPlayers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPlayers.map((player) => {
-                const overallRating = calculateOverallRating(player.skills);
+                const overallRating = calculateOverallRating(player.skills); 
                 return (
                   <Card key={player.id} className="hover:shadow-lg transition-shadow flex flex-col">
                     <CardHeader className="flex flex-row items-start gap-4 pb-3">
