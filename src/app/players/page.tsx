@@ -83,7 +83,7 @@ export default function PlayersPage() {
     if (!players) {
       return ["all"];
     }
-    const teamsSet = new Set(players.map(player => player.team).filter(team => typeof team === 'string'));
+    const teamsSet = new Set(players.map(player => player.team).filter(team => typeof team === 'string' && team.trim() !== ''));
     return ["all", ...Array.from(teamsSet).sort()];
   }, [players]);
 
@@ -91,7 +91,7 @@ export default function PlayersPage() {
     if (!players) {
       return ["all"];
     }
-    const rolesSet = new Set(players.map(player => player.role).filter(role => typeof role === 'string'));
+    const rolesSet = new Set(players.map(player => player.role).filter(role => typeof role === 'string' && role.trim() !== ''));
     return ["all", ...Array.from(rolesSet).sort()];
   }, [players]);
 
@@ -101,13 +101,15 @@ export default function PlayersPage() {
     }
     return players.filter(player => {
       const searchLower = searchTerm.toLowerCase();
-      const nameMatch = player.name && player.name.toLowerCase().includes(searchLower);
-      const teamMatch = player.team && player.team.toLowerCase().includes(searchLower);
-      const roleMatch = player.role && player.role.toLowerCase().includes(searchLower);
+      
+      const nameMatch = player.name && typeof player.name === 'string' && player.name.toLowerCase().includes(searchLower);
+      const teamMatch = player.team && typeof player.team === 'string' && player.team.toLowerCase().includes(searchLower);
+      const roleMatch = player.role && typeof player.role === 'string' && player.role.toLowerCase().includes(searchLower);
       
       const matchesSearch = searchTerm === "" || nameMatch || teamMatch || roleMatch;
-      const matchesTeam = teamFilter === "all" || (player.team && player.team === teamFilter);
-      const matchesRole = roleFilter === "all" || (player.role && player.role === roleFilter);
+      
+      const matchesTeam = teamFilter === "all" || (player.team && typeof player.team === 'string' && player.team === teamFilter);
+      const matchesRole = roleFilter === "all" || (player.role && typeof player.role === 'string' && player.role === roleFilter);
 
       return matchesSearch && matchesTeam && matchesRole;
     });
@@ -143,10 +145,11 @@ export default function PlayersPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl flex items-center gap-2">
-            <User className="h-6 w-6 text-[hsl(var(--primary))]" />
-            Player Profiles
+            <User className="h-6 w-6 text-primary" /> Player Profiles
           </CardTitle>
-          <CardDescription>Discover player statistics and career highlights from the database. Filter by team and role.</CardDescription>
+          <CardDescription>
+            Browse player profiles, view statistics, and manage player data from the database.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -209,9 +212,9 @@ export default function PlayersPage() {
                 return (
                   <Card key={player.id} className="hover:shadow-lg transition-shadow flex flex-col">
                     <CardHeader className="flex flex-row items-start gap-4 pb-3">
-                      <Avatar className="h-16 w-16 mt-1">
+                      <Avatar className="h-14 w-14 mt-1">
                         <AvatarImage src={player.avatar} alt={player.name || 'Player'} data-ai-hint="player portrait"/>
-                        <AvatarFallback>{player.name ? player.name.substring(0,2).toUpperCase() : 'P'}</AvatarFallback>
+                        <AvatarFallback>{player.name ? player.name.substring(0, 2).toUpperCase() : 'P'}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
@@ -224,15 +227,15 @@ export default function PlayersPage() {
                         </div>
                         <CardDescription>{player.team || 'N/A Team'} - {player.role || 'N/A Role'}</CardDescription>
                       </CardHeader>
-                    <CardContent className="flex-grow py-3">
-                      <div className="grid grid-cols-3 gap-2">
-                        <CompactStatDisplay label="Mat" value={player.stats?.matchesPlayed} />
-                        <CompactStatDisplay label="Runs" value={player.stats?.runs} />
-                        <CompactStatDisplay label="Bat Avg" value={player.stats?.average} />
-                        <CompactStatDisplay label="Wkts" value={player.stats?.wickets} />
-                        <CompactStatDisplay label="Bowl Avg" value={player.stats?.bowlingAverage} />
-                        <CompactStatDisplay label="Catches" value={player.stats?.catches} />
-                      </div>
+                      <CardContent className="flex-grow py-3">
+                        <div className="grid grid-cols-3 gap-2">
+                          <CompactStatDisplay label="Mat" value={player.stats?.matchesPlayed} />
+                          <CompactStatDisplay label="Runs" value={player.stats?.runs} />
+                          <CompactStatDisplay label="Bat Avg" value={player.stats?.average} />
+                          <CompactStatDisplay label="Wkts" value={player.stats?.wickets} />
+                          <CompactStatDisplay label="Bowl Avg" value={player.stats?.bowlingAverage} />
+                          <CompactStatDisplay label="Catches" value={player.stats?.catches} />
+                        </div>
                     </CardContent>
                     <CardContent className="pt-2 pb-4 mt-auto">
                        <Button asChild variant="default" size="sm" className="w-full">
