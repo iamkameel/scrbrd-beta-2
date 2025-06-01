@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, User, Filter, Users as TeamIcon, Briefcase, Loader2, AlertTriangle } from "lucide-react";
-import type { PlayerProfile, PlayerSkills } from "@/lib/player-data"; // Ensure PlayerSkills is imported
+// Temporarily remove PlayerSkills import to simplify
+import type { PlayerProfile } from "@/lib/player-data"; 
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +31,8 @@ const CompactStatDisplay: React.FC<{ label: string; value: string | number | und
   </div>
 );
 
+// Temporarily comment out calculateOverallRating
+/*
 const calculateOverallRating = (skills: PlayerSkills | undefined): string | number => {
   if (!skills) {
     return 'N/A';
@@ -58,6 +61,7 @@ const calculateOverallRating = (skills: PlayerSkills | undefined): string | numb
   }
   return Math.round(totalScore / skillCount);
 };
+*/
 
 const fetchPlayers = async (): Promise<PlayerProfile[]> => {
   const playersCollectionRef = collection(db, 'players');
@@ -79,23 +83,34 @@ export default function PlayersPage() {
     queryFn: fetchPlayers,
   });
 
+  // Temporarily simplify uniqueTeams
   const uniqueTeams = React.useMemo(() => {
+    return ["all"];
+    /*
     if (!players) {
       return ["all"];
     }
     const teamsSet = new Set(players.map(player => player.team).filter(team => typeof team === 'string' && team.trim() !== ''));
     return ["all", ...Array.from(teamsSet).sort()];
+    */
   }, [players]);
 
+  // Temporarily simplify uniqueRoles
   const uniqueRoles = React.useMemo(() => {
+    return ["all"];
+    /*
     if (!players) {
       return ["all"];
     }
     const rolesSet = new Set(players.map(player => player.role).filter(role => typeof role === 'string' && role.trim() !== ''));
     return ["all", ...Array.from(rolesSet).sort()];
+    */
   }, [players]);
 
+  // Temporarily simplify filteredPlayers
   const filteredPlayers = React.useMemo(() => {
+    return players || [];
+    /*
     if (!players) {
       return [];
     }
@@ -113,6 +128,7 @@ export default function PlayersPage() {
 
       return matchesSearch && matchesTeam && matchesRole;
     });
+    */
   }, [players, searchTerm, teamFilter, roleFilter]);
 
   if (isLoading) {
@@ -208,7 +224,8 @@ export default function PlayersPage() {
           {filteredPlayers && filteredPlayers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPlayers.map((player) => {
-                const overallRating = calculateOverallRating(player.skills); 
+                // Temporarily remove overallRating calculation and display
+                // const overallRating = calculateOverallRating(player.skills); 
                 return (
                   <Card key={player.id} className="hover:shadow-lg transition-shadow flex flex-col">
                     <CardHeader className="flex flex-row items-start gap-4 pb-3">
@@ -219,11 +236,13 @@ export default function PlayersPage() {
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-lg">{player.name || 'Unknown Player'}</CardTitle>
+                          {/* Temporarily remove overallRating badge
                           {overallRating !== 'N/A' && (
                             <Badge variant="secondary" className="ml-2">
                               {overallRating}
                             </Badge>
                           )}
+                          */}
                         </div>
                         <CardDescription>{player.team || 'N/A Team'} - {player.role || 'N/A Role'}</CardDescription>
                       </CardHeader>
