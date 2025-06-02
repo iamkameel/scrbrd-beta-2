@@ -1,3 +1,4 @@
+
 // Placeholder player and team data for the team details page
 
 import { PlayerProfile } from "@/lib/player-data";
@@ -76,7 +77,6 @@ export const detailedTeamsData: Team[] = [
     affiliation: "School Affiliation",
   },
   {
-  {
     id: "2",
     schoolId: "school_placeholder",
     divisionId: "div_placeholder",
@@ -107,7 +107,6 @@ export const detailedTeamsData: Team[] = [
       titles: 1,
     },
     affiliation: "School Affiliation",
-  },
   },
   {
     id: "3",
@@ -140,7 +139,6 @@ export const detailedTeamsData: Team[] = [
     },
     affiliation: "School Affiliation",
   },
-  },
   {
     id: "4",
     schoolId: "school_placeholder",
@@ -163,10 +161,9 @@ export const detailedTeamsData: Team[] = [
       losses: 5,
       draws: 1,
       winPercentage: "60%",
-      affiliation: "School Affiliation",
     },
+    affiliation: "School Affiliation",
   },
-  {
   {
     id: "5",
     schoolId: "school_placeholder",
@@ -192,6 +189,5 @@ export const detailedTeamsData: Team[] = [
       titles: 1,
     },
     affiliation: "School Affiliation",
-  },
   },
 ];
