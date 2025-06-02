@@ -44,7 +44,7 @@ export default function PrematchTeamPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Pre-Match Details: {fixture.teamA} vs {fixture.teamB}</CardTitle>
+          <CardTitle className="text-2xl">Pre-Match Details: {fixture.teamAId} vs {fixture.teamBId}</CardTitle>
           <CardDescription>
             Fixture scheduled for {format(new Date(fixture.date), 'EEEE, MMMM d, yyyy')} at {fixture.time}.
           </CardDescription>
@@ -81,7 +81,7 @@ export default function PrematchTeamPage() {
               {/* Placeholder for actual team line-ups */}
               <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-semibold text-lg mb-2">{fixture.teamA}</h3>
+                  <h3 className="font-semibold text-lg mb-2">{fixture.teamAId}</h3>
                   <ul className="list-disc list-inside pl-2 text-muted-foreground">
                     <li>Player 1 (Captain)</li>
                     <li>Player 2 (Wicket-keeper)</li>
@@ -98,7 +98,7 @@ export default function PrematchTeamPage() {
                   </ul>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg mb-2">{fixture.teamB}</h3>
+                  <h3 className="font-semibold text-lg mb-2">{fixture.teamBId}</h3>
                    <ul className="list-disc list-inside pl-2 text-muted-foreground">
                     <li>Player 1 (Captain)</li>
                     <li>Player 2 (Wicket-keeper)</li>

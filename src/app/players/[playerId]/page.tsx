@@ -191,7 +191,7 @@ export default function PlayerProfilePage() {
             <div className="flex flex-col items-end space-y-1">
               <div className="flex items-center gap-2 p-2 bg-black/20 rounded-md">
                 <ShieldQuestion className="h-5 w-5" />
-                <span className="text-xs font-medium">{player.team}</span>
+                <span className="text-xs font-medium">{player.teamId}</span>
               </div>
             </div>
           </div>
@@ -336,7 +336,7 @@ export default function PlayerProfilePage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <StatItem label="Full Name" value={player.name} icon={AtSign} />
-              <StatItem label="Team" value={player.team} icon={ShieldCheck} />
+              <StatItem label="Team" value={player.teamId} icon={ShieldCheck} />
               <StatItem label="Role" value={player.role} />
               {player.dateOfBirth && <StatItem label="Date of Birth" value={format(new Date(player.dateOfBirth), "MMMM d, yyyy")} icon={CalendarDays} />}
               {player.battingStyle && <StatItem label="Batting Style" value={player.battingStyle} />}

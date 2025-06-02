@@ -1,0 +1,227 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.playersData = void 0;
+exports.playersData = [
+    {
+        id: "player-1",
+        name: "John Doe",
+        teamId: "1", // Corresponds to Northwood School 1st XI in detailedTeamsData
+        avatar: "https://placehold.co/100x100.png",
+        role: "All-rounder",
+        dateOfBirth: "1998-05-15",
+        battingStyle: "Right-hand bat",
+        bowlingStyle: "Right-arm medium",
+        careerSpan: "School Career: 2020 - Present",
+        bio: "John is a dynamic all-rounder known for his aggressive batting and consistent bowling. He has been a key player for the Eagles, often turning matches with his versatile performances.",
+        stats: {
+            matchesPlayed: 50,
+            runs: 1250,
+            average: 31.25,
+            strikeRate: 110.5,
+            highestScore: {
+                value: "102*", opponent: "Panthers Academy", year: 2023, venue: "Northwood Main Oval",
+            },
+            bestBatting: {
+                value: "102*", opponent: "Panthers Academy", year: 2023,
+            },
+            wickets: 60, // Added wickets for all-rounder
+            bowlingAverage: 22.5,
+            economyRate: 4.75,
+            bestBowling: {
+                value: "4/35", opponent: "Lions College", year: 2022, venue: "City Stadium",
+            },
+            catches: 25, stumpings: 0,
+        },
+        skills: {
+            technical: {
+                battingTechnique: 82,
+                shotSelection: 78,
+                powerHitting: 75,
+                runningBetweenWickets: 70,
+                bowlingAccuracy: 77,
+                bowlingVariation: 72,
+                groundFielding: 80,
+                catchingTechnique: 85,
+                throwingAccuracy: 73,
+            },
+            tactical: {
+                matchAwareness: 80,
+                strikeRotation: 75,
+                oppositionAnalysis: 70,
+                fieldPlacement: 68,
+            },
+            physicalMental: {
+                speedAgility: 88,
+                endurance: 82,
+                strengthPower: 78,
+                reactionTime: 75,
+                concentration: 76,
+                composure: 72,
+                resilience: 79,
+                decisionMaking: 73,
+            },
+            teamLeadership: {
+                communication: 70,
+                teamSpirit: 85,
+                leadership: 65,
+            }
+        },
+    },
+    {
+        id: "player-2",
+        name: "Jane Smith",
+        teamId: "3", // Corresponds to Riverdale Cricket Club Seniors in detailedTeamsData
+        avatar: "https://placehold.co/100x100.png",
+        role: "Wicket-keeper Batsman",
+        dateOfBirth: "2000-02-20",
+        battingStyle: "Left-hand bat",
+        careerSpan: "Academy Career: 2021 - Present",
+        bio: "Jane is an agile wicket-keeper and a reliable top-order batsman. Her sharp reflexes behind the stumps and ability to build innings make her an invaluable asset to the Panthers.",
+        stats: {
+            matchesPlayed: 45,
+            runs: 980,
+            average: 28.0,
+            strikeRate: 95.0,
+            highestScore: {
+                value: "85", opponent: "Eagles High", year: 2022, venue: "Panthers Home Ground"
+            },
+            bestBatting: {
+                value: "85", opponent: "Eagles High", year: 2022,
+            },
+            hundreds: 0,
+            fifties: 5,
+            catches: 40,
+            stumpings: 15,
+        },
+        skills: {
+            technical: {
+                battingTechnique: 78,
+                shotSelection: 80,
+                runningBetweenWickets: 72,
+                catchingTechnique: 90,
+                groundFielding: 75,
+            },
+            tactical: {
+                matchAwareness: 70,
+                strikeRotation: 68,
+            },
+            physicalMental: {
+                speedAgility: 80,
+                flexibility: 70,
+                reactionTime: 85,
+                concentration: 82,
+                composure: 75,
+            },
+            teamLeadership: {
+                communication: 78,
+                teamSpirit: 70,
+            }
+        },
+    },
+    {
+        id: "player-3",
+        name: "Mike Brown",
+        teamId: "4", // Corresponds to Hillcrest College U16 in detailedTeamsData
+        avatar: "https://placehold.co/100x100.png",
+        role: "Opening Batsman",
+        dateOfBirth: "1997-11-01",
+        battingStyle: "Right-hand bat",
+        careerSpan: "College Career: 2019 - 2023",
+        bio: "Mike is a classic opening batsman with a penchant for long innings. He provides solid starts for the Lions and is known for his excellent technique against the new ball.",
+        stats: {
+            matchesPlayed: 60,
+            runs: 2100,
+            average: 42.0,
+            strikeRate: 75.5,
+            highestScore: {
+                value: "150", opponent: "Eagles High", year: 2021, venue: "Lions Main Ground"
+            },
+            bestBatting: {
+                value: "150", opponent: "Eagles High", year: 2021,
+            },
+            hundreds: 3,
+            fifties: 12,
+            catches: 12,
+        },
+        skills: {
+            technical: {
+                battingTechnique: 90,
+                shotSelection: 85,
+                powerHitting: 70,
+                runningBetweenWickets: 65,
+            },
+            tactical: {
+                matchAwareness: 88,
+                strikeRotation: 80,
+                oppositionAnalysis: 75,
+            },
+            physicalMental: {
+                endurance: 85,
+                concentration: 90,
+                composure: 80,
+                resilience: 70,
+                decisionMaking: 82,
+            },
+            teamLeadership: {
+                leadership: 70,
+                workEthic: 80,
+            }
+        },
+    },
+    {
+        id: "player-4",
+        name: "Sarah Wilson",
+        teamId: "1", // Corresponds to Northwood School 1st XI in detailedTeamsData
+        avatar: "https://placehold.co/100x100.png",
+        role: "Fast Bowler",
+        dateOfBirth: "1999-07-22",
+        battingStyle: "Right-hand bat",
+        bowlingStyle: "Right-arm fast",
+        careerSpan: "School Career: 2020 - Present",
+        bio: "Sarah leads the bowling attack for the Eagles with her express pace and ability to swing the ball. She is a genuine wicket-taker.",
+        stats: {
+            matchesPlayed: 40,
+            runs: 150,
+            average: 10.0,
+            strikeRate: 80.0, // Added strike rate
+            highestScore: {
+                value: "35*", opponent: "Lions College", year: 2022, venue: "Lions College Oval"
+            },
+            bestBatting: {
+                value: "35*", opponent: "Lions College", year: 2022,
+            },
+            wickets: 75,
+            bowlingAverage: 18.5,
+            economyRate: 4.2,
+            bestBowling: {
+                value: "6/20", opponent: "Panthers Academy", year: 2023, venue: "Academy Ground"
+            },
+            catches: 8,
+        },
+        skills: {
+            technical: {
+                bowlingAccuracy: 92,
+                bowlingVariation: 75,
+                powerHitting: 60,
+            },
+            tactical: {
+                matchAwareness: 78,
+                oppositionAnalysis: 80,
+                fieldPlacement: 70,
+                deathOversExecution: 75,
+            },
+            physicalMental: {
+                speedAgility: 85,
+                strengthPower: 80,
+                endurance: 70,
+                concentration: 75,
+                resilience: 85,
+                coachability: 78,
+            },
+            teamLeadership: {
+                teamSpirit: 75,
+                workEthic: 88,
+            }
+        },
+    },
+];

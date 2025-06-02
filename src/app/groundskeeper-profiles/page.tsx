@@ -8,7 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Tractor, UserCircle, Tool } from "lucide-react";
+// Attempt to import specific icons from a subpath or individually
+import { Search, Tractor, UserCircle } from "lucide-react";
 import { groundkeepersData, type GroundskeeperProfile } from '@/lib/groundskeeper-data';
 
 const CompactStatDisplay: React.FC<{ label: string; value: string | number | undefined }> = ({ label, value }) => (
@@ -37,7 +38,7 @@ export default function GroundskeeperProfilesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl flex items-center gap-2">
-            <Tractor className="h-6 w-6 text-[hsl(var(--primary))]" />
+            <UserCircle className="h-6 w-6 text-[hsl(var(--primary))]" />
             Groundskeeper Profiles
           </CardTitle>
           <CardDescription>Directory of groundskeepers, their expertise, and assigned fields.</CardDescription>

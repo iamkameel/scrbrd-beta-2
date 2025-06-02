@@ -1,28 +1,36 @@
-
 // This is a placeholder for the migrateSchools script.
 // It was previously showing an error message related to src/app/players/page.tsx.
 
+import * as admin from 'firebase-admin';
+import { schoolsData, SchoolProfile } from './src/lib/schools-data'; // Adjust the path if necessary
+
+// Initialize Firebase Admin if not already done
+if (admin.apps.length === 0) {
+  const serviceAccount = require('./scrbrd-beta-2-firebase-adminsdk-fbsvc-4c0a94b7bc.json'); // Replace with your actual service account key path
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+}
+
+const db = admin.firestore();
+
 async function main() {
-  console.log("migrateSchools.ts - placeholder script. Add migration logic if needed.");
-  // Example:
-  // try {
-  //   // Initialize Firebase Admin if not already done in a shared module
-  //   // const admin = require('firebase-admin');
-  //   // const serviceAccount = require('./path/to/your/serviceAccountKey.json');
-  //   // if (admin.apps.length === 0) {
-  //   //   admin.initializeApp({
-  //   //     credential: admin.credential.cert(serviceAccount)
-  //   //   });
-  //   // }
-  //   // const db = admin.firestore();
-  //   // console.log("Firebase Admin SDK initialized for migrateSchools.");
+  console.log("Starting school data migration to Firebase...");
+  console.log(`Found ${schoolsData.length} schools to migrate.`);
 
-  //   // Your migration logic here...
-  //   // e.g., const schoolsCollectionRef = db.collection('schools_new');
-  //   // await schoolsCollectionRef.doc('school_1').set({ name: 'Example School migrated' });
+  const schoolsCollectionRef = db.collection('schools');
 
-  //   console.log("School migration placeholder finished successfully.");
-  //   process.exit(0);
+  for (const school of schoolsData) {
+    try {
+      await schoolsCollectionRef.doc(String(school.id)).set(school);
+      console.log(`Successfully migrated school: ${school.name} (ID: ${school.id})`);
+    } catch (error) {
+      console.error(`Error migrating school ${school.name} (ID: ${school.id}):`, error);
+    }
+  }
+
+  console.log("School data migration complete.");
+  process.exit(0);
   // } catch (error) {
   //   console.error("Error during school migration placeholder:", error);
   //   process.exit(1);

@@ -16,7 +16,7 @@ export default function ResultsPage() {
             {resultsData.length > 0 ? resultsData.map((result) => (
               <Card key={result.id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
-                  <CardTitle className="text-lg">{result.teamA} vs {result.teamB}</CardTitle>
+                  <CardTitle className="text-lg">{result.teamAId} vs {result.teamBId}</CardTitle>
                   <CardDescription>
                     <span className="font-semibold text-foreground">{result.winner}</span> won by {result.margin}
                   </CardDescription>
@@ -24,11 +24,11 @@ export default function ResultsPage() {
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                      <p className="font-medium">{result.teamA}</p>
+                      <p className="font-medium">{result.teamAId}</p>
                       <p className="text-muted-foreground">{result.teamAScore}</p>
                     </div>
                     <div>
-                      <p className="font-medium">{result.teamB}</p>
+                      <p className="font-medium">{result.teamBId}</p>
                       <p className="text-muted-foreground">{result.teamBScore}</p>
                     </div>
                   </div>

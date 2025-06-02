@@ -25,7 +25,7 @@ function getTopBatsmen(teamName: string, inningsData: InningsData[] | undefined,
   if (!inningsData) return [];
   const allTeamBattingScores: BatsmanScore[] = [];
   inningsData.forEach(inning => {
-    if (inning.battingTeam === teamName) {
+    if (inning.battingTeam === teamName) { // This appears to be correct based on the structure used in the migration script
       allTeamBattingScores.push(...inning.battingScores.filter(bs => typeof bs.runs === 'number'));
     }
   });
@@ -40,7 +40,7 @@ function getTopBowlers(teamName: string, inningsData: InningsData[] | undefined,
   if (!inningsData) return [];
   const allTeamBowlingScores: BowlerScore[] = [];
   inningsData.forEach(inning => {
-    // Corrected to check bowlingTeam
+    // Corrected to check bowlingTeam - This appears to be correct based on the structure used in the migration script
     if (inning.bowlingTeam === teamName) { 
       allTeamBowlingScores.push(...inning.bowlingScores.filter(bs => typeof bs.wickets === 'number' && typeof bs.runsConceded === 'number'));
     }
@@ -222,11 +222,11 @@ export default function ScorecardPage() {
   const result: Result | undefined = React.useMemo(() => fixtureId ? resultsData.find(r => r.fixtureId === fixtureId) : undefined, [fixtureId]);
 
   const defaultTabValue = result?.innings && result.innings.length > 0 ? `innings-${result.innings[0].inningsNumber}` : "";
-  
-  const topTeamABatsmen = React.useMemo(() => result?.teamA && result?.innings ? getTopBatsmen(result.teamA, result.innings, 2) : [], [result]);
-  const topTeamABowlers = React.useMemo(() => result?.teamA && result?.innings ? getTopBowlers(result.teamA, result.innings, 2) : [], [result]);
-  const topTeamBBatsmen = React.useMemo(() => result?.teamB && result?.innings ? getTopBatsmen(result.teamB, result.innings, 2) : [], [result]);
-  const topTeamBBowlers = React.useMemo(() => result?.teamB && result?.innings ? getTopBowlers(result.teamB, result.innings, 2) : [], [result]);
+
+  const topTeamABatsmen = React.useMemo(() => result?.teamAId && result?.innings ? getTopBatsmen(result.teamAId, result.innings, 2) : [], [result]); // Access teamAId from result
+  const topTeamABowlers = React.useMemo(() => result?.teamAId && result?.innings ? getTopBowlers(result.teamAId, result.innings, 2) : [], [result]); // Access teamAId from result
+  const topTeamBBatsmen = React.useMemo(() => result?.teamBId && result?.innings ? getTopBatsmen(result.teamBId, result.innings, 2) : [], [result]); // Access teamBId from result
+  const topTeamBBowlers = React.useMemo(() => result?.teamBId && result?.innings ? getTopBowlers(result.teamBId, result.innings, 2) : [], [result]); // Access teamBId from result
 
   if (!fixture || !result) {
     return (
@@ -260,26 +260,26 @@ export default function ScorecardPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            Match Scorecard: {fixture.teamA} vs {fixture.teamB}
+            Match Scorecard: {fixture.teamAId} vs {fixture.teamBId}
           </CardTitle>
           <CardDescription>
             Played on {format(new Date(fixture.date), 'EEEE, MMMM d, yyyy')} at {fixture.location}.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
+          <div className="space-y-6" id="scorecard-content">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 p-4 rounded-lg bg-muted/50">
               <div className="text-center md:text-left flex-1">
-                <p className="font-semibold text-lg">{result.teamA}</p>
+                <p className="font-semibold text-lg">{result.teamAId}</p>
                 <p className="text-2xl font-bold text-primary">{result.teamAScore}</p>
               </div>
               <p className="text-xl font-medium text-muted-foreground">vs</p>
               <div className="text-center md:text-right flex-1">
-                <p className="font-semibold text-lg">{result.teamB}</p>
+                <p className="font-semibold text-lg">{result.teamBId}</p>
                 <p className="text-2xl font-bold text-primary">{result.teamBScore}</p>
               </div>
             </div>
-            
+
             <div className="text-center p-3 bg-card rounded-md shadow border">
                 <p className="text-lg font-semibold text-[hsl(var(--accent))] flex items-center justify-center">
                   <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
@@ -290,9 +290,9 @@ export default function ScorecardPage() {
             <Separator className="my-6" />
 
             <CardContent className="p-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-foreground">{result.teamA} - Top Performers</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6"> {/* Adjusted spacing */}
+                <div className="space-y-4" id={`top-performers-${result.teamAId}`}> {/* Use teamAId */}
+                  <h3 className="text-lg font-semibold text-foreground">{result.teamAId} - Top Performers</h3>
                   {(topTeamABatsmen.length > 0 || topTeamABowlers.length > 0) ? (
                     <div className="space-y-3">
                       {topTeamABatsmen.length > 0 && (
@@ -323,13 +323,13 @@ export default function ScorecardPage() {
                       )}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No top performer data available for {result.teamA}.</p>
-                  )}
+                    <p className="text-sm text-muted-foreground">No top performer data available for {result.teamAId}.</p>
+                  )} {/* Keep result.teamA for display as it seems to be the team name here */}
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-foreground">{result.teamB} - Top Performers</h3>
-                  {(topTeamBBatsmen.length > 0 || topTeamBBowlers.length > 0) ? (
+                <div className="space-y-4" id={`top-performers-${result.teamBId}`}> {/* Use teamBId */}
+                  <h3 className="text-lg font-semibold text-foreground">{result.teamBId} - Top Performers</h3>
+                  {(topTeamBBatsmen.length > 0 || topTeamBBowlers.length > 0) ? ( /* Check both batsmen and bowlers */
                     <div className="space-y-3">
                       {topTeamBBatsmen.length > 0 && (
                         <div className="space-y-1">
@@ -359,8 +359,8 @@ export default function ScorecardPage() {
                       )}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No top performer data available for {result.teamB}.</p>
-                  )}
+                    <p className="text-sm text-muted-foreground">No top performer data available for {result.teamBId}.</p>
+                  )} {/* Use result.teamBId for display as it seems to be the team name here */}
                 </div>
               </div>
             </CardContent>
@@ -421,7 +421,7 @@ export default function ScorecardPage() {
                                     <TableBody>
                                       {inningData.battingScores.map((batter) => (
                                         <TableRow key={batter.name}>
-                                          <TableCell className="font-medium">{batter.name}</TableCell>
+                                          <TableCell className="font-medium">{batter.name} {batter.dismissal.toLowerCase().includes('not out') && "(not out)"}</TableCell>
                                           <TableCell>{batter.dismissal}</TableCell>
                                           <TableCell className="text-right">{batter.runs}</TableCell>
                                           <TableCell className="text-right">{batter.balls}</TableCell>
@@ -429,7 +429,7 @@ export default function ScorecardPage() {
                                           <TableCell className="text-right">{batter.sixes}</TableCell>
                                           <TableCell className="text-right">{batter.strikeRate}</TableCell>
                                         </TableRow>
-                                      ))}
+                                      ))}                                      
                                       <TableRow>
                                         <TableCell className="font-medium">Extras</TableCell>
                                         <TableCell className="text-muted-foreground">{inningData.extras.details}</TableCell>
@@ -442,20 +442,20 @@ export default function ScorecardPage() {
                                       <TableRow className="bg-muted/50">
                                         <TableCell colSpan={2} className="font-bold text-lg">Total</TableCell>
                                         <TableCell className="text-right font-bold text-lg" colSpan={5}>{inningData.totalScoreString} ({inningData.oversPlayed})</TableCell>
-                                      </TableRow>
+                                      </TableRow>                                    
                                     </TableBody>
                                   </Table>
                                 </div>
                                 
                                 <Separator className="my-4" />
                                 <div className="p-4 pt-0">
-                                  <h4 className="text-md font-semibold mb-3">Batting Partnerships</h4>
+                                  <h4 className="text-md font-semibold mb-3">Batting Partnerships for {inningData.battingTeam}</h4>
                                   {partnershipVisualData.length > 0 ? (
                                     <ChartContainer config={chartConfig} className="min-h-[300px] w-full aspect-auto">
                                       <BarChart
                                         layout="vertical"
                                         data={partnershipVisualData}
-                                        margin={{ top: 5, right: 30, left: 30, bottom: 20 }} // Increased margins
+                                        margin={{ top: 5, right: 40, left: 30, bottom: 20 }} // Increased margins
                                         barCategoryGap="25%" // Adjusted gap
                                       >
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} />
@@ -475,7 +475,7 @@ export default function ScorecardPage() {
                             
                             <AccordionItem value="bowling">
                               <AccordionTrigger className="text-lg font-medium p-4 bg-muted/50 rounded-t-md hover:no-underline">
-                                 Bowling - {inningData.bowlingTeam}
+                                 Bowling - {inningData.bowlingTeam} 
                               </AccordionTrigger>
                               <AccordionContent className="border border-t-0 rounded-b-md p-0">
                                 <div className="p-4">
@@ -506,7 +506,7 @@ export default function ScorecardPage() {
                                 </div>
                                 <Separator className="my-4" />
                                 <div className="p-4 pt-0">
-                                  <h4 className="text-md font-semibold mb-3">Fall of Wickets</h4>
+                                  <h4 className="text-md font-semibold mb-3">Fall of Wickets for {inningData.battingTeam}</h4>
                                   {inningData.fallOfWickets && inningData.fallOfWickets.length > 0 ? (
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                                       {inningData.fallOfWickets.map((fow, idx) => (

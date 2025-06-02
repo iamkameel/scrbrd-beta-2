@@ -84,17 +84,17 @@ const fetchPlayers = async (): Promise<PlayerProfile[]> => {
 export default function PlayersPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [teamFilter, setTeamFilter] = React.useState("all");
-  const [roleFilter, setRoleFilter] = React.useState("all");
+  const [roleFilter, setRoleFilter] = React.useState("all"); // Added role filter state
 
   const { data: players, isLoading, isError, error } = useQuery<PlayerProfile[], Error>({
     queryKey: ['players'],
     queryFn: fetchPlayers,
-  });
+  }); // Fetch players data
 
   React.useEffect(() => {
     if (isLoading) {
       console.log("PlayersPage: Player data is loading...");
-    }
+    } 
     if (isError) {
       console.error("PlayersPage: Error fetching players:", error);
     }
@@ -106,16 +106,16 @@ export default function PlayersPage() {
     }
   }, [players, isLoading, isError, error]);
 
-
   const uniqueTeams = React.useMemo(() => {
     if (!players) return ["all"];
-    const teams = new Set(players.map(player => player.team).filter(Boolean as (value: string | undefined) => value is string));
+    // Corrected filter to use a type predicate for string | undefined
+    const teams = new Set(players.map(player => player.teamId).filter((teamId): teamId is string => teamId !== undefined && teamId !== null));
     return ["all", ...Array.from(teams).sort()];
   }, [players]);
-
+  
   const uniqueRoles = React.useMemo(() => {
     if (!players) return ["all"];
-    const roles = new Set(players.map(player => player.role).filter(Boolean as (value: string | undefined) => value is string));
+    const roles = new Set(players.map(player => player.role).filter((role): role is string => role !== undefined && role !== null));
     return ["all", ...Array.from(roles).sort()];
   }, [players]);
 
@@ -124,11 +124,11 @@ export default function PlayersPage() {
     return players.filter(player => {
       const lowerSearchTerm = searchTerm.toLowerCase();
       const nameMatch = player.name && typeof player.name === 'string' && player.name.toLowerCase().includes(lowerSearchTerm);
-      const teamNameMatch = player.team && typeof player.team === 'string' && player.team.toLowerCase().includes(lowerSearchTerm);
-      
+      const teamNameMatch = player.teamId && typeof player.teamId === 'string' && player.teamId.toLowerCase().includes(lowerSearchTerm);
+
       const matchesSearch = !searchTerm || nameMatch || teamNameMatch;
-      
-      const matchesTeam = teamFilter === "all" || (player.team && player.team === teamFilter);
+
+      const matchesTeam = teamFilter === "all" || (player.teamId && player.teamId === teamFilter);
       const matchesRole = roleFilter === "all" || (player.role && player.role === roleFilter);
 
       return matchesSearch && matchesTeam && matchesRole;
@@ -250,7 +250,7 @@ export default function PlayersPage() {
                     </CardHeader>
                     <CardContent className="flex-grow space-y-3 pt-2">
                       <Badge variant="outline" className="text-xs w-full justify-center truncate">
-                        Team: {player.team || 'N/A'}
+                        Team ID: {player.teamId || 'N/A'}
                       </Badge>
                       <div className="grid grid-cols-2 gap-2 pt-1">
                         <CompactStatDisplay label="Matches" value={player.stats?.matchesPlayed} icon={User} />
