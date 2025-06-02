@@ -15,6 +15,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectLabel,
 } from '@/components/ui/select';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -22,6 +23,7 @@ import { schoolsData as allSchools, type SchoolProfile as School } from '@/lib/s
 import { detailedTeamsData as allTeams, type Team as TeamData } from '@/lib/team-data';
 import { scorersData as allScorersData, type ScorerProfile } from '@/lib/scorer-data';
 import { umpiresData as allUmpiresData, type UmpireProfile } from '@/lib/umpire-data';
+import { divisionsData as allDivisionsData, type Division } from '@/lib/divisions-data';
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,20 +41,22 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuLabel,
+  DropdownMenuLabel as DropdownMenuLabelComponent, // Renamed to avoid conflict
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
 import { Loader2, Users } from 'lucide-react';
 
+const AGE_GROUPS = ["Open", "U19", "U18", "U17", "U16", "U15", "U14", "U13", "U12", "U11", "U10", "U9"] as const;
+
 const fixtureFormSchema = z.object({
   matchType: z.enum(['T20', 'ODI', 'Test'], { required_error: "Match type is required."}),
   overs: z.number().min(1, "Overs must be at least 1.").optional(),
-  division: z.string().optional(),
+  division: z.string().optional().or(z.literal("no-division")),
   homeTeamSchoolId: z.string().min(1, "Home school is required."),
   homeTeamId: z.string().min(1, "Home team is required."),
-  ageGroup: z.string().min(1, "Age group is required (auto-filled)."),
+  ageGroup: z.enum(AGE_GROUPS, { required_error: "Age group is required."}),
   awayTeamId: z.string().min(1, "Away team is required."),
   scheduledDate: z.date({ required_error: "Date is required."}),
   time: z.string().min(1, "Time is required."),
@@ -68,10 +72,10 @@ type FixtureFormData = z.infer<typeof fixtureFormSchema>;
 const initialDefaultValues: FixtureFormData = {
   matchType: 'T20',
   overs: 20,
-  division: '',
+  division: 'no-division',
   homeTeamSchoolId: '',
   homeTeamId: '',
-  ageGroup: '',
+  ageGroup: 'Open', // Default age group
   awayTeamId: '',
   scheduledDate: new Date(),
   time: '',
@@ -100,6 +104,7 @@ export default function CreateFixturePage() {
   const watchHomeTeamSchoolId = form.watch('homeTeamSchoolId');
   const watchHomeTeamId = form.watch('homeTeamId');
   const watchMatchType = form.watch('matchType');
+  const watchAgeGroup = form.watch('ageGroup');
 
   useEffect(() => {
     if (watchHomeTeamSchoolId) {
@@ -113,14 +118,14 @@ export default function CreateFixturePage() {
         setAvailableFields([]);
       }
       form.setValue('homeTeamId', '');
-      form.setValue('ageGroup', '');
+      // form.setValue('ageGroup', initialDefaultValues.ageGroup); // Reset age group or let it be set by team
       form.setValue('venueId', '');
       form.setValue('awayTeamId', '');
     } else {
       setAvailableHomeTeams([]);
       setAvailableFields([]);
       form.setValue('homeTeamId', '');
-      form.setValue('ageGroup', '');
+      // form.setValue('ageGroup', initialDefaultValues.ageGroup);
       form.setValue('venueId', '');
       form.setValue('awayTeamId', '');
     }
@@ -129,20 +134,30 @@ export default function CreateFixturePage() {
   useEffect(() => {
     if (watchHomeTeamId) {
       const selectedTeam = allTeams.find(team => team.id === watchHomeTeamId);
-      if (selectedTeam) {
-        form.setValue('ageGroup', selectedTeam.ageGroup);
-        setFilteredAwayTeams(allTeams.filter(team => team.id !== watchHomeTeamId && team.ageGroup === selectedTeam.ageGroup));
+      if (selectedTeam && selectedTeam.ageGroup && AGE_GROUPS.includes(selectedTeam.ageGroup as typeof AGE_GROUPS[number])) {
+        form.setValue('ageGroup', selectedTeam.ageGroup as typeof AGE_GROUPS[number]);
       } else {
-         form.setValue('ageGroup', '');
-         setFilteredAwayTeams(allTeams.filter(team => team.id !== watchHomeTeamId));
+         form.setValue('ageGroup', initialDefaultValues.ageGroup); // Reset to default if team has no age group
       }
-      form.setValue('awayTeamId', '');
+      // Away team filtering will now be handled by the watchAgeGroup effect
     } else {
-      form.setValue('ageGroup', '');
-      setFilteredAwayTeams(allTeams);
-      form.setValue('awayTeamId', '');
+      form.setValue('ageGroup', initialDefaultValues.ageGroup);
     }
+     form.setValue('awayTeamId', ''); // Always reset away team when home team changes
   }, [watchHomeTeamId, form]);
+
+   useEffect(() => {
+    if (watchAgeGroup) {
+      setFilteredAwayTeams(allTeams.filter(team => 
+        team.id !== watchHomeTeamId && 
+        team.ageGroup === watchAgeGroup
+      ));
+    } else {
+      setFilteredAwayTeams(allTeams.filter(team => team.id !== watchHomeTeamId));
+    }
+    form.setValue('awayTeamId', ''); // Reset away team if age group changes
+  }, [watchAgeGroup, watchHomeTeamId, form]);
+
 
   useEffect(() => {
     if (watchMatchType === 'T20') {
@@ -172,7 +187,7 @@ export default function CreateFixturePage() {
         status: 'Scheduled' as 'Scheduled' | 'Team Confirmed' | 'Ground Ready' | 'Live' | 'Completed',
         umpireIds: data.umpireIds || [],
         scorerId: data.scorerId === 'no-scorer' || data.scorerId === '' ? null : data.scorerId, 
-        division: data.division || null,
+        division: data.division === 'no-division' ? null : data.division,
         transportId: null,
         createdBy: null, 
         groundkeeperId: null,
@@ -266,11 +281,25 @@ export default function CreateFixturePage() {
                   control={form.control}
                   name="division"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Division (Optional)</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value ?? ''} placeholder="e.g., Division 1, Plate" />
-                      </FormControl>
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Division</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || 'no-division'}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select division (optional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="no-division">No Division</SelectItem>
+                            {allDivisionsData.map((div) => (
+                              <SelectItem key={div.id} value={div.id}>
+                                {div.name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -342,9 +371,23 @@ export default function CreateFixturePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Age Group *</FormLabel>
-                      <FormControl>
-                        <Input {...field} readOnly className="bg-muted/50" placeholder="Auto-filled"/>
-                      </FormControl>
+                       <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select age group" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectGroup>
+                            {AGE_GROUPS.map((ag) => (
+                              <SelectItem key={ag} value={ag}>
+                                {ag}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Auto-filled by Home Team selection, can be overridden.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -355,10 +398,10 @@ export default function CreateFixturePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Away Team *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchHomeTeamId || filteredAwayTeams.length === 0}>
+                      <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchAgeGroup || filteredAwayTeams.length === 0}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={!watchHomeTeamId ? "Select home team first" : filteredAwayTeams.length === 0 ? "No eligible away teams" : "Select away team"} />
+                            <SelectValue placeholder={!watchAgeGroup ? "Select age group first" : filteredAwayTeams.length === 0 ? "No eligible away teams" : "Select away team"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -371,7 +414,7 @@ export default function CreateFixturePage() {
                           </SelectGroup>
                         </SelectContent>
                       </Select>
-                       <FormDescription>Away teams filtered by home team's age group.</FormDescription>
+                       <FormDescription>Away teams filtered by selected age group.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -471,7 +514,7 @@ export default function CreateFixturePage() {
                           </FormControl>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-full max-h-60 overflow-y-auto">
-                          <DropdownMenuLabel>Available Umpires</DropdownMenuLabel>
+                          <DropdownMenuLabelComponent>Available Umpires</DropdownMenuLabelComponent>
                           <DropdownMenuSeparator />
                           {currentUmpires.map((umpire) => (
                             <DropdownMenuCheckboxItem
