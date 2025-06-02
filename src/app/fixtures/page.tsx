@@ -9,26 +9,28 @@ import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Clock, MapPin, ListChecks, AlertTriangle, Loader2, Users, Shield, BarChart2, Info } from "lucide-react";
-import { format, isFuture, subDays, isWithinInterval, parseISO, isValid } from 'date-fns';
+import { CalendarDays, Clock, MapPin, ListChecks, AlertTriangle, Loader2, Users, Shield, BarChart2, Info, LayoutGrid, List as ListIcon } from "lucide-react";
+import { format, isFuture, subDays, isWithinInterval, parseISO, isValid, isEqual } from 'date-fns';
 import { cn } from "@/lib/utils";
-import { detailedTeamsData, type Team } from '@/lib/team-data'; // For team names and age groups
-import { umpiresData, type UmpireProfile } from '@/lib/umpire-data'; // For umpire names
-import { scorersData, type ScorerProfile } from '@/lib/scorer-data'; // For scorer names
+import { detailedTeamsData, type Team } from '@/lib/team-data';
+import { umpiresData, type UmpireProfile } from '@/lib/umpire-data';
+import { scorersData, type ScorerProfile } from '@/lib/scorer-data';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Calendar } from "@/components/ui/calendar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-// Interface for the data structure of a fixture coming from Firestore
+
 interface FirestoreFixture {
-  id: string; // Firestore document ID
+  id: string;
   homeTeamId: string;
-  // homeTeamName?: string; // We will fetch this
   awayTeamId: string;
-  // awayTeamName?: string; // We will fetch this
   matchType: 'T20' | 'ODI' | 'Test';
-  venueId: string; // Stores field name for now
+  venueId: string;
   scheduledDate: Timestamp | null;
   time: string;
-  overs?: number; // Optional, might not be set for Test
-  ageGroup: string; // Should be available from fixture data or home team
+  overs?: number;
+  ageGroup: string;
   status: 'Scheduled' | 'Team Confirmed' | 'Ground Ready' | 'Live' | 'Completed' | 'Match Abandoned' | 'Rain-Delay' | 'Play Suspended';
   umpireIds: string[];
   scorerId: string | null;
@@ -38,15 +40,14 @@ interface FirestoreFixture {
   createdAt?: Timestamp;
 }
 
-// Expanded Interface for how we want to display fixtures in the UI
 export interface DisplayFixture {
   id: string;
   homeTeamId: string;
   homeTeamName: string;
   awayTeamId: string;
   awayTeamName: string;
-  date: string; // Formatted date string 'yyyy-MM-dd'
-  displayDate: string; // Formatted for display 'EEE, MMM d, yyyy'
+  date: string; 
+  displayDate: string; 
   time: string;
   location: string;
   status: FirestoreFixture['status'];
@@ -59,7 +60,7 @@ export interface DisplayFixture {
 
 const fetchFixtures = async (): Promise<DisplayFixture[]> => {
   const fixturesCollectionRef = collection(db, 'fixtures');
-  const q = firestoreQuery(fixturesCollectionRef, orderBy('scheduledDate', 'desc')); // Order by scheduledDate
+  const q = firestoreQuery(fixturesCollectionRef, orderBy('scheduledDate', 'desc'));
   const querySnapshot = await getDocs(q);
   
   const fixturesList = querySnapshot.docs.reduce((acc, doc) => {
@@ -103,8 +104,110 @@ const fetchFixtures = async (): Promise<DisplayFixture[]> => {
     return acc;
   }, [] as DisplayFixture[]);
   
-  // Already sorted by Firestore query, no need to re-sort unless criteria changes
   return fixturesList;
+};
+
+const getStatusBadgeVariant = (status: DisplayFixture["status"], dateStr: string): "default" | "secondary" | "destructive" | "outline" => {
+  const fixtureDate = parseISO(dateStr); 
+  const today = new Date();
+  today.setHours(0,0,0,0); 
+  const fiveDaysFromNow = subDays(new Date(), -5); 
+  fiveDaysFromNow.setHours(0,0,0,0);
+
+  if (status === "Scheduled" && isFuture(fixtureDate) && isWithinInterval(fixtureDate, { start: today, end: fiveDaysFromNow })) {
+    return "default"; 
+  }
+
+  switch (status) {
+    case "Live":
+      return "destructive";
+    case "Completed":
+        return "default"; 
+    case "Match Abandoned":
+      return "secondary";
+    case "Rain-Delay":
+    case "Play Suspended":
+      return "default"; 
+    case "Scheduled": 
+    default:
+      return "outline";
+  }
+};
+
+const getStatusDisplayName = (status: DisplayFixture["status"], dateStr: string): string => {
+  const fixtureDate = parseISO(dateStr);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const fiveDaysFromNow = subDays(new Date(), -5);
+  fiveDaysFromNow.setHours(0,0,0,0);
+
+  if (status === "Scheduled" && isFuture(fixtureDate) && isWithinInterval(fixtureDate, { start: today, end: fiveDaysFromNow })) {
+    return "Upcoming";
+  }
+  return status;
+};
+
+const FixtureCard: React.FC<{ fixture: DisplayFixture }> = ({ fixture }) => {
+  const currentStatus = getStatusDisplayName(fixture.status, fixture.date);
+  const badgeVariant = getStatusBadgeVariant(fixture.status, fixture.date);
+
+  return (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-lg">{fixture.homeTeamName} vs {fixture.awayTeamName}</CardTitle>
+          <Badge
+            variant={badgeVariant}
+            className={cn(
+              "whitespace-nowrap",
+              currentStatus === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground border-transparent", 
+              fixture.status === "Completed" && "bg-green-600 text-white border-transparent",
+              fixture.status === "Live" && "bg-destructive text-destructive-foreground border-transparent animate-pulse",
+              (fixture.status === "Rain-Delay" || fixture.status === "Play Suspended") && "bg-yellow-500 text-black border-transparent",
+              fixture.status === "Match Abandoned" && "bg-gray-500 text-white opacity-80 border-transparent"
+            )}
+          >
+            {currentStatus}
+          </Badge>
+        </div>
+          <CardDescription className="text-xs pt-1">
+          {fixture.matchType} &bull; {fixture.ageGroup} {fixture.division && `(${fixture.division} Div)`}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-2 text-muted-foreground">
+          <div className="flex items-center">
+            <CalendarDays className="mr-2 h-4 w-4" />
+            <span>{fixture.displayDate}</span>
+          </div>
+          <div className="flex items-center">
+            <Clock className="mr-2 h-4 w-4" />
+            <span>{fixture.time}</span>
+          </div>
+          <div className="flex items-center">
+            <MapPin className="mr-2 h-4 w-4" />
+            <span>{fixture.location}</span>
+          </div>
+        </div>
+          {(fixture.umpiresDisplay && fixture.umpiresDisplay !== 'N/A') || (fixture.scorerName && fixture.scorerName !== 'N/A') ? (
+          <div className="pt-2 border-t mt-2 text-xs text-muted-foreground space-y-1">
+            {fixture.umpiresDisplay && fixture.umpiresDisplay !== 'N/A' && (
+              <div className="flex items-center">
+                <Users className="mr-2 h-3.5 w-3.5 text-primary/80" />
+                <span>Umpires: {fixture.umpiresDisplay}</span>
+              </div>
+            )}
+            {fixture.scorerName && fixture.scorerName !== 'N/A' && (
+              <div className="flex items-center">
+                <Info className="mr-2 h-3.5 w-3.5 text-primary/80" />
+                <span>Scorer: {fixture.scorerName}</span>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
 };
 
 export default function FixturesPage() {
@@ -113,45 +216,30 @@ export default function FixturesPage() {
     queryFn: fetchFixtures,
   });
 
-  const getStatusBadgeVariant = (status: DisplayFixture["status"], dateStr: string): "default" | "secondary" | "destructive" | "outline" => {
-    const fixtureDate = parseISO(dateStr); 
-    const today = new Date();
-    today.setHours(0,0,0,0); 
-    const fiveDaysFromNow = subDays(new Date(), -5); 
-    fiveDaysFromNow.setHours(0,0,0,0);
+  const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
 
-    if (status === "Scheduled" && isFuture(fixtureDate) && isWithinInterval(fixtureDate, { start: today, end: fiveDaysFromNow })) {
-      return "default"; 
-    }
-  
-    switch (status) {
-      case "Live":
-        return "destructive";
-      case "Completed":
-         return "default"; // Will be styled green specifically
-      case "Match Abandoned":
-        return "secondary";
-      case "Rain-Delay":
-      case "Play Suspended":
-        return "default"; // Will be styled orange/yellow specifically
-      case "Scheduled": 
-      default:
-        return "outline";
-    }
+  const fixtureDates = React.useMemo(() => {
+    return fixtures?.map(f => parseISO(f.date)) || [];
+  }, [fixtures]);
+
+  const calendarModifiers = {
+    hasFixture: fixtureDates,
+  };
+  const calendarModifiersStyles = {
+    hasFixture: {
+      fontWeight: 'bold',
+      color: 'hsl(var(--primary))',
+      textDecoration: 'underline',
+    },
   };
 
-  const getStatusDisplayName = (status: DisplayFixture["status"], dateStr: string): string => {
-    const fixtureDate = parseISO(dateStr);
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const fiveDaysFromNow = subDays(new Date(), -5);
-    fiveDaysFromNow.setHours(0,0,0,0);
-
-    if (status === "Scheduled" && isFuture(fixtureDate) && isWithinInterval(fixtureDate, { start: today, end: fiveDaysFromNow })) {
-      return "Upcoming";
-    }
-    return status;
-  };
+  const fixturesForSelectedDate = React.useMemo(() => {
+    if (!selectedCalendarDate || !fixtures) return [];
+    return fixtures.filter(fixture => {
+      const fixtureDate = parseISO(fixture.date);
+      return isEqual(fixtureDate, selectedCalendarDate);
+    });
+  }, [selectedCalendarDate, fixtures]);
 
 
   if (isLoading) {
@@ -196,77 +284,119 @@ export default function FixturesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {fixtures && fixtures.length > 0 ? (
-            <div className="space-y-4">
-              {fixtures.map((fixture) => {
-                const currentStatus = getStatusDisplayName(fixture.status, fixture.date);
-                const badgeVariant = getStatusBadgeVariant(fixture.status, fixture.date);
-                
-                return (
-                  <Card key={fixture.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg">{fixture.homeTeamName} vs {fixture.awayTeamName}</CardTitle>
-                        <Badge
-                          variant={badgeVariant}
-                          className={cn(
-                            "whitespace-nowrap",
-                            currentStatus === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground border-transparent", 
-                            fixture.status === "Completed" && "bg-green-600 text-white border-transparent", // Specific green for completed
-                            fixture.status === "Live" && "bg-destructive text-destructive-foreground border-transparent animate-pulse",
-                            (fixture.status === "Rain-Delay" || fixture.status === "Play Suspended") && "bg-yellow-500 text-black border-transparent", // Specific orange/yellow
-                            fixture.status === "Match Abandoned" && "bg-gray-500 text-white opacity-80 border-transparent"
-                          )}
-                        >
-                          {currentStatus}
-                        </Badge>
+          <Tabs defaultValue="card" className="w-full">
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 mb-4">
+              <TabsTrigger value="card" className="flex items-center gap-2"><LayoutGrid className="h-4 w-4" />Card View</TabsTrigger>
+              <TabsTrigger value="list" className="flex items-center gap-2"><ListIcon className="h-4 w-4" />List View</TabsTrigger>
+              <TabsTrigger value="calendar" className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />Calendar View</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="card">
+              {fixtures && fixtures.length > 0 ? (
+                <div className="space-y-4">
+                  {fixtures.map((fixture) => (
+                    <FixtureCard key={`card-${fixture.id}`} fixture={fixture} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-4">No fixtures found for card view.</p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="list">
+              {fixtures && fixtures.length > 0 ? (
+                <ScrollArea className="h-[600px] border rounded-md">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-muted z-10">
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Match</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {fixtures.map((fixture) => {
+                        const currentStatus = getStatusDisplayName(fixture.status, fixture.date);
+                        const badgeVariant = getStatusBadgeVariant(fixture.status, fixture.date);
+                        return (
+                          <TableRow key={`list-${fixture.id}`}>
+                            <TableCell>{fixture.displayDate}</TableCell>
+                            <TableCell>{fixture.time}</TableCell>
+                            <TableCell>
+                              <div className="font-medium">{fixture.homeTeamName} vs {fixture.awayTeamName}</div>
+                              <div className="text-xs text-muted-foreground">{fixture.ageGroup} {fixture.division && `(${fixture.division} Div)`}</div>
+                            </TableCell>
+                            <TableCell>{fixture.location}</TableCell>
+                            <TableCell>{fixture.matchType}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={badgeVariant}
+                                className={cn(
+                                  "whitespace-nowrap",
+                                  currentStatus === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground border-transparent",
+                                  fixture.status === "Completed" && "bg-green-600 text-white border-transparent",
+                                  fixture.status === "Live" && "bg-destructive text-destructive-foreground border-transparent animate-pulse",
+                                  (fixture.status === "Rain-Delay" || fixture.status === "Play Suspended") && "bg-yellow-500 text-black border-transparent",
+                                  fixture.status === "Match Abandoned" && "bg-gray-500 text-white opacity-80 border-transparent"
+                                )}
+                              >
+                                {currentStatus}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              ) : (
+                <p className="text-muted-foreground text-center py-4">No fixtures found for list view.</p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="calendar">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="md:w-1/2 lg:w-2/5 flex justify-center md:justify-start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedCalendarDate}
+                    onSelect={setSelectedCalendarDate}
+                    modifiers={calendarModifiers}
+                    modifiersStyles={calendarModifiersStyles}
+                    className="rounded-md border shadow-sm p-2"
+                    initialFocus
+                  />
+                </div>
+                <div className="md:w-1/2 lg:w-3/5">
+                  <h4 className="text-lg font-semibold mb-2">
+                    Fixtures for: {selectedCalendarDate ? format(selectedCalendarDate, 'PPP') : 'No date selected'}
+                  </h4>
+                  {fixturesForSelectedDate.length > 0 ? (
+                    <ScrollArea className="h-[400px] pr-3">
+                      <div className="space-y-3">
+                        {fixturesForSelectedDate.map((fixture) => (
+                           <FixtureCard key={`calendar-${fixture.id}`} fixture={fixture} />
+                        ))}
                       </div>
-                       <CardDescription className="text-xs pt-1">
-                        {fixture.matchType} &bull; {fixture.ageGroup} {fixture.division && `(${fixture.division} Div)`}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-2 text-muted-foreground">
-                        <div className="flex items-center">
-                          <CalendarDays className="mr-2 h-4 w-4" />
-                          <span>{fixture.displayDate}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="mr-2 h-4 w-4" />
-                          <span>{fixture.time}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <MapPin className="mr-2 h-4 w-4" />
-                          <span>{fixture.location}</span>
-                        </div>
-                      </div>
-                       {(fixture.umpiresDisplay && fixture.umpiresDisplay !== 'N/A') || (fixture.scorerName && fixture.scorerName !== 'N/A') ? (
-                        <div className="pt-2 border-t mt-2 text-xs text-muted-foreground space-y-1">
-                          {fixture.umpiresDisplay && fixture.umpiresDisplay !== 'N/A' && (
-                            <div className="flex items-center">
-                              <Users className="mr-2 h-3.5 w-3.5 text-primary/80" />
-                              <span>Umpires: {fixture.umpiresDisplay}</span>
-                            </div>
-                          )}
-                          {fixture.scorerName && fixture.scorerName !== 'N/A' && (
-                            <div className="flex items-center">
-                              <Info className="mr-2 h-3.5 w-3.5 text-primary/80" /> {/* Using Info as placeholder for scorer icon */}
-                              <span>Scorer: {fixture.scorerName}</span>
-                            </div>
-                          )}
-                        </div>
-                      ) : null}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center py-4">No fixtures found in the database. Try creating some!</p>
+                    </ScrollArea>
+                  ) : (
+                    <p className="text-muted-foreground py-4">
+                      {selectedCalendarDate ? 'No fixtures on this date.' : 'Select a date to see fixtures.'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+          
+          {(!fixtures || fixtures.length === 0) && (
+             <p className="text-muted-foreground text-center py-4 mt-4">No fixtures found in the database. Try creating some!</p>
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
-
