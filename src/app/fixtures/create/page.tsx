@@ -21,7 +21,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { schoolsData as allSchools, type SchoolProfile as School } from '@/lib/schools-data';
 import { detailedTeamsData as allTeams, type Team as TeamData } from '@/lib/team-data';
 import { scorersData as allScorersData, type ScorerProfile } from '@/lib/scorer-data';
-// import { umpiresData as allUmpiresData, type UmpireProfile } from '@/lib/umpire-data'; // For future umpire dropdown
+import { umpiresData as allUmpiresData, type UmpireProfile } from '@/lib/umpire-data';
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,8 +35,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Users } from 'lucide-react';
 
 const fixtureFormSchema = z.object({
   matchType: z.enum(['T20', 'ODI', 'Test'], { required_error: "Match type is required."}),
@@ -49,8 +57,8 @@ const fixtureFormSchema = z.object({
   scheduledDate: z.date({ required_error: "Date is required."}).nullable(),
   time: z.string().min(1, "Time is required."),
   venueId: z.string().min(1, "Location/Field is required."),
-  umpireIdsInput: z.string().optional(),
-  scorerId: z.string().optional().or(z.literal("no-scorer")), // Allow "no-scorer" or actual ID
+  umpireIds: z.array(z.string()).optional(), // Changed from umpireIdsInput
+  scorerId: z.string().optional().or(z.literal("no-scorer")),
   leagueId: z.string().optional(),
   provinceId: z.string().optional(),
 });
@@ -68,8 +76,8 @@ const initialDefaultValues: FixtureFormData = {
   scheduledDate: null as Date | null,
   time: '',
   venueId: '',
-  umpireIdsInput: '',
-  scorerId: 'no-scorer', // Default to "no-scorer"
+  umpireIds: [], // Changed from umpireIdsInput
+  scorerId: 'no-scorer',
   leagueId: '',
   provinceId: '',
 };
@@ -80,6 +88,7 @@ export default function CreateFixturePage() {
   const [availableFields, setAvailableFields] = useState<string[]>([]);
   const [filteredAwayTeams, setFilteredAwayTeams] = useState<TeamData[]>(allTeams);
   const [currentScorers] = useState<ScorerProfile[]>(allScorersData);
+  const [currentUmpires] = useState<UmpireProfile[]>(allUmpiresData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -98,7 +107,7 @@ export default function CreateFixturePage() {
       if (selectedSchool) {
         const schoolTeams = allTeams.filter(team => team.schoolId === selectedSchool.id);
         setAvailableHomeTeams(schoolTeams);
-        setAvailableFields(selectedSchool.fields?.filter(f => f && f.trim() !== '') || []); // Defensive filter
+        setAvailableFields(selectedSchool.fields?.filter(f => f && f.trim() !== '') || []);
       } else {
         setAvailableHomeTeams([]);
         setAvailableFields([]);
@@ -159,7 +168,7 @@ export default function CreateFixturePage() {
         overs: data.overs,
         ageGroup: data.ageGroup,
         status: 'Scheduled' as 'Scheduled' | 'Team Confirmed' | 'Ground Ready' | 'Live' | 'Completed',
-        umpireIds: data.umpireIdsInput ? data.umpireIdsInput.split(',').map(id => id.trim()).filter(id => id) : [],
+        umpireIds: data.umpireIds || [], // Use the array of umpire IDs
         scorerId: data.scorerId === 'no-scorer' ? null : data.scorerId, 
         division: data.division || null,
         transportId: null,
@@ -421,7 +430,7 @@ export default function CreateFixturePage() {
                         </FormControl>
                         <SelectContent>
                           <SelectGroup>
-                          {availableFields.filter(fld => fld && fld.trim() !== '').map((fld) => ( // Defensive filter
+                          {availableFields.filter(fld => fld && fld.trim() !== '').map((fld) => (
                             <SelectItem key={fld} value={fld}>
                               {fld}
                             </SelectItem>
@@ -444,14 +453,44 @@ export default function CreateFixturePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="umpireIdsInput"
+                  name="umpireIds"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Umpire IDs (optional)</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value ?? ''} placeholder="e.g., umpire-1, umpire-2" />
-                      </FormControl>
-                      <FormDescription>Enter Umpire unique IDs, separated by commas.</FormDescription>
+                      <FormLabel>Umpires (Optional)</FormLabel>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <FormControl>
+                            <Button variant="outline" className="w-full justify-start font-normal">
+                              <Users className="mr-2 h-4 w-4" />
+                              {field.value && field.value.length > 0 
+                                ? `${field.value.length} umpire(s) selected` 
+                                : "Select umpires"}
+                            </Button>
+                          </FormControl>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-full max-h-60 overflow-y-auto">
+                          <DropdownMenuLabel>Available Umpires</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {currentUmpires.map((umpire) => (
+                            <DropdownMenuCheckboxItem
+                              key={umpire.id}
+                              checked={field.value?.includes(umpire.id)}
+                              onCheckedChange={(checked) => {
+                                return checked
+                                  ? field.onChange([...(field.value || []), umpire.id])
+                                  : field.onChange(
+                                      (field.value || []).filter(
+                                        (id) => id !== umpire.id
+                                      )
+                                    );
+                              }}
+                            >
+                              {umpire.name} ({umpire.umpiringLevel})
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <FormDescription>Select one or more umpires.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -464,7 +503,7 @@ export default function CreateFixturePage() {
                       <FormLabel>Scorer (Optional)</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
-                        value={field.value === '' ? 'no-scorer' : field.value || 'no-scorer'} // Ensure '' from RHF maps to 'no-scorer' or is handled
+                        value={field.value === '' ? 'no-scorer' : field.value || 'no-scorer'}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -535,3 +574,4 @@ export default function CreateFixturePage() {
   );
 }
 
+    
