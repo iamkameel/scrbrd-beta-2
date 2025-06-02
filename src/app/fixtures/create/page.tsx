@@ -41,7 +41,7 @@ import { Loader2 } from 'lucide-react';
 const fixtureFormSchema = z.object({
   matchType: z.enum(['T20', 'ODI', 'Test'], { required_error: "Match type is required."}),
   overs: z.number().min(1, "Overs must be at least 1.").optional(),
-  division: z.string().optional(), // Moved here
+  division: z.string().optional(),
   homeTeamSchoolId: z.string().min(1, "Home school is required."),
   homeTeamId: z.string().min(1, "Home team is required."),
   ageGroup: z.string().min(1, "Age group is required (auto-filled)."),
@@ -50,14 +50,14 @@ const fixtureFormSchema = z.object({
   time: z.string().min(1, "Time is required."),
   venueId: z.string().min(1, "Location/Field is required."),
   umpireIdsInput: z.string().optional(),
-  scorerId: z.string().optional(), // Changed from scorerIdInput
+  scorerId: z.string().optional().or(z.literal("no-scorer")), // Allow "no-scorer" or actual ID
   leagueId: z.string().optional(),
   provinceId: z.string().optional(),
 });
 
 type FixtureFormData = z.infer<typeof fixtureFormSchema>;
 
-const initialDefaultValues: Partial<FixtureFormData> = {
+const initialDefaultValues: FixtureFormData = {
   matchType: 'T20',
   overs: 20,
   division: '',
@@ -69,7 +69,7 @@ const initialDefaultValues: Partial<FixtureFormData> = {
   time: '',
   venueId: '',
   umpireIdsInput: '',
-  scorerId: '',
+  scorerId: 'no-scorer', // Default to "no-scorer"
   leagueId: '',
   provinceId: '',
 };
@@ -80,13 +80,12 @@ export default function CreateFixturePage() {
   const [availableFields, setAvailableFields] = useState<string[]>([]);
   const [filteredAwayTeams, setFilteredAwayTeams] = useState<TeamData[]>(allTeams);
   const [currentScorers] = useState<ScorerProfile[]>(allScorersData);
-  // const [currentUmpires] = useState<UmpireProfile[]>(allUmpiresData); // For future umpire dropdown
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<FixtureFormData>({
     resolver: zodResolver(fixtureFormSchema),
-    defaultValues: initialDefaultValues as FixtureFormData,
+    defaultValues: initialDefaultValues,
   });
 
   const watchHomeTeamSchoolId = form.watch('homeTeamSchoolId');
@@ -97,13 +96,9 @@ export default function CreateFixturePage() {
     if (watchHomeTeamSchoolId) {
       const selectedSchool = allSchools.find(s => s.id === watchHomeTeamSchoolId);
       if (selectedSchool) {
-        // IMPORTANT: For this filter to work, team.schoolId in detailedTeamsData (src/lib/team-data.ts)
-        // MUST match the actual 'id' of a school from schoolsData (src/lib/schools-data.ts).
-        // E.g., if a school has id "school-8-northwood-school", a team belonging to it should have team.schoolId = "school-8-northwood-school".
-        // Currently, team.schoolId is "school_placeholder" for all teams in the static data.
         const schoolTeams = allTeams.filter(team => team.schoolId === selectedSchool.id);
         setAvailableHomeTeams(schoolTeams);
-        setAvailableFields(selectedSchool.fields || []);
+        setAvailableFields(selectedSchool.fields?.filter(f => f && f.trim() !== '') || []); // Defensive filter
       } else {
         setAvailableHomeTeams([]);
         setAvailableFields([]);
@@ -125,12 +120,12 @@ export default function CreateFixturePage() {
       const selectedTeam = allTeams.find(team => team.id === watchHomeTeamId);
       if (selectedTeam) {
         form.setValue('ageGroup', selectedTeam.ageGroup);
-        setFilteredAwayTeams(allTeams.filter(team => team.id !== watchHomeTeamId && team.ageGroup === selectedTeam.ageGroup)); // Also filter away by age group
+        setFilteredAwayTeams(allTeams.filter(team => team.id !== watchHomeTeamId && team.ageGroup === selectedTeam.ageGroup));
       } else {
          form.setValue('ageGroup', '');
          setFilteredAwayTeams(allTeams);
       }
-      form.setValue('awayTeamId', ''); // Reset away team if home team changes
+      form.setValue('awayTeamId', '');
     } else {
       form.setValue('ageGroup', '');
       setFilteredAwayTeams(allTeams);
@@ -160,12 +155,12 @@ export default function CreateFixturePage() {
         matchType: data.matchType,
         venueId: data.venueId, 
         scheduledDate: scheduledTimestamp,
-        time: data.time, // Added time
+        time: data.time,
         overs: data.overs,
         ageGroup: data.ageGroup,
         status: 'Scheduled' as 'Scheduled' | 'Team Confirmed' | 'Ground Ready' | 'Live' | 'Completed',
         umpireIds: data.umpireIdsInput ? data.umpireIdsInput.split(',').map(id => id.trim()).filter(id => id) : [],
-        scorerId: data.scorerId || null, 
+        scorerId: data.scorerId === 'no-scorer' ? null : data.scorerId, 
         division: data.division || null,
         transportId: null,
         createdBy: null, 
@@ -181,7 +176,7 @@ export default function CreateFixturePage() {
         title: "Fixture Created!",
         description: `Fixture ID: ${docRef.id} has been scheduled.`,
       });
-      form.reset(initialDefaultValues as FixtureFormData);
+      form.reset(initialDefaultValues);
       setAvailableHomeTeams([]);
       setAvailableFields([]);
       setFilteredAwayTeams(allTeams);
@@ -283,7 +278,7 @@ export default function CreateFixturePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Home School *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select home school" />
@@ -309,7 +304,7 @@ export default function CreateFixturePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Home Team *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!watchHomeTeamSchoolId || availableHomeTeams.length === 0}>
+                      <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchHomeTeamSchoolId || availableHomeTeams.length === 0}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={!watchHomeTeamSchoolId ? "Select school first" : availableHomeTeams.length === 0 ? "No teams for school" : "Select home team"} />
@@ -349,7 +344,7 @@ export default function CreateFixturePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Away Team *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!watchHomeTeamId || filteredAwayTeams.length === 0}>
+                      <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchHomeTeamId || filteredAwayTeams.length === 0}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={!watchHomeTeamId ? "Select home team first" : filteredAwayTeams.length === 0 ? "No eligible away teams" : "Select away team"} />
@@ -418,7 +413,7 @@ export default function CreateFixturePage() {
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
                       <FormLabel>Location/Field *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!watchHomeTeamSchoolId || availableFields.length === 0}>
+                      <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchHomeTeamSchoolId || availableFields.length === 0}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={!watchHomeTeamSchoolId ? "Select home school first" : availableFields.length === 0 ? "No fields for school" : "Select field/venue"} />
@@ -426,7 +421,7 @@ export default function CreateFixturePage() {
                         </FormControl>
                         <SelectContent>
                           <SelectGroup>
-                          {availableFields.map((fld) => (
+                          {availableFields.filter(fld => fld && fld.trim() !== '').map((fld) => ( // Defensive filter
                             <SelectItem key={fld} value={fld}>
                               {fld}
                             </SelectItem>
@@ -467,7 +462,10 @@ export default function CreateFixturePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Scorer (Optional)</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value === '' ? 'no-scorer' : field.value || 'no-scorer'} // Ensure '' from RHF maps to 'no-scorer' or is handled
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select scorer" />
@@ -475,7 +473,7 @@ export default function CreateFixturePage() {
                         </FormControl>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value="">None</SelectItem>
+                            <SelectItem value="no-scorer">None</SelectItem>
                             {currentScorers.map((scorer) => (
                               <SelectItem key={scorer.id} value={scorer.id}>
                                 {scorer.name} ({scorer.certificationLevel})
@@ -536,3 +534,4 @@ export default function CreateFixturePage() {
     </Card>
   );
 }
+
