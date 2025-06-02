@@ -2,7 +2,7 @@
 import * as admin from 'firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { schoolsData, type SchoolProfile, type SchoolTeam } from '@/lib/schools-data';
-import type { PlayerProfile, PlayerStats } from '@/lib/player-data';
+import type { PlayerProfile, PlayerStats } from '@/lib/player-data'; // Ensure this import is correct
 
 // IMPORTANT: Replace with the actual path to your downloaded Firebase Admin SDK JSON file if needed.
 const serviceAccountPath = './scrbrd-beta-2-firebase-adminsdk-fbsvc-4c0a94b7bc.json';
@@ -101,6 +101,18 @@ async function generateSchoolSquads() {
   let schoolsProcessedCount = 0;
   let schoolsSkippedDueToMissingTeam = 0;
 
+  // Debugging schoolsData import
+  console.log(`DEBUG: Immediately after import - typeof schoolsData: ${typeof schoolsData}`);
+  console.log(`DEBUG: Immediately after import - Array.isArray(schoolsData): ${Array.isArray(schoolsData)}`);
+  if (schoolsData) {
+    console.log(`DEBUG: Immediately after import - schoolsData.length: ${schoolsData.length}`);
+    // Uncomment for more detail, but can be very verbose:
+    // if (Array.isArray(schoolsData) && schoolsData.length > 0) {
+    //   console.log(`DEBUG: First school in schoolsData: ${JSON.stringify(schoolsData[0])}`);
+    // }
+  }
+
+
   if (!schoolsData || !Array.isArray(schoolsData) || schoolsData.length === 0) {
     console.error('CRITICAL: Schools data is not available, not an array, or is empty. Check src/lib/schools-data.ts export.');
     console.error('No players will be generated.');
@@ -129,7 +141,6 @@ async function generateSchoolSquads() {
       console.log(`  No "1st XI" found for ${school.name}, defaulting to first team: ${primaryTeam.name} (ID: ${primaryTeam.id})`);
     }
 
-    // Robust check for primaryTeam and its id before using it
     if (!primaryTeam || !primaryTeam.id) {
       console.warn(`  CRITICAL SKIP: School ${school.name} (ID: ${school.id}). Could not determine a primary team with a valid ID.`);
       console.warn(`  Ensure 'teams' array in 'schools-data.ts' for this school has at least one team object with an 'id' property.`);
@@ -138,47 +149,40 @@ async function generateSchoolSquads() {
       continue;
     }
 
-    // If we reach here, primaryTeam and primaryTeam.id are guaranteed to be defined.
-    const primaryTeamId = primaryTeam.id; // This should now be safe from TS2461.
+    const primaryTeamId = primaryTeam.id;
 
     console.log(`  Generating players for team: ${primaryTeam.name} (Team ID: ${primaryTeamId})`);
-    generatedFullNames.clear(); // Clear for each new team to allow name reuse across different teams
+    generatedFullNames.clear(); 
 
-    const playersPerTeam = 12; // Generate a squad of 12 for the primary team
+    const playersPerTeam = 12; 
     for (let i = 1; i <= playersPerTeam; i++) {
       const { firstName, lastName } = generateUniqueFullName();
       const playerName = `${firstName} ${lastName}`;
-      const playerDocRef = db.collection('players').doc(); // Auto-generate Firestore document ID
-      const playerRole = roles[i % roles.length]; // Cycle through roles for variety
+      const playerDocRef = db.collection('players').doc(); 
+      const playerRole = roles[i % roles.length]; 
 
       const playerData: Omit<PlayerProfile, 'id'> = {
         name: playerName,
-        teamId: primaryTeamId, // Assign to the school's primary team ID
-        avatar: `https://placehold.co/100x100.png`, // Placeholder avatar
+        teamId: primaryTeamId, 
+        avatar: `https://placehold.co/100x100.png`, 
         role: playerRole,
         battingStyle: getRandomElement(battingStyles),
         bowlingStyle: playerRole.toLowerCase().includes("bowler") || playerRole.toLowerCase().includes("all-rounder") ? getRandomElement(bowlingStyles) : "N/A",
         bio: `Placeholder bio for ${playerName}, a dedicated member of ${school.name}'s ${primaryTeam.name}.`,
-        stats: generatePlayerStats(), // Generate random placeholder stats
+        stats: generatePlayerStats(), 
         careerSpan: "Current School Season",
-        dateOfBirth: generateRandomDateOfBirth().toDate().toISOString().split('T')[0], // Format as YYYY-MM-DD string
-        skills: {}, // Empty skills object for now, to be potentially filled by AI
+        dateOfBirth: generateRandomDateOfBirth().toDate().toISOString().split('T')[0], 
+        skills: {}, 
       };
       
-      // Convert dateOfBirth string back to Timestamp for Firestore
       const playerDocumentData = {
         ...playerData,
         dateOfBirth: playerData.dateOfBirth ? Timestamp.fromDate(new Date(playerData.dateOfBirth)) : null,
       };
 
       try {
-        // console.log(`    Attempting to generate player: ${playerName} (Doc ID: ${playerDocRef.id}) for team ID: ${primaryTeamId}`);
-        // if (i === 1) { // Log first player data for each school
-        //   console.log(`    Sample player data for ${playerName}: ${JSON.stringify(playerDocumentData, null, 2)}`);
-        // }
         await playerDocRef.set(playerDocumentData);
         totalPlayersGenerated++;
-        // console.log(`    Successfully generated player: ${playerName} with Firestore ID: ${playerDocRef.id}`);
       } catch (error) {
         totalErrorsGeneratingPlayers++;
         console.error(`    ERROR generating player ${playerName} (Attempted Doc ID: ${playerDocRef.id}):`, error);
@@ -197,7 +201,7 @@ async function generateSchoolSquads() {
 
   if (totalErrorsGeneratingPlayers > 0 || schoolsSkippedDueToMissingTeam > 0) {
     console.warn("Script finished with some issues. Please review logs.");
-    process.exit(1); // Exit with error if any player generation failed or schools were skipped
+    process.exit(1); 
   } else if (totalPlayersGenerated === 0 && schoolsProcessedCount > 0) {
     console.warn("Script finished. No players were generated, but schools were processed. This might indicate an issue with team ID logic or player generation loop.");
     process.exit(1);
