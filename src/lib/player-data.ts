@@ -72,7 +72,7 @@ export interface PlayerProfile {
   teamId: string; // Changed from team to teamId
   avatar: string;
   role: string;
-  dateOfBirth?: string;
+  dateOfBirth?: Date; // Changed from string to Date
   battingStyle?: string;
   bowlingStyle?: string;
   bio?: string;
@@ -88,7 +88,7 @@ export const playersData: PlayerProfile[] = [
     teamId: "1", // Corresponds to Northwood School 1st XI in detailedTeamsData
     avatar: "https://placehold.co/100x100.png",
     role: "All-rounder",
-    dateOfBirth: "1998-05-15",
+    dateOfBirth: new Date("1998-05-15"),
     battingStyle: "Right-hand bat",
     bowlingStyle: "Right-arm medium",
     careerSpan: "School Career: 2020 - Present",
@@ -153,7 +153,7 @@ export const playersData: PlayerProfile[] = [
     teamId: "3", // Corresponds to Riverdale Cricket Club Seniors in detailedTeamsData
     avatar: "https://placehold.co/100x100.png",
     role: "Wicket-keeper Batsman",
-    dateOfBirth: "2000-02-20",
+    dateOfBirth: new Date("2000-02-20"),
     battingStyle: "Left-hand bat",
     careerSpan: "Academy Career: 2021 - Present",
     bio: "Jane is an agile wicket-keeper and a reliable top-order batsman. Her sharp reflexes behind the stumps and ability to build innings make her an invaluable asset to the Panthers.",
@@ -204,7 +204,7 @@ export const playersData: PlayerProfile[] = [
     teamId: "4", // Corresponds to Hillcrest College U16 in detailedTeamsData
     avatar: "https://placehold.co/100x100.png",
     role: "Opening Batsman",
-    dateOfBirth: "1997-11-01",
+    dateOfBirth: new Date("1997-11-01"),
     battingStyle: "Right-hand bat",
     careerSpan: "College Career: 2019 - 2023",
     bio: "Mike is a classic opening batsman with a penchant for long innings. He provides solid starts for the Lions and is known for his excellent technique against the new ball.",
@@ -254,7 +254,7 @@ export const playersData: PlayerProfile[] = [
     teamId: "1", // Corresponds to Northwood School 1st XI in detailedTeamsData
     avatar: "https://placehold.co/100x100.png",
     role: "Fast Bowler",
-    dateOfBirth: "1999-07-22",
+    dateOfBirth: new Date("1999-07-22"),
     battingStyle: "Right-hand bat",
     bowlingStyle: "Right-arm fast",
     careerSpan: "School Career: 2020 - Present",

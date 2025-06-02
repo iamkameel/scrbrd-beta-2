@@ -4,9 +4,9 @@
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, Timestamp } from 'firebase/firestore'; // Added Timestamp
 import { db } from '@/lib/firebase';
-import type { PlayerProfile, PlayerSkills, ScoreDetail } from '@/lib/player-data'; // Keep type for structure
+import type { PlayerProfile, PlayerSkills, ScoreDetail } from '@/lib/player-data'; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -116,7 +116,17 @@ const fetchPlayer = async (playerId: string): Promise<PlayerProfile | null> => {
   const playerDocRef = doc(db, 'players', playerId);
   const playerSnap = await getDoc(playerDocRef);
   if (playerSnap.exists()) {
-    return { id: playerSnap.id, ...playerSnap.data() } as PlayerProfile;
+    const data = playerSnap.data();
+    // Convert Firestore Timestamp to JS Date for dateOfBirth
+    const dateOfBirth = data.dateOfBirth instanceof Timestamp 
+      ? data.dateOfBirth.toDate() 
+      : data.dateOfBirth; // Could be null or already a Date if transformed elsewhere
+
+    return { 
+      id: playerSnap.id, 
+      ...data,
+      dateOfBirth, // Ensure this is a JS Date or undefined/null
+    } as PlayerProfile;
   }
   return null;
 };
@@ -129,7 +139,7 @@ export default function PlayerProfilePage() {
   const { data: player, isLoading, isError, error } = useQuery<PlayerProfile | null, Error>({
     queryKey: ['player', playerId],
     queryFn: () => fetchPlayer(playerId),
-    enabled: !!playerId, // Only run query if playerId is available
+    enabled: !!playerId, 
   });
 
   if (isLoading) {
@@ -171,6 +181,17 @@ export default function PlayerProfilePage() {
   
   const roleAbbreviation = player.role.substring(0,2).toUpperCase();
   const overallRating = calculateOverallRating(player.skills);
+
+  let formattedDateOfBirth = "N/A";
+  if (player.dateOfBirth && player.dateOfBirth instanceof Date && !isNaN(player.dateOfBirth.getTime())) {
+    try {
+      formattedDateOfBirth = format(player.dateOfBirth, "MMMM d, yyyy");
+    } catch (e) {
+      console.error("Error formatting dateOfBirth:", e);
+      // formattedDateOfBirth remains "N/A"
+    }
+  }
+
 
   return (
     <div className="container mx-auto py-8 space-y-6 print:space-y-0">
@@ -338,7 +359,7 @@ export default function PlayerProfilePage() {
               <StatItem label="Full Name" value={player.name} icon={AtSign} />
               <StatItem label="Team" value={player.teamId} icon={ShieldCheck} />
               <StatItem label="Role" value={player.role} />
-              {player.dateOfBirth && <StatItem label="Date of Birth" value={format(new Date(player.dateOfBirth), "MMMM d, yyyy")} icon={CalendarDays} />}
+              {player.dateOfBirth && <StatItem label="Date of Birth" value={formattedDateOfBirth} icon={CalendarDays} />}
               {player.battingStyle && <StatItem label="Batting Style" value={player.battingStyle} />}
               {player.bowlingStyle && <StatItem label="Bowling Style" value={player.bowlingStyle} />}
             </CardContent>
