@@ -54,10 +54,10 @@ const fixtureFormSchema = z.object({
   homeTeamId: z.string().min(1, "Home team is required."),
   ageGroup: z.string().min(1, "Age group is required (auto-filled)."),
   awayTeamId: z.string().min(1, "Away team is required."),
-  scheduledDate: z.date({ required_error: "Date is required."}).nullable(),
+  scheduledDate: z.date({ required_error: "Date is required."}), // Made non-nullable
   time: z.string().min(1, "Time is required."),
   venueId: z.string().min(1, "Location/Field is required."),
-  umpireIds: z.array(z.string()).optional(), // Changed from umpireIdsInput
+  umpireIds: z.array(z.string()).optional(),
   scorerId: z.string().optional().or(z.literal("no-scorer")),
   leagueId: z.string().optional(),
   provinceId: z.string().optional(),
@@ -73,10 +73,10 @@ const initialDefaultValues: FixtureFormData = {
   homeTeamId: '',
   ageGroup: '',
   awayTeamId: '',
-  scheduledDate: null as Date | null,
+  scheduledDate: new Date(), // Default to today, or handle as needed
   time: '',
   venueId: '',
-  umpireIds: [], // Changed from umpireIdsInput
+  umpireIds: [],
   scorerId: 'no-scorer',
   leagueId: '',
   provinceId: '',
@@ -156,7 +156,8 @@ export default function CreateFixturePage() {
   const onSubmit = async (data: FixtureFormData) => {
     setIsSubmitting(true);
     try {
-      const scheduledTimestamp = data.scheduledDate ? Timestamp.fromDate(data.scheduledDate) : null;
+      // data.scheduledDate is now guaranteed by Zod to be a Date object
+      const scheduledTimestamp = Timestamp.fromDate(data.scheduledDate);
       
       const newFixtureData = {
         homeTeamId: data.homeTeamId,
@@ -168,8 +169,8 @@ export default function CreateFixturePage() {
         overs: data.overs,
         ageGroup: data.ageGroup,
         status: 'Scheduled' as 'Scheduled' | 'Team Confirmed' | 'Ground Ready' | 'Live' | 'Completed',
-        umpireIds: data.umpireIds || [], // Use the array of umpire IDs
-        scorerId: data.scorerId === 'no-scorer' ? null : data.scorerId, 
+        umpireIds: data.umpireIds || [],
+        scorerId: data.scorerId === 'no-scorer' || data.scorerId === '' ? null : data.scorerId, 
         division: data.division || null,
         transportId: null,
         createdBy: null, 
@@ -503,7 +504,7 @@ export default function CreateFixturePage() {
                       <FormLabel>Scorer (Optional)</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
-                        value={field.value === '' ? 'no-scorer' : field.value || 'no-scorer'}
+                        value={field.value === '' || field.value === undefined ? 'no-scorer' : field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -573,5 +574,3 @@ export default function CreateFixturePage() {
     </Card>
   );
 }
-
-    

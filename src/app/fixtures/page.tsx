@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Clock, MapPin, ListChecks, AlertTriangle, Loader2 } from "lucide-react";
-import { format, isFuture, subDays, isWithinInterval, parseISO } from 'date-fns';
+import { format, isFuture, subDays, isWithinInterval, parseISO, isValid } from 'date-fns';
 import { cn } from "@/lib/utils";
 
 // Interface for the data structure of a fixture coming from Firestore
@@ -23,7 +23,7 @@ interface FirestoreFixture {
   awayTeamName?: string;
   matchType: 'T20' | 'ODI' | 'Test';
   venueId: string; // Stores field name for now
-  scheduledDate: Timestamp; // Firestore Timestamp
+  scheduledDate: Timestamp | null; // Firestore Timestamp, can be null from older data
   time: string; // Time string e.g., "14:00"
   overs: number;
   ageGroup: string;
@@ -42,6 +42,7 @@ export interface DisplayFixture {
   teamA: string;
   teamB: string;
   date: string; // Formatted date string
+  displayDate: string; // Formatted for display
   time: string; // Time string
   location: string;
   status: FirestoreFixture['status'];
@@ -53,26 +54,38 @@ export interface DisplayFixture {
 const fetchFixtures = async (): Promise<DisplayFixture[]> => {
   const fixturesCollectionRef = collection(db, 'fixtures');
   // Order by scheduledDate in descending order to show upcoming/recent first
-  const q = firestoreQuery(fixturesCollectionRef, orderBy('scheduledDate', 'desc'));
+  // Firestore queries cannot order by null values first/last easily without workarounds.
+  // We will filter out null dates client-side or handle them.
+  const q = firestoreQuery(fixturesCollectionRef, orderBy('createdAt', 'desc')); // Fallback sort if scheduledDate is problematic
   const querySnapshot = await getDocs(q);
-  const fixturesList = querySnapshot.docs.map(doc => {
-    const data = doc.data() as Omit<FirestoreFixture, 'id'>; // Omit id because it's doc.id
-    const scheduledDateTime = data.scheduledDate.toDate();
+  
+  const fixturesList = querySnapshot.docs.reduce((acc, doc) => {
+    const data = doc.data() as Omit<FirestoreFixture, 'id'>;
     
-    return {
-      id: doc.id,
-      teamA: data.homeTeamName || data.homeTeamId, // Fallback to ID if name not present
-      teamB: data.awayTeamName || data.awayTeamId, // Fallback to ID if name not present
-      date: format(scheduledDateTime, 'yyyy-MM-dd'), // Store raw date for logic
-      displayDate: format(scheduledDateTime, 'EEE, MMM d, yyyy'), // Formatted for display
-      time: data.time, // Use the time string directly from DB
-      location: data.venueId, // This is the field name for now
-      status: data.status,
-      // umpires: data.umpireIds,
-      // scorer: data.scorerId || undefined,
-    } as DisplayFixture & { displayDate: string }; // Ensure DisplayFixture structure with displayDate for sorting/display
-  });
-  return fixturesList;
+    if (data.scheduledDate && typeof data.scheduledDate.toDate === 'function') {
+      const scheduledDateTime = data.scheduledDate.toDate();
+      if (isValid(scheduledDateTime)) { // Check if the date is valid after conversion
+        acc.push({
+          id: doc.id,
+          teamA: data.homeTeamName || data.homeTeamId,
+          teamB: data.awayTeamName || data.awayTeamId,
+          date: format(scheduledDateTime, 'yyyy-MM-dd'),
+          displayDate: format(scheduledDateTime, 'EEE, MMM d, yyyy'),
+          time: data.time,
+          location: data.venueId,
+          status: data.status,
+        } as DisplayFixture);
+      } else {
+        console.warn(`Fixture with ID ${doc.id} has an invalid scheduledDate after toDate() conversion.`);
+      }
+    } else {
+      console.warn(`Fixture with ID ${doc.id} has missing, null, or invalid scheduledDate field.`);
+    }
+    return acc;
+  }, [] as DisplayFixture[]);
+  
+  // Sort by date after fetching and processing, ensuring valid dates are handled
+  return fixturesList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 };
 
 export default function FixturesPage() {
@@ -82,15 +95,14 @@ export default function FixturesPage() {
   });
 
   const getStatusBadgeVariant = (status: DisplayFixture["status"], dateStr: string): "default" | "secondary" | "destructive" | "outline" => {
-    const fixtureDate = parseISO(dateStr); // Parse the date string
+    const fixtureDate = parseISO(dateStr); 
     const today = new Date();
-    today.setHours(0,0,0,0); // Normalize today to start of day for comparison
-    const fiveDaysFromNow = subDays(new Date(), -5); // Calculate 5 days from now
+    today.setHours(0,0,0,0); 
+    const fiveDaysFromNow = subDays(new Date(), -5); 
     fiveDaysFromNow.setHours(0,0,0,0);
 
-    // Special handling for "Scheduled" status to appear as "Upcoming" if within 5 days
     if (status === "Scheduled" && isFuture(fixtureDate) && isWithinInterval(fixtureDate, { start: today, end: fiveDaysFromNow })) {
-      return "default"; // Use default for "Upcoming" (accent color)
+      return "default"; 
     }
   
     switch (status) {
@@ -103,7 +115,7 @@ export default function FixturesPage() {
         return "destructive";
       case "Match Abandoned":
         return "secondary";
-      case "Scheduled": // General scheduled beyond 5 days
+      case "Scheduled": 
       default:
         return "outline";
     }
@@ -170,8 +182,7 @@ export default function FixturesPage() {
               {fixtures.map((fixture) => {
                 const currentStatus = getStatusDisplayName(fixture.status, fixture.date);
                 const badgeVariant = getStatusBadgeVariant(fixture.status, fixture.date);
-                const displayDateStr = format(parseISO(fixture.date), 'EEE, MMM d, yyyy');
-
+                
                 return (
                   <Card key={fixture.id} className="hover:shadow-md transition-shadow">
                     <CardHeader>
@@ -181,7 +192,7 @@ export default function FixturesPage() {
                           variant={badgeVariant}
                           className={cn(
                             "whitespace-nowrap",
-                            currentStatus === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground border-transparent", // Accent for Upcoming
+                            currentStatus === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground border-transparent", 
                             fixture.status === "Completed" && "bg-[hsl(120,60%,30%)] text-accent-foreground border-transparent",
                             fixture.status === "Live" && "bg-destructive text-destructive-foreground border-transparent animate-pulse",
                             fixture.status === "Rain-Delay" && "bg-[hsl(var(--primary))] text-primary-foreground border-transparent opacity-80",
@@ -196,7 +207,7 @@ export default function FixturesPage() {
                     <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center">
                         <CalendarDays className="mr-2 h-4 w-4" />
-                        <span>{displayDateStr}</span>
+                        <span>{fixture.displayDate}</span>
                       </div>
                       <div className="flex items-center">
                         <Clock className="mr-2 h-4 w-4" />
@@ -219,3 +230,4 @@ export default function FixturesPage() {
     </div>
   );
 }
+
