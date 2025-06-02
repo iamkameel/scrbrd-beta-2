@@ -15,15 +15,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectLabel,
 } from '@/components/ui/select';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { schoolsData as allSchools, type SchoolProfile as School } from '@/lib/schools-data';
+import { schoolsData as allSchools } from '@/lib/schools-data';
 import { detailedTeamsData as allTeams, type Team as TeamData } from '@/lib/team-data';
 import { scorersData as allScorersData, type ScorerProfile } from '@/lib/scorer-data';
 import { umpiresData as allUmpiresData, type UmpireProfile } from '@/lib/umpire-data';
-import { divisionsData as allDivisionsData, type Division } from '@/lib/divisions-data';
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,22 +39,25 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuLabel as DropdownMenuLabelComponent, // Renamed to avoid conflict
+  DropdownMenuLabel as DropdownMenuLabelComponent,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
 import { Loader2, Users } from 'lucide-react';
 
-const AGE_GROUPS = ["Open", "U19", "U18", "U17", "U16", "U15", "U14", "U13", "U12", "U11", "U10", "U9"] as const;
+const AGE_DIVISIONS = ["Open", "U19", "U18", "U17", "U16", "U15", "U14", "U13", "U12", "U11", "U10", "U9"] as const;
+const OPEN_CLASSES = ["1st XI", "2nd XI", "3rd XI", "4th XI", "Club Premier", "Club Reserve"] as const;
+const AGE_SPECIFIC_CLASSES = ["A", "B", "C", "D", "E"] as const;
 
 const fixtureFormSchema = z.object({
   matchType: z.enum(['T20', 'ODI', 'Test'], { required_error: "Match type is required."}),
   overs: z.number().min(1, "Overs must be at least 1.").optional(),
-  division: z.string().optional().or(z.literal("no-division")),
+  ageDivision: z.enum(AGE_DIVISIONS, { required_error: "Age Division is required."}),
+  openClass: z.enum(OPEN_CLASSES).optional(),
+  ageSpecificClass: z.enum(AGE_SPECIFIC_CLASSES).optional(),
   homeTeamSchoolId: z.string().min(1, "Home school is required."),
   homeTeamId: z.string().min(1, "Home team is required."),
-  ageGroup: z.enum(AGE_GROUPS, { required_error: "Age group is required."}),
   awayTeamId: z.string().min(1, "Away team is required."),
   scheduledDate: z.date({ required_error: "Date is required."}),
   time: z.string().min(1, "Time is required."),
@@ -65,6 +66,21 @@ const fixtureFormSchema = z.object({
   scorerId: z.string().optional().or(z.literal("no-scorer")),
   leagueId: z.string().optional(),
   provinceId: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.ageDivision === "Open" && !data.openClass) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Open Class is required for Open Age Division.",
+      path: ["openClass"],
+    });
+  }
+  if (data.ageDivision !== "Open" && !data.ageSpecificClass) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Age-Specific Class is required for U-Age Divisions.",
+      path: ["ageSpecificClass"],
+    });
+  }
 });
 
 type FixtureFormData = z.infer<typeof fixtureFormSchema>;
@@ -72,10 +88,11 @@ type FixtureFormData = z.infer<typeof fixtureFormSchema>;
 const initialDefaultValues: FixtureFormData = {
   matchType: 'T20',
   overs: 20,
-  division: 'no-division',
+  ageDivision: 'Open',
+  openClass: undefined,
+  ageSpecificClass: undefined,
   homeTeamSchoolId: '',
   homeTeamId: '',
-  ageGroup: 'Open', // Default age group
   awayTeamId: '',
   scheduledDate: new Date(),
   time: '',
@@ -104,12 +121,23 @@ export default function CreateFixturePage() {
   const watchHomeTeamSchoolId = form.watch('homeTeamSchoolId');
   const watchHomeTeamId = form.watch('homeTeamId');
   const watchMatchType = form.watch('matchType');
-  const watchAgeGroup = form.watch('ageGroup');
+  const watchAgeDivision = form.watch('ageDivision');
+  const watchOpenClass = form.watch('openClass');
+  const watchAgeSpecificClass = form.watch('ageSpecificClass');
+
+  useEffect(() => {
+    if (watchAgeDivision === "Open") {
+      form.setValue('ageSpecificClass', undefined);
+    } else {
+      form.setValue('openClass', undefined);
+    }
+  }, [watchAgeDivision, form]);
 
   useEffect(() => {
     if (watchHomeTeamSchoolId) {
       const selectedSchool = allSchools.find(s => String(s.id) === watchHomeTeamSchoolId);
       if (selectedSchool) {
+        // Basic filtering: In future, enhance team-data.ts to include ageDivision, openClass, ageSpecificClass for better filtering
         const schoolTeams = allTeams.filter(team => String(team.schoolId) === String(selectedSchool.id));
         setAvailableHomeTeams(schoolTeams);
         setAvailableFields(selectedSchool.fields?.filter(f => f && f.trim() !== '') || []);
@@ -118,14 +146,12 @@ export default function CreateFixturePage() {
         setAvailableFields([]);
       }
       form.setValue('homeTeamId', '');
-      // form.setValue('ageGroup', initialDefaultValues.ageGroup); // Reset age group or let it be set by team
       form.setValue('venueId', '');
       form.setValue('awayTeamId', '');
     } else {
       setAvailableHomeTeams([]);
       setAvailableFields([]);
       form.setValue('homeTeamId', '');
-      // form.setValue('ageGroup', initialDefaultValues.ageGroup);
       form.setValue('venueId', '');
       form.setValue('awayTeamId', '');
     }
@@ -134,29 +160,33 @@ export default function CreateFixturePage() {
   useEffect(() => {
     if (watchHomeTeamId) {
       const selectedTeam = allTeams.find(team => team.id === watchHomeTeamId);
-      if (selectedTeam && selectedTeam.ageGroup && AGE_GROUPS.includes(selectedTeam.ageGroup as typeof AGE_GROUPS[number])) {
-        form.setValue('ageGroup', selectedTeam.ageGroup as typeof AGE_GROUPS[number]);
+      if (selectedTeam && selectedTeam.ageGroup && AGE_DIVISIONS.includes(selectedTeam.ageGroup as typeof AGE_DIVISIONS[number])) {
+        form.setValue('ageDivision', selectedTeam.ageGroup as typeof AGE_DIVISIONS[number]);
+        // Potentially set openClass or ageSpecificClass here if team data supports it
       } else {
-         form.setValue('ageGroup', initialDefaultValues.ageGroup); // Reset to default if team has no age group
+         form.setValue('ageDivision', initialDefaultValues.ageDivision);
       }
-      // Away team filtering will now be handled by the watchAgeGroup effect
     } else {
-      form.setValue('ageGroup', initialDefaultValues.ageGroup);
+      form.setValue('ageDivision', initialDefaultValues.ageDivision);
     }
-     form.setValue('awayTeamId', ''); // Always reset away team when home team changes
+     form.setValue('awayTeamId', '');
   }, [watchHomeTeamId, form]);
 
    useEffect(() => {
-    if (watchAgeGroup) {
-      setFilteredAwayTeams(allTeams.filter(team => 
-        team.id !== watchHomeTeamId && 
-        team.ageGroup === watchAgeGroup
+    // Enhanced filtering for away teams based on selected classification
+    // This still relies heavily on how `team-data.ts` is structured.
+    // For now, primarily filters by ageDivision.
+    if (watchAgeDivision) {
+      setFilteredAwayTeams(allTeams.filter(team =>
+        team.id !== watchHomeTeamId &&
+        team.ageGroup === watchAgeDivision // `team.ageGroup` in `team-data.ts` should align with `ageDivision`
+        // Add openClass/ageSpecificClass filtering if team data is updated
       ));
     } else {
       setFilteredAwayTeams(allTeams.filter(team => team.id !== watchHomeTeamId));
     }
-    form.setValue('awayTeamId', ''); // Reset away team if age group changes
-  }, [watchAgeGroup, watchHomeTeamId, form]);
+    form.setValue('awayTeamId', '');
+  }, [watchAgeDivision, watchOpenClass, watchAgeSpecificClass, watchHomeTeamId, form]);
 
 
   useEffect(() => {
@@ -165,7 +195,7 @@ export default function CreateFixturePage() {
     } else if (watchMatchType === 'ODI') {
       form.setValue('overs', 50);
     } else {
-      form.setValue('overs', undefined);
+      form.setValue('overs', undefined); // Or a suitable default for Test like 90
     }
   }, [watchMatchType, form]);
 
@@ -179,19 +209,16 @@ export default function CreateFixturePage() {
         homeTeamId: data.homeTeamId,
         awayTeamId: data.awayTeamId,
         matchType: data.matchType,
-        venueId: data.venueId, 
+        venueId: data.venueId,
         scheduledDate: scheduledTimestamp,
         time: data.time,
         overs: data.overs,
-        ageGroup: data.ageGroup,
+        ageDivision: data.ageDivision,
+        openClass: data.ageDivision === "Open" ? data.openClass : null,
+        ageSpecificClass: data.ageDivision !== "Open" ? data.ageSpecificClass : null,
         status: 'Scheduled' as 'Scheduled' | 'Team Confirmed' | 'Ground Ready' | 'Live' | 'Completed',
         umpireIds: data.umpireIds || [],
-        scorerId: data.scorerId === 'no-scorer' || data.scorerId === '' ? null : data.scorerId, 
-        division: data.division === 'no-division' ? null : data.division,
-        transportId: null,
-        createdBy: null, 
-        groundkeeperId: null,
-        toss: null,
+        scorerId: data.scorerId === 'no-scorer' || data.scorerId === '' ? null : data.scorerId,
         leagueId: data.leagueId || null,
         provinceId: data.provinceId || null,
         createdAt: Timestamp.now(),
@@ -263,9 +290,9 @@ export default function CreateFixturePage() {
                     <FormItem>
                       <FormLabel>Overs *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          {...field} 
+                        <Input
+                          type="number"
+                          {...field}
                           value={field.value ?? ''}
                           onChange={e => field.onChange(parseInt(e.target.value, 10) || undefined)}
                           readOnly={watchMatchType === 'T20' || watchMatchType === 'ODI'}
@@ -277,24 +304,31 @@ export default function CreateFixturePage() {
                     </FormItem>
                   )}
                 />
+              </div>
+            </div>
+            
+            <Separator />
+
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Classification</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="division"
+                  name="ageDivision"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Division</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || 'no-division'}>
+                    <FormItem>
+                      <FormLabel>Age Division *</FormLabel>
+                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select division (optional)" />
+                            <SelectValue placeholder="Select age division" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value="no-division">No Division</SelectItem>
-                            {allDivisionsData.map((div) => (
-                              <SelectItem key={div.id} value={div.id}>
-                                {div.name}
+                            {AGE_DIVISIONS.map((ag) => (
+                              <SelectItem key={ag} value={ag}>
+                                {ag}
                               </SelectItem>
                             ))}
                           </SelectGroup>
@@ -304,6 +338,62 @@ export default function CreateFixturePage() {
                     </FormItem>
                   )}
                 />
+                {watchAgeDivision === "Open" && (
+                  <FormField
+                    control={form.control}
+                    name="openClass"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Open Class *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select open class" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectGroup>
+                              {OPEN_CLASSES.map((oc) => (
+                                <SelectItem key={oc} value={oc}>
+                                  {oc}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                {watchAgeDivision !== "Open" && AGE_DIVISIONS.includes(watchAgeDivision) && (
+                   <FormField
+                    control={form.control}
+                    name="ageSpecificClass"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Age-Specific Class *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select age-specific class" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectGroup>
+                              {AGE_SPECIFIC_CLASSES.map((asc) => (
+                                <SelectItem key={asc} value={asc}>
+                                  {asc}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
             </div>
 
@@ -354,40 +444,13 @@ export default function CreateFixturePage() {
                           <SelectGroup>
                           {availableHomeTeams.map((team) => (
                             <SelectItem key={team.id} value={team.id}>
-                              {team.teamName} ({team.ageGroup})
+                              {team.teamName} ({team.ageGroup} {team.division})
                             </SelectItem>
                           ))}
                           </SelectGroup>
                         </SelectContent>
                       </Select>
-                      <FormDescription>Ensure team data (team-data.ts) has correct school IDs.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="ageGroup"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Age Group *</FormLabel>
-                       <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select age group" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectGroup>
-                            {AGE_GROUPS.map((ag) => (
-                              <SelectItem key={ag} value={ag}>
-                                {ag}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>Auto-filled by Home Team selection, can be overridden.</FormDescription>
+                      <FormDescription>Teams filtered by school. Update team-data.ts with correct school IDs & classifications for better filtering.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -396,25 +459,25 @@ export default function CreateFixturePage() {
                   control={form.control}
                   name="awayTeamId"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="md:col-span-2">
                       <FormLabel>Away Team *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchAgeGroup || filteredAwayTeams.length === 0}>
+                      <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchAgeDivision || filteredAwayTeams.length === 0}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={!watchAgeGroup ? "Select age group first" : filteredAwayTeams.length === 0 ? "No eligible away teams" : "Select away team"} />
+                            <SelectValue placeholder={!watchAgeDivision ? "Select classification first" : filteredAwayTeams.length === 0 ? "No eligible away teams" : "Select away team"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           <SelectGroup>
                           {filteredAwayTeams.map((team) => (
                             <SelectItem key={team.id} value={team.id}>
-                              {team.teamName} ({team.affiliation} - {team.ageGroup})
+                              {team.teamName} ({team.affiliation} - {team.ageGroup} {team.division})
                             </SelectItem>
                           ))}
                           </SelectGroup>
                         </SelectContent>
                       </Select>
-                       <FormDescription>Away teams filtered by selected age group.</FormDescription>
+                       <FormDescription>Away teams filtered by selected Age Division (and Class in future).</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -455,7 +518,7 @@ export default function CreateFixturePage() {
                     <FormItem>
                       <FormLabel>Time *</FormLabel>
                       <FormControl>
-                        <Input type="time" {...field} />
+                        <Input type="time" {...field} value={field.value ?? ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -483,7 +546,7 @@ export default function CreateFixturePage() {
                           </SelectGroup>
                         </SelectContent>
                       </Select>
-                      <FormDescription>This will eventually be a Venue ID from a Grounds collection.</FormDescription>
+                      <FormDescription>Fields populated from selected Home School.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -548,7 +611,7 @@ export default function CreateFixturePage() {
                       <FormLabel>Scorer (Optional)</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
-                        value={field.value === '' || field.value === undefined ? 'no-scorer' : field.value}
+                        value={field.value && field.value !== '' ? field.value : 'no-scorer'}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -618,3 +681,5 @@ export default function CreateFixturePage() {
     </Card>
   );
 }
+
+    
