@@ -1,8 +1,8 @@
 
 import * as admin from 'firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
-import { schoolsData, type SchoolProfile, type SchoolTeam } from './src/lib/schools-data'; // Import schools data
-import type { PlayerProfile, PlayerStats } from './src/lib/player-data'; // Import PlayerProfile structure
+import { schoolsData, type SchoolProfile, type SchoolTeam } from '@/lib/schools-data'; // Import schools data
+import type { PlayerProfile, PlayerStats } from '@/lib/player-data'; // Import PlayerProfile structure
 
 // IMPORTANT: Replace with the actual path to your downloaded Firebase Admin SDK JSON file if needed.
 const serviceAccountPath = './scrbrd-beta-2-firebase-adminsdk-fbsvc-4c0a94b7bc.json';
