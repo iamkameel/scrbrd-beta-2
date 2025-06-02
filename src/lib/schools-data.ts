@@ -1,10 +1,13 @@
+
 export interface SchoolTeam {
   id: string; // Could link to teamId later
   name: string;
+  ageGroup?: string; // Added to better define teams within a school context
+  division?: string; // Added for more team detail
 }
 
 export interface SchoolProfile {
-  id: number;
+  id: string; // Changed from number to string
   divisionId: string; // Link to Division entity
   name: string;
   location: string;
@@ -13,77 +16,77 @@ export interface SchoolProfile {
   bannerImageUrl?: string;
   about?: string;
   awardsAndAccolades?: string[];
-  teams?: SchoolTeam[]; // More structured team info
+  teams?: SchoolTeam[];
   records?: string[];
 }
 
 export const schoolsData: SchoolProfile[] = [
   {
-    id: 1,
-    divisionId: "div_placeholder", // Placeholder for now
+    id: "school-1-michaelhouse",
+    divisionId: "div_placeholder",
     name: "Michaelhouse",
     location: "Balgowan",
     crestUrl: "https://placehold.co/80x80.png",
     fields: ["Roy Gathorne Oval", "Hannahs Field"],
     bannerImageUrl: "https://placehold.co/1200x400.png",
     about: "Michaelhouse is a leading independent senior boarding school for boys, located in the Midlands of KwaZulu-Natal, South Africa. It has a strong cricket tradition.",
-    teams: [{ id: "mhs_1st", name: "1st XI" }],
+    teams: [{ id: "mhs_1stXI", name: "1st XI", ageGroup: "Open", division: "A" }],
   },
   {
-    id: 2,
-    divisionId: "div_placeholder", // Placeholder for now
+    id: "school-2-hilton-college",
+    divisionId: "div_placeholder",
     name: "Hilton College",
     location: "Hilton",
     crestUrl: "https://placehold.co/80x80.png",
     fields: ["Weightman-Smith Oval", "Hart-Davis Oval"],
     bannerImageUrl: "https://placehold.co/1200x400.png",
     about: "Hilton College is an independent boarding school for boys, renowned for its beautiful campus and sporting excellence.",
-    teams: [{ id: "hc_1st", name: "1st XI" }],
+    teams: [{ id: "hc_1stXI", name: "1st XI", ageGroup: "Open", division: "A" }],
   },
   {
-    id: 3,
-    divisionId: "div_placeholder", // Placeholder for now
+    id: "school-3-maritzburg-college",
+    divisionId: "div_placeholder",
     name: "Maritzburg College",
     location: "Pietermaritzburg",
     crestUrl: "https://placehold.co/80x80.png",
     fields: ["Goldstones", "Varsity Oval", "Bavers"],
     bannerImageUrl: "https://placehold.co/1200x400.png",
     about: "Maritzburg College is one of the oldest boys' schools in KwaZulu-Natal, with a rich history in cricket.",
-    teams: [{ id: "mc_1st", name: "1st XI" }],
+    teams: [{ id: "mc_1stXI", name: "1st XI", ageGroup: "Open", division: "A" }],
   },
   {
-    id: 4,
-    divisionId: "div_placeholder", // Placeholder for now
+    id: "school-4-glenwood-high-school",
+    divisionId: "div_placeholder",
     name: "Glenwood High School",
     location: "Durban",
     crestUrl: "https://placehold.co/80x80.png",
     fields: ["Dixons", "The Subway"],
     bannerImageUrl: "https://placehold.co/1200x400.png",
-    teams: [{ id: "ghs_1st", name: "1st XI" }],
+    teams: [{ id: "ghs_1stXI", name: "1st XI", ageGroup: "Open", division: "A" }],
   },
   {
-    id: 5,
-    divisionId: "div_placeholder", // Placeholder for now
+    id: "school-5-durban-high-school",
+    divisionId: "div_placeholder",
     name: "Durban High School (DHS)",
     location: "Durban",
     crestUrl: "https://placehold.co/80x80.png",
     fields: ["The Memorial Ground", "Seabreeze Oval"],
     bannerImageUrl: "https://placehold.co/1200x400.png",
-    teams: [{ id: "dhs_1st", name: "1st XI" }],
+    teams: [{ id: "dhs_1stXI", name: "1st XI", ageGroup: "Open", division: "A" }],
   },
   {
-    id: 6,
-    divisionId: "div_placeholder", // Placeholder for now
+    id: "school-6-kearsney-college",
+    divisionId: "div_placeholder",
     name: "Kearsney College",
     location: "Botha's Hill",
     crestUrl: "https://placehold.co/80x80.png",
     fields: ["AH Smith Oval", "Matterson Field"],
     bannerImageUrl: "https://placehold.co/1200x400.png",
-    teams: [{ id: "kc_1st", name: "1st XI" }],
+    teams: [{ id: "kc_1stXI", name: "1st XI", ageGroup: "Open", division: "A" }],
   },
   {
-    id: 7,
-    divisionId: "div_placeholder", // Placeholder for now
+    id: "school-7-westville-boys-high-school",
+    divisionId: "div_placeholder",
     name: "Westville Boys' High School",
     location: "Westville",
     crestUrl: "https://placehold.co/80x80.png",
@@ -97,18 +100,18 @@ export const schoolsData: SchoolProfile[] = [
       "Consistently producing Provincial and National age-group representatives"
     ],
     teams: [
-      { id: "wbhs_1st", name: "1st XI" },
-      { id: "wbhs_2nd", name: "2nd XI" },
-      { id: "wbhs_3rd", name: "3rd XI" },
-      { id: "wbhs_u16a", name: "U16A" },
-      { id: "wbhs_u16b", name: "U16B" },
-      { id: "wbhs_u15a", name: "U15A" },
-      { id: "wbhs_u15b", name: "U15B" },
-      { id: "wbhs_u15c", name: "U15C" },
-      { id: "wbhs_u14a", name: "U14A" },
-      { id: "wbhs_u14b", name: "U14B" },
-      { id: "wbhs_u14c", name: "U14C" },
-      { id: "wbhs_u14d", name: "U14D" }
+      { id: "wbhs_1stXI", name: "1st XI", ageGroup: "Open", division: "A" },
+      { id: "wbhs_2ndXI", name: "2nd XI", ageGroup: "Open", division: "B" },
+      { id: "wbhs_3rdXI", name: "3rd XI", ageGroup: "Open", division: "C" },
+      { id: "wbhs_u16a", name: "U16A", ageGroup: "U16", division: "A" },
+      { id: "wbhs_u16b", name: "U16B", ageGroup: "U16", division: "B" },
+      { id: "wbhs_u15a", name: "U15A", ageGroup: "U15", division: "A" },
+      { id: "wbhs_u15b", name: "U15B", ageGroup: "U15", division: "B" },
+      { id: "wbhs_u15c", name: "U15C", ageGroup: "U15", division: "C" },
+      { id: "wbhs_u14a", name: "U14A", ageGroup: "U14", division: "A" },
+      { id: "wbhs_u14b", name: "U14B", ageGroup: "U14", division: "B" },
+      { id: "wbhs_u14c", name: "U14C", ageGroup: "U14", division: "C" },
+      { id: "wbhs_u14d", name: "U14D", ageGroup: "U14", division: "D" }
     ],
     records: [
       "Highest 1st XI Partnership: 255 runs (A. Smith & B. Jones, 2021 vs Hilton College)",
@@ -119,53 +122,55 @@ export const schoolsData: SchoolProfile[] = [
     ]
   },
   {
-    id: 8,
-    divisionId: "div_placeholder", // Placeholder for now
+    id: "school-8-northwood-school",
+    divisionId: "div_placeholder",
     name: "Northwood School",
     location: "Durban North",
     crestUrl: "https://placehold.co/80x80.png",
     fields: ["Northwood Crusaders Main Oval", "Knights Field"],
     bannerImageUrl: "https://placehold.co/1200x400.png",
-    teams: [{ id: "nw_1st", name: "1st XI" }],
+    teams: [{ id: "nw_1stXI", name: "1st XI", ageGroup: "Open", division: "A" }],
   },
   {
-    id: 9,
-    divisionId: "div_placeholder", // Placeholder for now
+    id: "school-9-clifton-school",
+    divisionId: "div_placeholder",
     name: "Clifton School",
     location: "Durban",
     crestUrl: "https://placehold.co/80x80.png",
     fields: ["Clifton Riverside Sports Campus", "College Field"],
     bannerImageUrl: "https://placehold.co/1200x400.png",
-    teams: [{ id: "cs_1st", name: "1st XI" }],
+    teams: [{ id: "cs_1stXI", name: "1st XI", ageGroup: "Open", division: "A" }],
   },
   {
-    id: 10,
-    divisionId: "div_placeholder", // Placeholder for now
+    id: "school-10-st-charles-college",
+    divisionId: "div_placeholder",
     name: "St Charles College",
     location: "Pietermaritzburg",
     crestUrl: "https://placehold.co/80x80.png",
     fields: ["Samke Khumalo Oval", "College Oval"],
     bannerImageUrl: "https://placehold.co/1200x400.png",
-    teams: [{ id: "scc_1st", name: "1st XI" }],
+    teams: [{ id: "scc_1stXI", name: "1st XI", ageGroup: "Open", division: "A" }],
   },
   {
-    id: 11,
-    divisionId: "div_placeholder", // Placeholder for now
+    id: "school-11-crawford-college-la-lucia",
+    divisionId: "div_placeholder",
     name: "Crawford College La Lucia",
     location: "La Lucia",
     crestUrl: "https://placehold.co/80x80.png",
     fields: ["Main Cricket Field"],
     bannerImageUrl: "https://placehold.co/1200x400.png",
-    teams: [{ id: "ccll_1st", name: "1st XI" }],
+    teams: [{ id: "ccll_1stXI", name: "1st XI", ageGroup: "Open", division: "A" }],
   },
   {
-    id: 12,
-    divisionId: "div_placeholder", // Placeholder for now
+    id: "school-12-ashton-international-college-ballito",
+    divisionId: "div_placeholder",
     name: "Ashton International College Ballito",
     location: "Ballito",
     crestUrl: "https://placehold.co/80x80.png",
     fields: ["Main Sports Field"],
     bannerImageUrl: "https://placehold.co/1200x400.png",
-    teams: [{ id: "aicb_1st", name: "1st XI" }],
+    teams: [{ id: "aicb_1stXI", name: "1st XI", ageGroup: "Open", division: "A" }],
   },
 ];
+
+    
