@@ -54,7 +54,7 @@ const fixtureFormSchema = z.object({
   homeTeamId: z.string().min(1, "Home team is required."),
   ageGroup: z.string().min(1, "Age group is required (auto-filled)."),
   awayTeamId: z.string().min(1, "Away team is required."),
-  scheduledDate: z.date({ required_error: "Date is required."}), // Made non-nullable
+  scheduledDate: z.date({ required_error: "Date is required."}),
   time: z.string().min(1, "Time is required."),
   venueId: z.string().min(1, "Location/Field is required."),
   umpireIds: z.array(z.string()).optional(),
@@ -73,7 +73,7 @@ const initialDefaultValues: FixtureFormData = {
   homeTeamId: '',
   ageGroup: '',
   awayTeamId: '',
-  scheduledDate: new Date(), // Default to today, or handle as needed
+  scheduledDate: new Date(),
   time: '',
   venueId: '',
   umpireIds: [],
@@ -103,9 +103,9 @@ export default function CreateFixturePage() {
 
   useEffect(() => {
     if (watchHomeTeamSchoolId) {
-      const selectedSchool = allSchools.find(s => s.id === watchHomeTeamSchoolId);
+      const selectedSchool = allSchools.find(s => String(s.id) === watchHomeTeamSchoolId);
       if (selectedSchool) {
-        const schoolTeams = allTeams.filter(team => team.schoolId === selectedSchool.id);
+        const schoolTeams = allTeams.filter(team => String(team.schoolId) === String(selectedSchool.id));
         setAvailableHomeTeams(schoolTeams);
         setAvailableFields(selectedSchool.fields?.filter(f => f && f.trim() !== '') || []);
       } else {
@@ -115,12 +115,14 @@ export default function CreateFixturePage() {
       form.setValue('homeTeamId', '');
       form.setValue('ageGroup', '');
       form.setValue('venueId', '');
+      form.setValue('awayTeamId', '');
     } else {
       setAvailableHomeTeams([]);
       setAvailableFields([]);
       form.setValue('homeTeamId', '');
       form.setValue('ageGroup', '');
       form.setValue('venueId', '');
+      form.setValue('awayTeamId', '');
     }
   }, [watchHomeTeamSchoolId, form]);
 
@@ -132,7 +134,7 @@ export default function CreateFixturePage() {
         setFilteredAwayTeams(allTeams.filter(team => team.id !== watchHomeTeamId && team.ageGroup === selectedTeam.ageGroup));
       } else {
          form.setValue('ageGroup', '');
-         setFilteredAwayTeams(allTeams);
+         setFilteredAwayTeams(allTeams.filter(team => team.id !== watchHomeTeamId));
       }
       form.setValue('awayTeamId', '');
     } else {
@@ -156,7 +158,6 @@ export default function CreateFixturePage() {
   const onSubmit = async (data: FixtureFormData) => {
     setIsSubmitting(true);
     try {
-      // data.scheduledDate is now guaranteed by Zod to be a Date object
       const scheduledTimestamp = Timestamp.fromDate(data.scheduledDate);
       
       const newFixtureData = {
@@ -297,7 +298,7 @@ export default function CreateFixturePage() {
                         <SelectContent>
                           <SelectGroup>
                           {allSchools.map((school) => (
-                            <SelectItem key={school.id} value={school.id}>
+                            <SelectItem key={String(school.id)} value={String(school.id)}>
                               {school.name}
                             </SelectItem>
                           ))}
