@@ -22,6 +22,7 @@ import { schoolsData as allSchools } from '@/lib/schools-data';
 import { detailedTeamsData as allTeams, type Team as TeamData } from '@/lib/team-data';
 import { scorersData as allScorersData, type ScorerProfile } from '@/lib/scorer-data';
 import { umpiresData as allUmpiresData, type UmpireProfile } from '@/lib/umpire-data';
+import { divisionsData as allDivisionsData, type Division } from '@/lib/divisions-data';
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,8 +48,8 @@ import { Separator } from '@/components/ui/separator';
 import { Loader2, Users } from 'lucide-react';
 
 const AGE_DIVISIONS = ["Open", "U19", "U18", "U17", "U16", "U15", "U14", "U13", "U12", "U11", "U10", "U9"] as const;
-const OPEN_CLASSES = ["1st XI", "2nd XI", "3rd XI", "4th XI", "Club Premier", "Club Reserve"] as const;
-const AGE_SPECIFIC_CLASSES = ["A", "B", "C", "D", "E"] as const;
+const OPEN_CLASSES = ["1st XI", "2nd XI", "3rd XI", "4th XI", "5th XI", "Club Premier", "Club Reserve"] as const;
+const AGE_SPECIFIC_CLASSES = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
 
 const fixtureFormSchema = z.object({
   matchType: z.enum(['T20', 'ODI', 'Test'], { required_error: "Match type is required."}),
@@ -63,7 +64,7 @@ const fixtureFormSchema = z.object({
   time: z.string().min(1, "Time is required."),
   venueId: z.string().min(1, "Location/Field is required."),
   umpireIds: z.array(z.string()).optional(),
-  scorerId: z.string().optional().or(z.literal("no-scorer")),
+  scorerId: z.string().optional().default('no-scorer'), // Ensures scorerId always has a value or is 'no-scorer'
   leagueId: z.string().optional(),
   provinceId: z.string().optional(),
 }).superRefine((data, ctx) => {
@@ -74,7 +75,7 @@ const fixtureFormSchema = z.object({
       path: ["openClass"],
     });
   }
-  if (data.ageDivision !== "Open" && !data.ageSpecificClass) {
+  if (data.ageDivision !== "Open" && AGE_DIVISIONS.includes(data.ageDivision) && data.ageDivision !== "Open" && !data.ageSpecificClass) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "Age-Specific Class is required for U-Age Divisions.",
@@ -110,6 +111,7 @@ export default function CreateFixturePage() {
   const [filteredAwayTeams, setFilteredAwayTeams] = useState<TeamData[]>(allTeams);
   const [currentScorers] = useState<ScorerProfile[]>(allScorersData);
   const [currentUmpires] = useState<UmpireProfile[]>(allUmpiresData);
+  const [currentDivisions] = useState<Division[]>(allDivisionsData); // Using imported divisions data
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -122,14 +124,16 @@ export default function CreateFixturePage() {
   const watchHomeTeamId = form.watch('homeTeamId');
   const watchMatchType = form.watch('matchType');
   const watchAgeDivision = form.watch('ageDivision');
-  const watchOpenClass = form.watch('openClass');
-  const watchAgeSpecificClass = form.watch('ageSpecificClass');
+  // const watchOpenClass = form.watch('openClass'); // Not directly used in useEffects currently
+  // const watchAgeSpecificClass = form.watch('ageSpecificClass'); // Not directly used in useEffects currently
 
   useEffect(() => {
     if (watchAgeDivision === "Open") {
       form.setValue('ageSpecificClass', undefined);
+      form.trigger('ageSpecificClass'); // Trigger validation for conditional field
     } else {
       form.setValue('openClass', undefined);
+      form.trigger('openClass'); // Trigger validation for conditional field
     }
   }, [watchAgeDivision, form]);
 
@@ -137,7 +141,6 @@ export default function CreateFixturePage() {
     if (watchHomeTeamSchoolId) {
       const selectedSchool = allSchools.find(s => String(s.id) === watchHomeTeamSchoolId);
       if (selectedSchool) {
-        // Basic filtering: In future, enhance team-data.ts to include ageDivision, openClass, ageSpecificClass for better filtering
         const schoolTeams = allTeams.filter(team => String(team.schoolId) === String(selectedSchool.id));
         setAvailableHomeTeams(schoolTeams);
         setAvailableFields(selectedSchool.fields?.filter(f => f && f.trim() !== '') || []);
@@ -162,7 +165,6 @@ export default function CreateFixturePage() {
       const selectedTeam = allTeams.find(team => team.id === watchHomeTeamId);
       if (selectedTeam && selectedTeam.ageGroup && AGE_DIVISIONS.includes(selectedTeam.ageGroup as typeof AGE_DIVISIONS[number])) {
         form.setValue('ageDivision', selectedTeam.ageGroup as typeof AGE_DIVISIONS[number]);
-        // Potentially set openClass or ageSpecificClass here if team data supports it
       } else {
          form.setValue('ageDivision', initialDefaultValues.ageDivision);
       }
@@ -170,23 +172,19 @@ export default function CreateFixturePage() {
       form.setValue('ageDivision', initialDefaultValues.ageDivision);
     }
      form.setValue('awayTeamId', '');
-  }, [watchHomeTeamId, form]);
+  }, [watchHomeTeamId, form, initialDefaultValues.ageDivision]);
 
    useEffect(() => {
-    // Enhanced filtering for away teams based on selected classification
-    // This still relies heavily on how `team-data.ts` is structured.
-    // For now, primarily filters by ageDivision.
     if (watchAgeDivision) {
       setFilteredAwayTeams(allTeams.filter(team =>
         team.id !== watchHomeTeamId &&
-        team.ageGroup === watchAgeDivision // `team.ageGroup` in `team-data.ts` should align with `ageDivision`
-        // Add openClass/ageSpecificClass filtering if team data is updated
+        team.ageGroup === watchAgeDivision
       ));
     } else {
       setFilteredAwayTeams(allTeams.filter(team => team.id !== watchHomeTeamId));
     }
     form.setValue('awayTeamId', '');
-  }, [watchAgeDivision, watchOpenClass, watchAgeSpecificClass, watchHomeTeamId, form]);
+  }, [watchAgeDivision, watchHomeTeamId, form]);
 
 
   useEffect(() => {
@@ -194,8 +192,8 @@ export default function CreateFixturePage() {
       form.setValue('overs', 20);
     } else if (watchMatchType === 'ODI') {
       form.setValue('overs', 50);
-    } else {
-      form.setValue('overs', undefined); // Or a suitable default for Test like 90
+    } else { // Test Match
+      form.setValue('overs', undefined); // Or a suitable default like 90
     }
   }, [watchMatchType, form]);
 
@@ -218,7 +216,7 @@ export default function CreateFixturePage() {
         ageSpecificClass: data.ageDivision !== "Open" ? data.ageSpecificClass : null,
         status: 'Scheduled' as 'Scheduled' | 'Team Confirmed' | 'Ground Ready' | 'Live' | 'Completed',
         umpireIds: data.umpireIds || [],
-        scorerId: data.scorerId === 'no-scorer' || data.scorerId === '' ? null : data.scorerId,
+        scorerId: data.scorerId === 'no-scorer' || !data.scorerId ? null : data.scorerId,
         leagueId: data.leagueId || null,
         provinceId: data.provinceId || null,
         createdAt: Timestamp.now(),
@@ -234,13 +232,21 @@ export default function CreateFixturePage() {
       setAvailableFields([]);
       setFilteredAwayTeams(allTeams);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating fixture:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create fixture. Please try again.",
-        variant: "destructive",
-      });
+      if (error.code === 'permission-denied') {
+        toast({
+          title: "Scheduling Conflict",
+          description: "Could not create fixture. This may be due to a team, venue, scorer, or umpire already being booked for this date and time. Please check your selections and try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create fixture. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -288,16 +294,16 @@ export default function CreateFixturePage() {
                   name="overs"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Overs *</FormLabel>
+                      <FormLabel>Overs {watchMatchType !== 'Test' ? '*' : '(Optional)'}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           {...field}
                           value={field.value ?? ''}
-                          onChange={e => field.onChange(parseInt(e.target.value, 10) || undefined)}
+                          onChange={e => field.onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))}
                           readOnly={watchMatchType === 'T20' || watchMatchType === 'ODI'}
                           className={ (watchMatchType === 'T20' || watchMatchType === 'ODI') ? "bg-muted/50" : ""}
-                          placeholder="Enter overs"
+                          placeholder={watchMatchType === 'Test' ? "e.g., 90" : "Enter overs"}
                         />
                       </FormControl>
                       <FormMessage />
@@ -338,7 +344,7 @@ export default function CreateFixturePage() {
                     </FormItem>
                   )}
                 />
-                {watchAgeDivision === "Open" && (
+                {watchAgeDivision === "Open" ? (
                   <FormField
                     control={form.control}
                     name="openClass"
@@ -365,8 +371,7 @@ export default function CreateFixturePage() {
                       </FormItem>
                     )}
                   />
-                )}
-                {watchAgeDivision !== "Open" && AGE_DIVISIONS.includes(watchAgeDivision) && (
+                ) : AGE_DIVISIONS.includes(watchAgeDivision) && watchAgeDivision !== "Open" ? (
                    <FormField
                     control={form.control}
                     name="ageSpecificClass"
@@ -393,6 +398,8 @@ export default function CreateFixturePage() {
                       </FormItem>
                     )}
                   />
+                ) : (
+                   <div className="text-sm text-muted-foreground h-10 flex items-center pt-7">Select Age Division first</div>
                 )}
               </div>
             </div>
@@ -450,7 +457,7 @@ export default function CreateFixturePage() {
                           </SelectGroup>
                         </SelectContent>
                       </Select>
-                      <FormDescription>Teams filtered by school. Update team-data.ts with correct school IDs & classifications for better filtering.</FormDescription>
+                      <FormDescription>Teams filtered by school. Update team-data.ts for correct IDs.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -477,7 +484,7 @@ export default function CreateFixturePage() {
                           </SelectGroup>
                         </SelectContent>
                       </Select>
-                       <FormDescription>Away teams filtered by selected Age Division (and Class in future).</FormDescription>
+                       <FormDescription>Away teams filtered by Age Division.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -611,7 +618,7 @@ export default function CreateFixturePage() {
                       <FormLabel>Scorer (Optional)</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
-                        value={field.value && field.value !== '' ? field.value : 'no-scorer'}
+                        value={field.value || 'no-scorer'}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -681,5 +688,4 @@ export default function CreateFixturePage() {
     </Card>
   );
 }
-
     
