@@ -2,7 +2,7 @@
 import * as admin from 'firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { schoolsData, type SchoolProfile, type SchoolTeam } from '@/lib/schools-data';
-import type { PlayerProfile, PlayerStats } from '@/lib/player-data'; // Ensure this import is correct
+import type { PlayerProfile, PlayerStats, PlayerSkills, ScoreDetail } from '@/lib/player-data'; // Ensure this import is correct
 
 // IMPORTANT: Replace with the actual path to your downloaded Firebase Admin SDK JSON file if needed.
 const serviceAccountPath = './scrbrd-beta-2-firebase-adminsdk-fbsvc-4c0a94b7bc.json';
@@ -72,17 +72,26 @@ function generateUniqueFullName(): { firstName: string, lastName: string } {
 }
 
 function generatePlayerStats(): PlayerStats {
+  const hsRuns = getRandomInt(20, 100);
+  const hsNotOut = Math.random() > 0.7 ? '*' : '';
+  const bestBowlWickets = getRandomInt(1,5);
+  const bestBowlRuns = getRandomInt(10,50);
+
   return {
     matchesPlayed: getRandomInt(5, 20),
     runs: getRandomInt(50, 500),
     average: parseFloat((Math.random() * 30 + 10).toFixed(2)),
     strikeRate: parseFloat((Math.random() * 50 + 70).toFixed(2)),
-    highestScore: { value: `${getRandomInt(20, 100)}${Math.random() > 0.8 ? '*' : ''}` },
+    highestScore: { value: `${hsRuns}${hsNotOut}` },
+    bestBatting: { value: `${hsRuns}${hsNotOut}` }, // Simplified for placeholder
     wickets: getRandomInt(0, 30),
     bowlingAverage: parseFloat((Math.random() * 30 + 15).toFixed(2)),
     economyRate: parseFloat((Math.random() * 5 + 3).toFixed(2)),
-    bestBowling: { value: `${getRandomInt(1,5)}/${getRandomInt(10,50)}`},
+    bestBowling: { value: `${bestBowlWickets}/${bestBowlRuns}`}, // Simplified
     catches: getRandomInt(1, 10),
+    hundreds: Math.random() > 0.9 ? getRandomInt(1,2) : 0,
+    fifties: getRandomInt(0,5),
+    stumpings: getRandomInt(0,5),
   };
 }
 
@@ -93,6 +102,51 @@ function generateRandomDateOfBirth(): Timestamp {
     const birthDay = getRandomInt(1, 28); // Simplified to avoid month length issues
     return Timestamp.fromDate(new Date(birthYear, birthMonth, birthDay));
 }
+
+function generatePlayerSkillsPlaceholder(): PlayerSkills {
+  const randomSkill = () => getRandomInt(20, 60); // Generate skills between 20-60 for visibility
+  return {
+    technical: {
+      battingTechnique: randomSkill(),
+      shotSelection: randomSkill(),
+      powerHitting: randomSkill(),
+      runningBetweenWickets: randomSkill(),
+      bowlingAccuracy: randomSkill(),
+      bowlingVariation: randomSkill(),
+      spinReading: randomSkill(),
+      groundFielding: randomSkill(),
+      catchingTechnique: randomSkill(),
+      throwingAccuracy: randomSkill(),
+    },
+    tactical: {
+      matchAwareness: randomSkill(),
+      strikeRotation: randomSkill(),
+      oppositionAnalysis: randomSkill(),
+      fieldPlacement: randomSkill(),
+      deathOversExecution: randomSkill(),
+    },
+    physicalMental: {
+      speedAgility: randomSkill(),
+      endurance: randomSkill(),
+      strengthPower: randomSkill(),
+      flexibility: randomSkill(),
+      reactionTime: randomSkill(),
+      concentration: randomSkill(),
+      composure: randomSkill(),
+      resilience: randomSkill(),
+      decisionMaking: randomSkill(),
+      coachability: randomSkill(),
+    },
+    teamLeadership: {
+      communication: randomSkill(),
+      teamSpirit: randomSkill(),
+      leadership: randomSkill(),
+      discipline: randomSkill(),
+      workEthic: randomSkill(),
+    }
+  };
+}
+
 
 async function generateSchoolSquads() {
   console.log('\nStarting generation of placeholder player data for school squads...');
@@ -106,10 +160,6 @@ async function generateSchoolSquads() {
   console.log(`DEBUG: Immediately after import - Array.isArray(schoolsData): ${Array.isArray(schoolsData)}`);
   if (schoolsData) {
     console.log(`DEBUG: Immediately after import - schoolsData.length: ${schoolsData.length}`);
-    // Uncomment for more detail, but can be very verbose:
-    // if (Array.isArray(schoolsData) && schoolsData.length > 0) {
-    //   console.log(`DEBUG: First school in schoolsData: ${JSON.stringify(schoolsData[0])}`);
-    // }
   }
 
 
@@ -137,7 +187,7 @@ async function generateSchoolSquads() {
     let primaryTeam: SchoolTeam | undefined = school.teams.find(t => t.name.toLowerCase().includes("1st xi"));
     
     if (!primaryTeam) {
-      primaryTeam = school.teams[0]; // Default to the first team if "1st XI" not found
+      primaryTeam = school.teams[0]; 
       console.log(`  No "1st XI" found for ${school.name}, defaulting to first team: ${primaryTeam.name} (ID: ${primaryTeam.id})`);
     }
 
@@ -171,13 +221,14 @@ async function generateSchoolSquads() {
         bio: `Placeholder bio for ${playerName}, a dedicated member of ${school.name}'s ${primaryTeam.name}.`,
         stats: generatePlayerStats(), 
         careerSpan: "Current School Season",
-        dateOfBirth: generateRandomDateOfBirth().toDate().toISOString().split('T')[0], 
-        skills: {}, 
+        dateOfBirth: generateRandomDateOfBirth().toDate(), // Store as JS Date object directly for Firestore
+        skills: generatePlayerSkillsPlaceholder(), 
       };
       
       const playerDocumentData = {
         ...playerData,
-        dateOfBirth: playerData.dateOfBirth ? Timestamp.fromDate(new Date(playerData.dateOfBirth)) : null,
+        // Firestore handles JS Date objects correctly, converting them to Timestamps.
+        // No explicit Timestamp.fromDate needed here if playerData.dateOfBirth is already a Date.
       };
 
       try {
