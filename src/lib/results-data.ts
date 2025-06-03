@@ -65,10 +65,27 @@ export interface Result {
   playerOfTheMatch: string;
   innings?: InningsData[]; // Array of detailed innings
 }
+export interface ResultWithTeamNames extends Result {
+  teamAName?: string;
+  teamBName?: string;
+}
+export async function fetchResultsWithTeamNames(): Promise<ResultWithTeamNames[]> {
+  // Replace with your actual data fetching logic from Firestore or other source
+  console.log("Fetching results with team names...");
 
+  // Example placeholder data (remove once you implement fetching)
+  const placeholderResults: ResultWithTeamNames[] = [
+
+  ];
+  // return placeholderResults; // Uncomment and replace with actual fetched data
+
+  return []; // Return fetched data or an empty array
+}
+
+/*
 export const resultsData: Result[] = [
   {
-    id: 1,
+    id: \"1\", // Changed to string to match potential Firestore doc.id
     fixtureId: 3, // Corresponds to Riverdale Cricket Club Seniors vs Sharks United
     teamAId: "team_a_id_1", teamAScore: "185/7",
     teamBId: "team_b_id_1", teamBScore: "170/9",
@@ -185,7 +202,7 @@ export const resultsData: Result[] = [
     ]
   },
   {
-    id: 2,
+    id: \"2\", // Changed to string
     fixtureId: 5, // Corresponds to Panthers Academy vs Hillcrest College U16
     teamAId: "team_a_id_2", teamAScore: "150/8",
     teamBId: "team_b_id_2", teamBScore: "151/5",
@@ -194,7 +211,7 @@ export const resultsData: Result[] = [
     // No detailed innings for this one yet
   },
   {
-    id: 3,
+    id: \"3\", // Changed to string
     fixtureId: 6, // Corresponds to Northwood School 1st XI vs Michaelhouse Colts XI
     teamAId: "team_a_id_3", teamAScore: "205/4",
     teamBId: "team_b_id_3", teamBScore: "180/9",
@@ -203,12 +220,12 @@ export const resultsData: Result[] = [
     // No detailed innings for this one yet
   },
   {
-    id: 4,
+    id: \"4\", // Changed to string
     fixtureId: 2,
     teamAId: "team_a_id_4", teamAScore: "170/6",
     teamBId: "team_b_id_4", teamBScore: "165/8",
     winner: "Hillcrest College U16", margin: "5 runs",
     playerOfTheMatch: "Jane Doe (Hillcrest - 45 runs, 1 wkt)"
     // No detailed innings for this one yet
-  }
-];
+  },
+];*/

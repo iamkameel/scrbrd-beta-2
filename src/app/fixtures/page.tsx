@@ -9,7 +9,17 @@ import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Clock, MapPin, ListChecks, AlertTriangle, Loader2, Users, Shield, BarChart2, Info, LayoutGrid, List as ListIcon } from "lucide-react";
+import { 
+  CalendarDays, Clock, MapPin, ListChecks, AlertTriangle, Loader2, Users, Shield, BarChart2, Info, LayoutGrid, List as ListIcon,
+  MoreHorizontal, Edit3, FileText, Trash2
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format, isFuture, subDays, isWithinInterval, parseISO, isValid, isEqual } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { detailedTeamsData, type Team } from '@/lib/team-data';
@@ -19,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 
 
 interface FirestoreFixture {
@@ -148,6 +159,7 @@ const getStatusDisplayName = (status: DisplayFixture["status"], dateStr: string)
 };
 
 const FixtureCard: React.FC<{ fixture: DisplayFixture }> = ({ fixture }) => {
+  const { toast } = useToast();
   const currentStatus = getStatusDisplayName(fixture.status, fixture.date);
   const badgeVariant = getStatusBadgeVariant(fixture.status, fixture.date);
 
@@ -155,24 +167,71 @@ const FixtureCard: React.FC<{ fixture: DisplayFixture }> = ({ fixture }) => {
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
-          <CardTitle className="text-lg">{fixture.homeTeamName} vs {fixture.awayTeamName}</CardTitle>
-          <Badge
-            variant={badgeVariant}
-            className={cn(
-              "whitespace-nowrap",
-              currentStatus === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground border-transparent", 
-              fixture.status === "Completed" && "bg-green-600 text-white border-transparent",
-              fixture.status === "Live" && "bg-destructive text-destructive-foreground border-transparent animate-pulse",
-              (fixture.status === "Rain-Delay" || fixture.status === "Play Suspended") && "bg-yellow-500 text-black border-transparent",
-              fixture.status === "Match Abandoned" && "bg-gray-500 text-white opacity-80 border-transparent"
-            )}
-          >
-            {currentStatus}
-          </Badge>
+          <div className="flex-grow"> {/* Container for title and description */}
+            <CardTitle className="text-lg">{fixture.homeTeamName} vs {fixture.awayTeamName}</CardTitle>
+            <CardDescription className="text-xs pt-1">
+              {fixture.matchType} &bull; {fixture.ageGroup} {fixture.division && `(${fixture.division} Div)`}
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-1 ml-2 flex-shrink-0"> {/* Container for badge and actions */}
+            <Badge
+              variant={badgeVariant}
+              className={cn(
+                "whitespace-nowrap",
+                currentStatus === "Upcoming" && "bg-[hsl(var(--accent))] text-accent-foreground border-transparent", 
+                fixture.status === "Completed" && "bg-green-600 text-white border-transparent",
+                fixture.status === "Live" && "bg-destructive text-destructive-foreground border-transparent animate-pulse",
+                (fixture.status === "Rain-Delay" || fixture.status === "Play Suspended") && "bg-yellow-500 text-black border-transparent",
+                fixture.status === "Match Abandoned" && "bg-gray-500 text-white opacity-80 border-transparent"
+              )}
+            >
+              {currentStatus}
+            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreHorizontal className="h-4 w-4" />
+                  <span className="sr-only">Fixture Actions</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href="#"> {/* Placeholder for edit */}
+                    <Edit3 className="mr-2 h-4 w-4" />
+                    Edit Fixture
+                  </Link>
+                </DropdownMenuItem>
+                {(fixture.status === "Completed" || fixture.status === "Match Abandoned") && (
+                  <DropdownMenuItem asChild>
+                    <Link href={`/scorecard/${fixture.id}`}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      View Scorecard
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                {(currentStatus === "Upcoming" || fixture.status === "Scheduled") && (
+                  <DropdownMenuItem asChild>
+                    <Link href={`/prematch-team/${fixture.id}`}>
+                      <Users className="mr-2 h-4 w-4" />
+                      Manage Pre-Match
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    console.log(`Attempting to delete fixture: ${fixture.id} - ${fixture.homeTeamName} vs ${fixture.awayTeamName}`);
+                    toast({ title: "Delete Action", description: `Delete action for fixture ${fixture.id} (UI only).`});
+                  }}
+                  className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Fixture
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-          <CardDescription className="text-xs pt-1">
-          {fixture.matchType} &bull; {fixture.ageGroup} {fixture.division && `(${fixture.division} Div)`}
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-2 text-muted-foreground">
@@ -215,6 +274,7 @@ export default function FixturesPage() {
     queryKey: ['fixtures'],
     queryFn: fetchFixtures,
   });
+  const { toast } = useToast();
 
   const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
 
@@ -315,6 +375,7 @@ export default function FixturesPage() {
                         <TableHead>Location</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -345,6 +406,51 @@ export default function FixturesPage() {
                               >
                                 {currentStatus}
                               </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Fixture Actions</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem asChild>
+                                    <Link href="#"> {/* Placeholder for edit */}
+                                      <Edit3 className="mr-2 h-4 w-4" />
+                                      Edit Fixture
+                                    </Link>
+                                  </DropdownMenuItem>
+                                  {(fixture.status === "Completed" || fixture.status === "Match Abandoned") && (
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/scorecard/${fixture.id}`}>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        View Scorecard
+                                      </Link>
+                                    </DropdownMenuItem>
+                                  )}
+                                  {(currentStatus === "Upcoming" || fixture.status === "Scheduled") && (
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/prematch-team/${fixture.id}`}>
+                                        <Users className="mr-2 h-4 w-4" />
+                                        Manage Pre-Match
+                                      </Link>
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      console.log(`Attempting to delete fixture: ${fixture.id} - ${fixture.homeTeamName} vs ${fixture.awayTeamName}`);
+                                      toast({ title: "Delete Action", description: `Delete action for fixture ${fixture.id} (UI only).`});
+                                    }}
+                                    className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete Fixture
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </TableCell>
                           </TableRow>
                         );
@@ -400,3 +506,4 @@ export default function FixturesPage() {
     </div>
   );
 }
+

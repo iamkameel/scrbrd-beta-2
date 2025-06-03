@@ -3,12 +3,11 @@
 
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { fixtures as allFixtures, type Fixture } from '@/lib/fixtures-data';
-import { resultsData, type Result, type InningsData, type BatsmanScore, type BowlerScore, FallOfWicket } from '@/lib/results-data';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+// import Image from 'next/image'; // Not used in this version
+// import { fixtures as allFixtures, type Fixture } from '@/lib/fixtures-data'; // No longer fetching all fixtures here
+// Using async fetch and importing necessary interfaces
+import { fetchScorecardData, type ScorecardData, type InningsData, type BatsmanScore, type BowlerScore, type FallOfWicket, type ResultWithTeamNames, type FixtureWithTeamNames } from '@/lib/results-data';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Star, Trophy, TrendingUp, Crosshair, Hand } from "lucide-react";
 import { format } from 'date-fns';
@@ -17,14 +16,16 @@ import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } 
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
 
 
+import { Button } from '@/components/ui/button';
 // Helper function to get top batsmen for a team
 function getTopBatsmen(teamName: string, inningsData: InningsData[] | undefined, count: number): BatsmanScore[] {
   if (!inningsData) return [];
-  const allTeamBattingScores: BatsmanScore[] = [];
-  inningsData.forEach(inning => {
+  const allTeamBattingScores: BatsmanScore[] = []; // Corrected variable name type
+  inningsData.forEach((inning: InningsData) => {
     if (inning.battingTeam === teamName) { // This appears to be correct based on the structure used in the migration script
       allTeamBattingScores.push(...inning.battingScores.filter(bs => typeof bs.runs === 'number'));
     }
@@ -38,8 +39,8 @@ function getTopBatsmen(teamName: string, inningsData: InningsData[] | undefined,
 // Helper function to get top bowlers for a team
 function getTopBowlers(teamName: string, inningsData: InningsData[] | undefined, count: number): BowlerScore[] {
   if (!inningsData) return [];
-  const allTeamBowlingScores: BowlerScore[] = [];
-  inningsData.forEach(inning => {
+  const allTeamBowlingScores: BowlerScore[] = []; // Corrected variable name type
+  inningsData.forEach((inning: InningsData) => {
     // Corrected to check bowlingTeam - This appears to be correct based on the structure used in the migration script
     if (inning.bowlingTeam === teamName) { 
       allTeamBowlingScores.push(...inning.bowlingScores.filter(bs => typeof bs.wickets === 'number' && typeof bs.runsConceded === 'number'));
@@ -78,7 +79,7 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
     return partnerships;
   }
   const battingScoresMap = new Map<string, BatsmanScore>();
-  innings.battingScores.forEach(bs => battingScoresMap.set(bs.name, bs));
+  innings.battingScores.forEach((bs: BatsmanScore) => battingScoresMap.set(bs.name, bs)); // Explicit type
 
   let currentScore = 0;
   
@@ -88,7 +89,7 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
   ];
   
   const fallOfWickets = innings.fallOfWickets || [];
-
+ 
   for (let i = 0; i < fallOfWickets.length; i++) {
     const fow = fallOfWickets[i];
     const partnershipRuns = fow.score - currentScore;
@@ -143,7 +144,7 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
     const partnershipRuns = totalRuns - currentScore;
     let b1Name = activeBatsmen[0]?.name || "N/A";
     let b2Name = activeBatsmen[1]?.name || (activeBatsmen[0] ? "Partner" : "N/A");
-
+ 
     const notOutBatsmen = innings.battingScores.filter(bs => bs.dismissal.toLowerCase().includes('not out'));
     if (notOutBatsmen.length === 1) {
         b1Name = notOutBatsmen[0].name;
@@ -165,7 +166,7 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
     if (b1Name !== "N/A" && b1Name === b2Name && b2Name !== "Partner") {
         b2Name = "Partner";
     }
-
+ 
     if ((b1Name !== "N/A" || (b2Name !== "N/A" && b2Name !== "Partner")) && partnershipRuns >= 0) {
         partnerships.push({
           batsman1Name: b1Name,
@@ -182,7 +183,7 @@ function generatePartnershipUIData(innings: InningsData): PartnershipChartDataIt
 
 const PartnershipTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    const partnershipData = payload[0].payload as PartnershipChartDataItem; 
+    const partnershipData = payload[0].payload as PartnershipChartDataItem; // Explicit type
     let partnerDisplay = "";
     if (partnershipData.batsman1Name && partnershipData.batsman1Name !== "N/A" && partnershipData.batsman1Name !== "Partner") {
         partnerDisplay += partnershipData.batsman1Name;
@@ -210,25 +211,56 @@ const PartnershipTooltip = ({ active, payload, label }: any) => {
     );
   }
   return null;
-}
 
 
 export default function ScorecardPage() {
   const params = useParams();
   const router = useRouter();
-  const fixtureId = params.fixtureId ? parseInt(params.fixtureId as string, 10) : null;
+  const fixtureId = params.fixtureId ? (params.fixtureId as string) : null; // Keep fixtureId as string for fetching
 
-  const fixture: Fixture | undefined = React.useMemo(() => fixtureId ? allFixtures.find(f => f.id === fixtureId) : undefined, [fixtureId]);
-  const result: Result | undefined = React.useMemo(() => fixtureId ? resultsData.find(r => r.fixtureId === fixtureId) : undefined, [fixtureId]);
+  const [scorecardData, setScorecardData] = React.useState<{ fixture: FixtureWithTeamNames | null, result: ResultWithTeamNames | null, innings: InningsData[] } | null>(null); // Updated type
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const loadScorecard = async () => {
+      if (!fixtureId) {
+        setError("Invalid fixture ID.");
+        setLoading(false);
+        return;
+      }
+      try {
+        setLoading(true);
+        // Fetch scorecard data using the fixtureId
+        const data = await fetchScorecardData(fixtureId);
+        if (data) {
+          setScorecardData(data);
+        } else {
+          setError("Scorecard data not found for this fixture.");
+        }
+      } catch (err) {
+        console.error("Error fetching scorecard data:", err);
+        setError("Failed to load scorecard.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadScorecard();
+  }, [fixtureId]); // Re-run effect if fixtureId changes
+
+  const result = scorecardData?.result; // Access result from the new structure
+  const fixture = scorecardData?.fixture; // Access fixture from the new structure
 
   const defaultTabValue = result?.innings && result.innings.length > 0 ? `innings-${result.innings[0].inningsNumber}` : "";
 
-  const topTeamABatsmen = React.useMemo(() => result?.teamAId && result?.innings ? getTopBatsmen(result.teamAId, result.innings, 2) : [], [result]); // Access teamAId from result
-  const topTeamABowlers = React.useMemo(() => result?.teamAId && result?.innings ? getTopBowlers(result.teamAId, result.innings, 2) : [], [result]); // Access teamAId from result
-  const topTeamBBatsmen = React.useMemo(() => result?.teamBId && result?.innings ? getTopBatsmen(result.teamBId, result.innings, 2) : [], [result]); // Access teamBId from result
-  const topTeamBBowlers = React.useMemo(() => result?.teamBId && result?.innings ? getTopBowlers(result.teamBId, result.innings, 2) : [], [result]); // Access teamBId from result
+  // Memoized calculations for top performers using the fetched data
+  const topTeamABatsmen = React.useMemo(() => result?.teamAName && result?.innings ? getTopBatsmen(result.teamAName, result.innings, 2) : [], [result]);
+  const topTeamABowlers = React.useMemo(() => result?.teamAName && result?.innings ? getTopBowlers(result.teamAName, result.innings, 2) : [], [result]);
+  const topTeamBBatsmen = React.useMemo(() => result?.teamBName && result?.innings ? getTopBatsmen(result.teamBName, result.innings, 2) : [], [result]);
+  const topTeamBBowlers = React.useMemo(() => result?.teamBName && result?.innings ? getTopBowlers(result.teamBName, result.innings, 2) : [], [result]);
 
-  if (!fixture || !result) {
+  if (loading) {
     return (
       <div className="container mx-auto py-8 text-center">
         <Card className="max-w-md mx-auto">
@@ -237,21 +269,37 @@ export default function ScorecardPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              Sorry, we couldn't find a scorecard for this fixture. It might be an upcoming match or data is not yet available.
+              Loading scorecard...
             </p>
-            <Button onClick={() => router.back()}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error || !fixture || !result) {
+    return (
+      <div className="container mx-auto py-8 text-center">
+        <Card className="max-w-md mx-auto">
+          <CardHeader>
+            <CardTitle>Error Loading Scorecard</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-red-500 mb-4">
+              {error || "Scorecard data not found for this fixture. It might be an upcoming match or data is not yet available."}
+            </p>
+            <button onClick={() => router.back()} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground px-4 py-2">
+ <ArrowLeft className="mr-2 h-4 w-4" />
               Go Back
-            </Button>
+ </Button>
           </CardContent>
         </Card>
       </div>
   );
 }
 
-
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-8 space-y-8">
       <Button variant="outline" onClick={() => router.back()} className="mb-6">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back
@@ -260,23 +308,23 @@ export default function ScorecardPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            Match Scorecard: {fixture.teamAId} vs {fixture.teamBId}
+            Match Scorecard: {fixture.teamAName || fixture.teamAId} vs {fixture.teamBName || fixture.teamBId}
           </CardTitle>
           <CardDescription>
             Played on {format(new Date(fixture.date), 'EEEE, MMMM d, yyyy')} at {fixture.location}.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6" id="scorecard-content">
+          <div className="space-y-8" id="scorecard-content">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 p-4 rounded-lg bg-muted/50">
               <div className="text-center md:text-left flex-1">
-                <p className="font-semibold text-lg">{result.teamAId}</p>
-                <p className="text-2xl font-bold text-primary">{result.teamAScore}</p>
-              </div>
+                <p className="font-semibold text-lg">{result.teamAName || result.teamAId}</p>
+ <p className="text-3xl font-bold text-primary">{result.teamAScore}</p> {/* Removed redundant closing div tag */}
+ </div>
               <p className="text-xl font-medium text-muted-foreground">vs</p>
               <div className="text-center md:text-right flex-1">
                 <p className="font-semibold text-lg">{result.teamBId}</p>
-                <p className="text-2xl font-bold text-primary">{result.teamBScore}</p>
+ <p className="text-2xl font-bold text-primary">{result.teamBScore}</p> {/* Removed redundant closing div tag */}
               </div>
             </div>
 
@@ -289,8 +337,8 @@ export default function ScorecardPage() {
 
             <Separator className="my-6" />
 
-            <CardContent className="p-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6"> {/* Adjusted spacing */}
+            <CardContent className="p-0 flex justify-center"> {/* Added flex and justify-center */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8 w-full max-w-4xl"> {/* Adjusted spacing and added max-width */}
                 <div className="space-y-4" id={`top-performers-${result.teamAId}`}> {/* Use teamAId */}
                   <h3 className="text-lg font-semibold text-foreground">{result.teamAId} - Top Performers</h3>
                   {(topTeamABatsmen.length > 0 || topTeamABowlers.length > 0) ? (
@@ -299,7 +347,7 @@ export default function ScorecardPage() {
                         <div className="space-y-1">
                           <p className="text-sm font-medium text-muted-foreground">Top Batsmen</p>
                           <ul className="space-y-1">
-                            {topTeamABatsmen.map((batsman, index) => (
+                            {topTeamABatsmen.map((batsman: BatsmanScore, index: number) => ( // Explicit types
                               <li key={`tA-batsman-${index}`} className="text-sm flex justify-between items-center border-b last:border-b-0 py-1">
                                 <span className="font-medium">{batsman.name}</span>
                                 <span className="font-bold text-foreground">{batsman.runs} ({batsman.balls})</span>
@@ -312,7 +360,7 @@ export default function ScorecardPage() {
                         <div className="space-y-1 pt-2">
                           <p className="text-sm font-medium text-muted-foreground">Top Bowlers</p>
                           <ul className="space-y-1">
-                            {topTeamABowlers.map((bowler, index) => (
+                            {topTeamABowlers.map((bowler: BowlerScore, index: number) => ( // Explicit types
                               <li key={`tA-bowler-${index}`} className="text-sm flex justify-between items-center border-b last:border-b-0 py-1">
                                 <span className="font-medium">{bowler.name}</span>
                                 <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets} ({bowler.overs} ov)</span>
@@ -335,7 +383,7 @@ export default function ScorecardPage() {
                         <div className="space-y-1">
                           <p className="text-sm font-medium text-muted-foreground">Top Batsmen</p>
                           <ul className="space-y-1">
-                            {topTeamBBatsmen.map((batsman, index) => (
+                            {topTeamBBatsmen.map((batsman: BatsmanScore, index: number) => ( // Explicit types
                               <li key={`tB-batsman-${index}`} className="text-sm flex justify-between items-center border-b last:border-b-0 py-1">
                                 <span className="font-medium">{batsman.name}</span>
                                 <span className="font-bold text-foreground">{batsman.runs} ({batsman.balls})</span>
@@ -348,7 +396,7 @@ export default function ScorecardPage() {
                         <div className="space-y-1 pt-2">
                           <p className="text-sm font-medium text-muted-foreground">Top Bowlers</p>
                           <ul className="space-y-1">
-                            {topTeamBBowlers.map((bowler, index) => (
+                            {topTeamBBowlers.map((bowler: BowlerScore, index: number) => ( // Explicit types
                               <li key={`tB-bowler-${index}`} className="text-sm flex justify-between items-center border-b last:border-b-0 py-1">
                                 <span className="font-medium">{bowler.name}</span>
                                 <span className="font-bold text-foreground">{bowler.runsConceded}/{bowler.wickets} ({bowler.overs} ov)</span>
@@ -387,7 +435,7 @@ export default function ScorecardPage() {
                   <Tabs defaultValue={defaultTabValue} className="w-full">
                     <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-none md:flex md:flex-wrap justify-start">
                       {result.innings.map((inningData) => (
-                        <TabsTrigger key={`trigger-innings-${inningData.inningsNumber}`} value={`innings-${inningData.inningsNumber}`}>
+                        <TabsTrigger key={`trigger-innings-${inningData.inningsNumber}`} value={`innings-${inningData.inningsNumber}`}> {/* Ensure consistent value */}
                           Innings {inningData.inningsNumber}: {inningData.battingTeam}
                         </TabsTrigger>
                       ))}
@@ -406,6 +454,7 @@ export default function ScorecardPage() {
                               </AccordionTrigger>
                               <AccordionContent className="border border-t-0 rounded-b-md p-0">
                                 <div className="p-4">
+ <TableCaption>Batting scorecard for {inningData.battingTeam}</TableCaption>
                                   <Table>
                                     <TableHeader>
                                       <TableRow>
@@ -419,7 +468,7 @@ export default function ScorecardPage() {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {inningData.battingScores.map((batter) => (
+ {inningData.battingScores.map((batter: BatsmanScore) => ( // Explicit type
                                         <TableRow key={batter.name}>
                                           <TableCell className="font-medium">{batter.name} {batter.dismissal.toLowerCase().includes('not out') && "(not out)"}</TableCell>
                                           <TableCell>{batter.dismissal}</TableCell>
@@ -479,6 +528,7 @@ export default function ScorecardPage() {
                               </AccordionTrigger>
                               <AccordionContent className="border border-t-0 rounded-b-md p-0">
                                 <div className="p-4">
+ <TableCaption>Bowling figures for {inningData.bowlingTeam}</TableCaption>
                                   <Table>
                                     <TableHeader>
                                       <TableRow>
@@ -491,7 +541,7 @@ export default function ScorecardPage() {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {inningData.bowlingScores.map((bowler) => (
+ {inningData.bowlingScores.map((bowler: BowlerScore) => ( // Explicit type
                                         <TableRow key={bowler.name}>
                                           <TableCell className="font-medium">{bowler.name}</TableCell>
                                           <TableCell className="text-right">{bowler.overs}</TableCell>
@@ -506,10 +556,11 @@ export default function ScorecardPage() {
                                 </div>
                                 <Separator className="my-4" />
                                 <div className="p-4 pt-0">
+ <TableCaption>Fall of wickets for {inningData.battingTeam}</TableCaption>
                                   <h4 className="text-md font-semibold mb-3">Fall of Wickets for {inningData.battingTeam}</h4>
                                   {inningData.fallOfWickets && inningData.fallOfWickets.length > 0 ? (
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                                      {inningData.fallOfWickets.map((fow, idx) => (
+ {inningData.fallOfWickets.map((fow: FallOfWicket, idx: number) => (
                                         <Card key={`fow-${idx}`} className="bg-card text-card-foreground shadow-sm text-sm p-3">
                                           <p className="font-semibold">{getOrdinal(fow.wicket)} Wkt</p>
                                           <p className="text-lg font-bold text-primary">{fow.score}</p>
