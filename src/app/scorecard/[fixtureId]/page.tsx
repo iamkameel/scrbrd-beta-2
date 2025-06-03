@@ -9,7 +9,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { fetchScorecardData, type ScorecardData, type InningsData, type BatsmanScore, type BowlerScore, type FallOfWicket, type ResultWithTeamNames, type FixtureWithTeamNames } from '@/lib/results-data';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Star, Trophy, TrendingUp, Crosshair, Hand } from "lucide-react";
+import { ArrowLeft, Star, Trophy } from "lucide-react";
 import { format } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
@@ -21,6 +21,12 @@ import { cn } from '@/lib/utils';
 
 
 import { Button } from '@/components/ui/button';
+
+interface FixtureWithTeamNamesAndDetails extends FixtureWithTeamNames {
+  date: string;
+  location: string;
+}
+
 // Helper function to get top batsmen for a team
 function getTopBatsmen(teamName: string, inningsData: InningsData[] | undefined, count: number): BatsmanScore[] {
   if (!inningsData) return [];
@@ -210,7 +216,7 @@ const PartnershipTooltip = ({ active, payload, label }: any) => {
       </div>
     );
   }
-  return null;
+}
 
 
 export default function ScorecardPage() {
@@ -218,7 +224,7 @@ export default function ScorecardPage() {
   const router = useRouter();
   const fixtureId = params.fixtureId ? (params.fixtureId as string) : null; // Keep fixtureId as string for fetching
 
-  const [scorecardData, setScorecardData] = React.useState<{ fixture: FixtureWithTeamNames | null, result: ResultWithTeamNames | null, innings: InningsData[] } | null>(null); // Updated type
+  const [scorecardData, setScorecardData] = React.useState<{ fixture: FixtureWithTeamNamesAndDetails | null, result: ResultWithTeamNames | null, innings: InningsData[] } | null>(null); // Updated type
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -232,7 +238,17 @@ export default function ScorecardPage() {
       try {
         setLoading(true);
         // Fetch scorecard data using the fixtureId
-        const data = await fetchScorecardData(fixtureId);
+        const data = await fetchScorecardData(fixtureId); // Assuming fetchScorecardData now fetches fixture details as well
+        
+        // Manually add date and location if fetchScorecardData doesn't return them in FixtureWithTeamNames
+        // This part might need adjustment based on the actual implementation of fetchScorecardData
+        if (data && data.fixture) {
+          // This is a placeholder - in a real app, fetchScorecardData or another function
+          // should be responsible for fetching the date and location from Firestore.
+          // For now, assume the fetched fixture data implicitly has these or they are added here.
+           // data.fixture.date = data.fixture.date || 'Date N/A'; // Placeholder
+           // data.fixture.location = data.fixture.location || 'Location N/A'; // Placeholder
+        }
         if (data) {
           setScorecardData(data);
         } else {
@@ -247,7 +263,7 @@ export default function ScorecardPage() {
     };
 
     loadScorecard();
-  }, [fixtureId]); // Re-run effect if fixtureId changes
+  }, [fixtureId]); // Re-run effect if fixtureId changes or router
 
   const result = scorecardData?.result; // Access result from the new structure
   const fixture = scorecardData?.fixture; // Access fixture from the new structure
@@ -290,8 +306,7 @@ export default function ScorecardPage() {
             </p>
             <button onClick={() => router.back()} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground px-4 py-2">
  <ArrowLeft className="mr-2 h-4 w-4" />
-              Go Back
- </Button>
+              Go Back</button>
           </CardContent>
         </Card>
       </div>
@@ -310,7 +325,7 @@ export default function ScorecardPage() {
           <CardTitle className="text-2xl">
             Match Scorecard: {fixture.teamAName || fixture.teamAId} vs {fixture.teamBName || fixture.teamBId}
           </CardTitle>
-          <CardDescription>
+          <CardDescription> {/* Assuming fixture object has date and location properties */}
             Played on {format(new Date(fixture.date), 'EEEE, MMMM d, yyyy')} at {fixture.location}.
           </CardDescription>
         </CardHeader>
@@ -320,11 +335,11 @@ export default function ScorecardPage() {
               <div className="text-center md:text-left flex-1">
                 <p className="font-semibold text-lg">{result.teamAName || result.teamAId}</p>
  <p className="text-3xl font-bold text-primary">{result.teamAScore}</p> {/* Removed redundant closing div tag */}
- </div>
+</div>
               <p className="text-xl font-medium text-muted-foreground">vs</p>
               <div className="text-center md:text-right flex-1">
                 <p className="font-semibold text-lg">{result.teamBId}</p>
- <p className="text-2xl font-bold text-primary">{result.teamBScore}</p> {/* Removed redundant closing div tag */}
+ <p className="text-3xl font-bold text-primary">{result.teamBScore}</p> {/* Corrected font size for consistency */}
               </div>
             </div>
 
@@ -439,7 +454,7 @@ export default function ScorecardPage() {
                           Innings {inningData.inningsNumber}: {inningData.battingTeam}
                         </TabsTrigger>
                       ))}
-                    </TabsList>
+                    </TabsList> {/* Added closing tag */}
                     {result.innings.map((inningData, index) => {
                       const partnershipVisualData = generatePartnershipUIData(inningData);
                       const chartConfig = {

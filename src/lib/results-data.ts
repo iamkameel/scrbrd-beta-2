@@ -53,6 +53,13 @@ export interface InningsData {
   ballEvents?: BallEvent[]; // Optional field for ball-by-ball data
 }
 
+// You'll need to define this type based on how you structure your fixture data
+export interface Fixture {
+  id: number;
+  teamAId: string;
+  teamBId: string;
+}
+
 export interface Result {
   id: number; // Unique ID for the result itself
   fixtureId: number; // Corresponds to Fixture.id in fixtures-data.ts
@@ -65,13 +72,27 @@ export interface Result {
   playerOfTheMatch: string;
   innings?: InningsData[]; // Array of detailed innings
 }
+
 export interface ResultWithTeamNames extends Result {
   teamAName?: string;
   teamBName?: string;
 }
+
+export interface FixtureWithTeamNames extends Fixture {
+ teamAName?: string;
+ teamBName?: string;
+}
 export async function fetchResultsWithTeamNames(): Promise<ResultWithTeamNames[]> {
   // Replace with your actual data fetching logic from Firestore or other source
   console.log("Fetching results with team names...");
+
+  // Assuming you have a way to fetch results and fixtures
+  // const results = await fetchYourResults();
+  // const fixtures = await fetchYourFixtures(); // Need to import fixtures-data.ts
+
+  // Merge results with fixture data to get team names
+  // const resultsWithTeamNames: ResultWithTeamNames[] = mergeResultsWithFixtures(results, fixtures);
+  // return resultsWithTeamNames;
 
   // Example placeholder data (remove once you implement fetching)
   const placeholderResults: ResultWithTeamNames[] = [
@@ -80,6 +101,36 @@ export async function fetchResultsWithTeamNames(): Promise<ResultWithTeamNames[]
   // return placeholderResults; // Uncomment and replace with actual fetched data
 
   return []; // Return fetched data or an empty array
+}
+
+// Define the ScorecardData interface based on what the scorecard page needs
+export interface ScorecardData {
+ fixture: FixtureWithTeamNames | null; // Assuming you need fixture data here with team names
+  result: ResultWithTeamNames | null; // Assuming the result contains the detailed innings data
+ innings: InnningsData[];
+}
+
+// Dummy data for ScorecardData (replace with actual fetch logic)
+export async function fetchScorecardData(fixtureId: string): Promise<ScorecardData | null> {
+  console.log(`Fetching scorecard data for fixture ID: ${fixtureId}`);
+
+  // In a real application, you would fetch the specific fixture and its result
+  // const fixture = await fetchFixtureById(fixtureId);
+  // const result = await fetchResultByFixtureId(fixtureId); // Make sure this fetches results with innings data
+
+  // Placeholder - return a dummy structure
+  // Note: You'll need to replace this with actual data fetching.
+  // The dummy data below is just to match the interface structure.
+  // You'll need to fetch a FixtureWithTeamNames and a ResultWithTeamNames
+  // based on the fixtureId and include the innings data in the Result.
+
+  return {
+    fixture: { id: parseInt(fixtureId), teamAId: "dummy_team_a", teamBId: "dummy_team_b" },
+    // Placeholder result data
+    result: null, // Or a dummy ResultWithTeamNames object
+    // result: ... fetch and include the actual result with innings data if available
+    result: undefined, // Or a dummy ResultWithTeamNames object
+  };
 }
 
 /*

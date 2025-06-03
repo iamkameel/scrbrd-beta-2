@@ -64,7 +64,7 @@ const fixtureFormSchema = z.object({
   time: z.string().min(1, "Time is required."),
   venueId: z.string().min(1, "Location/Field is required."),
   umpireIds: z.array(z.string()).optional(),
-  scorerId: z.string().optional().default('no-scorer'), // Ensures scorerId always has a value or is 'no-scorer'
+  scorerId: z.string().optional().default('no-scorer'),
   leagueId: z.string().optional(),
   provinceId: z.string().optional(),
 }).superRefine((data, ctx) => {
@@ -75,7 +75,7 @@ const fixtureFormSchema = z.object({
       path: ["openClass"],
     });
   }
-  if (data.ageDivision !== "Open" && AGE_DIVISIONS.includes(data.ageDivision) && data.ageDivision !== "Open" && !data.ageSpecificClass) {
+  if (data.ageDivision !== "Open" && AGE_DIVISIONS.includes(data.ageDivision) && !data.ageSpecificClass) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: "Age-Specific Class is required for U-Age Divisions.",
@@ -111,7 +111,7 @@ export default function CreateFixturePage() {
   const [filteredAwayTeams, setFilteredAwayTeams] = useState<TeamData[]>(allTeams);
   const [currentScorers] = useState<ScorerProfile[]>(allScorersData);
   const [currentUmpires] = useState<UmpireProfile[]>(allUmpiresData);
-  const [currentDivisions] = useState<Division[]>(allDivisionsData); // Using imported divisions data
+  const [currentDivisions] = useState<Division[]>(allDivisionsData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -124,17 +124,20 @@ export default function CreateFixturePage() {
   const watchHomeTeamId = form.watch('homeTeamId');
   const watchMatchType = form.watch('matchType');
   const watchAgeDivision = form.watch('ageDivision');
-  // const watchOpenClass = form.watch('openClass'); // Not directly used in useEffects currently
-  // const watchAgeSpecificClass = form.watch('ageSpecificClass'); // Not directly used in useEffects currently
 
   useEffect(() => {
     if (watchAgeDivision === "Open") {
-      form.setValue('ageSpecificClass', undefined);
-      form.trigger('ageSpecificClass'); // Trigger validation for conditional field
+      form.setValue('ageSpecificClass', undefined, { shouldValidate: true });
+      if (!form.getValues('openClass')) { // Set default if none selected
+        // form.setValue('openClass', OPEN_CLASSES[0], { shouldValidate: true });
+      }
     } else {
-      form.setValue('openClass', undefined);
-      form.trigger('openClass'); // Trigger validation for conditional field
+      form.setValue('openClass', undefined, { shouldValidate: true });
+       if (!form.getValues('ageSpecificClass')) { // Set default if none selected
+        // form.setValue('ageSpecificClass', AGE_SPECIFIC_CLASSES[0], { shouldValidate: true });
+      }
     }
+    form.trigger(['openClass', 'ageSpecificClass']);
   }, [watchAgeDivision, form]);
 
   useEffect(() => {
@@ -148,42 +151,53 @@ export default function CreateFixturePage() {
         setAvailableHomeTeams([]);
         setAvailableFields([]);
       }
-      form.setValue('homeTeamId', '');
-      form.setValue('venueId', '');
-      form.setValue('awayTeamId', '');
+      form.resetField('homeTeamId');
+      form.resetField('venueId');
+      form.resetField('awayTeamId');
     } else {
       setAvailableHomeTeams([]);
       setAvailableFields([]);
-      form.setValue('homeTeamId', '');
-      form.setValue('venueId', '');
-      form.setValue('awayTeamId', '');
+      form.resetField('homeTeamId');
+      form.resetField('venueId');
+      form.resetField('awayTeamId');
     }
   }, [watchHomeTeamSchoolId, form]);
 
   useEffect(() => {
+    let newFixtureAgeDivision = initialDefaultValues.ageDivision; // Default to 'Open'
     if (watchHomeTeamId) {
       const selectedTeam = allTeams.find(team => team.id === watchHomeTeamId);
-      if (selectedTeam && selectedTeam.ageGroup && AGE_DIVISIONS.includes(selectedTeam.ageGroup as typeof AGE_DIVISIONS[number])) {
-        form.setValue('ageDivision', selectedTeam.ageGroup as typeof AGE_DIVISIONS[number]);
-      } else {
-         form.setValue('ageDivision', initialDefaultValues.ageDivision);
+      if (selectedTeam && selectedTeam.ageGroup) {
+        if (AGE_DIVISIONS.includes(selectedTeam.ageGroup as typeof AGE_DIVISIONS[number])) {
+          newFixtureAgeDivision = selectedTeam.ageGroup as typeof AGE_DIVISIONS[number];
+        } else if (selectedTeam.ageGroup.toLowerCase() === 'senior') {
+          newFixtureAgeDivision = 'Open'; // Explicitly map "Senior" team ageGroup to "Open" fixture ageDivision
+        }
+        // If team.ageGroup is neither in AGE_DIVISIONS nor 'senior', it remains initialDefaultValues.ageDivision
       }
-    } else {
-      form.setValue('ageDivision', initialDefaultValues.ageDivision);
     }
-     form.setValue('awayTeamId', '');
+    
+    if (form.getValues('ageDivision') !== newFixtureAgeDivision) {
+        form.setValue('ageDivision', newFixtureAgeDivision, { shouldValidate: true });
+    }
+    form.setValue('awayTeamId', ''); // Always reset away team when home team or its derived age division changes
   }, [watchHomeTeamId, form, initialDefaultValues.ageDivision]);
 
+
    useEffect(() => {
-    if (watchAgeDivision) {
+    if (watchAgeDivision) { // watchAgeDivision is the fixture's ageDivision
       setFilteredAwayTeams(allTeams.filter(team =>
-        team.id !== watchHomeTeamId &&
-        team.ageGroup === watchAgeDivision
+        team.id !== watchHomeTeamId && // Exclude selected home team
+        ( (watchAgeDivision === 'Open' && (team.ageGroup === 'Open' || team.ageGroup.toLowerCase() === 'senior')) || // For "Open" fixture, include "Open" and "Senior" teams
+          team.ageGroup === watchAgeDivision ) // For other fixture ageDivisions, match team's ageGroup strictly
       ));
     } else {
+      // If no fixture ageDivision is set (should not happen with defaults), show all teams except home team
       setFilteredAwayTeams(allTeams.filter(team => team.id !== watchHomeTeamId));
     }
-    form.setValue('awayTeamId', '');
+    if (form.getValues('awayTeamId')) { // Only reset if an away team was already selected
+        form.setValue('awayTeamId', '');
+    }
   }, [watchAgeDivision, watchHomeTeamId, form]);
 
 
@@ -192,8 +206,8 @@ export default function CreateFixturePage() {
       form.setValue('overs', 20);
     } else if (watchMatchType === 'ODI') {
       form.setValue('overs', 50);
-    } else { // Test Match
-      form.setValue('overs', undefined); // Or a suitable default like 90
+    } else {
+      form.setValue('overs', undefined);
     }
   }, [watchMatchType, form]);
 
@@ -211,9 +225,9 @@ export default function CreateFixturePage() {
         scheduledDate: scheduledTimestamp,
         time: data.time,
         overs: data.overs,
-        ageDivision: data.ageDivision,
-        openClass: data.ageDivision === "Open" ? data.openClass : null,
-        ageSpecificClass: data.ageDivision !== "Open" ? data.ageSpecificClass : null,
+        ageDivision: data.ageDivision, // This is the fixture's age division
+        openClass: data.ageDivision === "Open" ? data.openClass : null, // Fixture's open class
+        ageSpecificClass: data.ageDivision !== "Open" ? data.ageSpecificClass : null, // Fixture's age-specific class
         status: 'Scheduled' as 'Scheduled' | 'Team Confirmed' | 'Ground Ready' | 'Live' | 'Completed',
         umpireIds: data.umpireIds || [],
         scorerId: data.scorerId === 'no-scorer' || !data.scorerId ? null : data.scorerId,
@@ -316,7 +330,7 @@ export default function CreateFixturePage() {
             <Separator />
 
             <div>
-              <h3 className="text-lg font-semibold mb-4">Classification</h3>
+              <h3 className="text-lg font-semibold mb-4">Fixture Classification</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -340,6 +354,7 @@ export default function CreateFixturePage() {
                           </SelectGroup>
                         </SelectContent>
                       </Select>
+                      <FormDescription>Defines the age category for this fixture.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -367,6 +382,7 @@ export default function CreateFixturePage() {
                             </SelectGroup>
                           </SelectContent>
                         </Select>
+                        <FormDescription>Class for Open age division fixtures.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -394,12 +410,13 @@ export default function CreateFixturePage() {
                             </SelectGroup>
                           </SelectContent>
                         </Select>
+                        <FormDescription>Class for U-Age division fixtures.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 ) : (
-                   <div className="text-sm text-muted-foreground h-10 flex items-center pt-7">Select Age Division first</div>
+                   <div className="text-sm text-muted-foreground h-10 flex items-center pt-7">Select Age Division first to see Class options.</div>
                 )}
               </div>
             </div>
@@ -457,7 +474,7 @@ export default function CreateFixturePage() {
                           </SelectGroup>
                         </SelectContent>
                       </Select>
-                      <FormDescription>Teams filtered by school. Update team-data.ts for correct IDs.</FormDescription>
+                      <FormDescription>Home team selection. Fixture's Age Division is derived from this team if not set manually.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -471,7 +488,7 @@ export default function CreateFixturePage() {
                       <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchAgeDivision || filteredAwayTeams.length === 0}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={!watchAgeDivision ? "Select classification first" : filteredAwayTeams.length === 0 ? "No eligible away teams" : "Select away team"} />
+                            <SelectValue placeholder={!watchAgeDivision ? "Set Fixture Age Division first" : filteredAwayTeams.length === 0 ? "No eligible away teams" : "Select away team"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -484,7 +501,7 @@ export default function CreateFixturePage() {
                           </SelectGroup>
                         </SelectContent>
                       </Select>
-                       <FormDescription>Away teams filtered by Age Division.</FormDescription>
+                       <FormDescription>Away teams are filtered by the Fixture's Age Division. This allows, for example, a U15A team to play a U15B team if the fixture's Age Division is set to U15.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -688,4 +705,6 @@ export default function CreateFixturePage() {
     </Card>
   );
 }
+    
+
     

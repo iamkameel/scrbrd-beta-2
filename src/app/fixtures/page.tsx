@@ -2,14 +2,24 @@
 "use client";
 
 import * as React from 'react';
-import Link from "next/link";
-import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, Timestamp, orderBy, query as firestoreQuery } from 'firebase/firestore';
+import Link from 'next/link';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { collection, getDocs, Timestamp, orderBy, query as firestoreQuery, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   CalendarDays, Clock, MapPin, ListChecks, AlertTriangle, Loader2, Users, Shield, BarChart2, Info, LayoutGrid, List as ListIcon,
   MoreHorizontal, Edit3, FileText, Trash2
 } from "lucide-react";
@@ -22,9 +32,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format, isFuture, subDays, isWithinInterval, parseISO, isValid, isEqual } from 'date-fns';
 import { cn } from "@/lib/utils";
-import { detailedTeamsData, type Team } from '@/lib/team-data';
-import { umpiresData, type UmpireProfile } from '@/lib/umpire-data';
-import { scorersData, type ScorerProfile } from '@/lib/scorer-data';
+import { detailedTeamsData } from '@/lib/team-data'; // Assuming Team type is implicitly handled or not strictly needed for DisplayFixture
+import { umpiresData } from '@/lib/umpire-data'; // Assuming UmpireProfile type is implicitly handled
+import { scorersData } from '@/lib/scorer-data'; // Assuming ScorerProfile type is implicitly handled
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar } from "@/components/ui/calendar";
@@ -74,8 +84,8 @@ const fetchFixtures = async (): Promise<DisplayFixture[]> => {
   const q = firestoreQuery(fixturesCollectionRef, orderBy('scheduledDate', 'desc'));
   const querySnapshot = await getDocs(q);
   
-  const fixturesList = querySnapshot.docs.reduce((acc, doc) => {
-    const data = doc.data() as Omit<FirestoreFixture, 'id'>;
+  const fixturesList = querySnapshot.docs.reduce((acc, docSnapshot) => { // Changed doc to docSnapshot to avoid conflict
+    const data = docSnapshot.data() as Omit<FirestoreFixture, 'id'>;
     
     if (data.scheduledDate && typeof data.scheduledDate.toDate === 'function') {
       const scheduledDateTime = data.scheduledDate.toDate();
@@ -90,7 +100,7 @@ const fetchFixtures = async (): Promise<DisplayFixture[]> => {
         const scorerInfo = data.scorerId ? scorersData.find(s => s.id === data.scorerId) : null;
 
         acc.push({
-          id: doc.id,
+          id: docSnapshot.id,
           homeTeamId: data.homeTeamId,
           homeTeamName: homeTeam?.teamName || data.homeTeamId,
           awayTeamId: data.awayTeamId,
@@ -107,10 +117,10 @@ const fetchFixtures = async (): Promise<DisplayFixture[]> => {
           scorerName: scorerInfo?.name || 'N/A',
         } as DisplayFixture);
       } else {
-        console.warn(`Fixture with ID ${doc.id} has an invalid scheduledDate after toDate() conversion.`);
+        console.warn(`Fixture with ID ${docSnapshot.id} has an invalid scheduledDate after toDate() conversion.`);
       }
     } else {
-      console.warn(`Fixture with ID ${doc.id} has missing, null, or invalid scheduledDate field.`);
+      console.warn(`Fixture with ID ${docSnapshot.id} has missing, null, or invalid scheduledDate field.`);
     }
     return acc;
   }, [] as DisplayFixture[]);
@@ -158,8 +168,7 @@ const getStatusDisplayName = (status: DisplayFixture["status"], dateStr: string)
   return status;
 };
 
-const FixtureCard: React.FC<{ fixture: DisplayFixture }> = ({ fixture }) => {
-  const { toast } = useToast();
+const FixtureCard: React.FC<{ fixture: DisplayFixture, onAttemptDelete: (fixtureId: string) => void }> = ({ fixture, onAttemptDelete }) => {
   const currentStatus = getStatusDisplayName(fixture.status, fixture.date);
   const badgeVariant = getStatusBadgeVariant(fixture.status, fixture.date);
 
@@ -167,13 +176,13 @@ const FixtureCard: React.FC<{ fixture: DisplayFixture }> = ({ fixture }) => {
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
-          <div className="flex-grow"> {/* Container for title and description */}
+          <div className="flex-grow">
             <CardTitle className="text-lg">{fixture.homeTeamName} vs {fixture.awayTeamName}</CardTitle>
             <CardDescription className="text-xs pt-1">
               {fixture.matchType} &bull; {fixture.ageGroup} {fixture.division && `(${fixture.division} Div)`}
             </CardDescription>
           </div>
-          <div className="flex items-center gap-1 ml-2 flex-shrink-0"> {/* Container for badge and actions */}
+          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
             <Badge
               variant={badgeVariant}
               className={cn(
@@ -196,7 +205,7 @@ const FixtureCard: React.FC<{ fixture: DisplayFixture }> = ({ fixture }) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href="#"> {/* Placeholder for edit */}
+                  <Link href={`/fixtures/edit/${fixture.id}`}>
                     <Edit3 className="mr-2 h-4 w-4" />
                     Edit Fixture
                   </Link>
@@ -217,13 +226,9 @@ const FixtureCard: React.FC<{ fixture: DisplayFixture }> = ({ fixture }) => {
                     </Link>
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => {
-                    console.log(`Attempting to delete fixture: ${fixture.id} - ${fixture.homeTeamName} vs ${fixture.awayTeamName}`);
-                    toast({ title: "Delete Action", description: `Delete action for fixture ${fixture.id} (UI only).`});
-                  }}
                   className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                  onClick={() => onAttemptDelete(fixture.id)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete Fixture
@@ -266,7 +271,7 @@ const FixtureCard: React.FC<{ fixture: DisplayFixture }> = ({ fixture }) => {
         ) : null}
       </CardContent>
     </Card>
-  );
+ );
 };
 
 export default function FixturesPage() {
@@ -274,13 +279,23 @@ export default function FixturesPage() {
     queryKey: ['fixtures'],
     queryFn: fetchFixtures,
   });
+  const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const fixtureDates = React.useMemo(() => {
+    if (!fixtures) return [];
+    return fixtures.map(f => parseISO(f.date)).filter(isValid);
+  }, [fixtures]);
 
   const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
 
-  const fixtureDates = React.useMemo(() => {
-    return fixtures?.map(f => parseISO(f.date)) || [];
-  }, [fixtures]);
+  const fixturesForSelectedDate = React.useMemo(() => {
+    if (!selectedCalendarDate || !fixtures) return [];
+    return fixtures.filter(fixture => {
+      const fixtureDate = parseISO(fixture.date);
+      return isEqual(fixtureDate, selectedCalendarDate);
+    });
+  }, [selectedCalendarDate, fixtures]);
 
   const calendarModifiers = {
     hasFixture: fixtureDates,
@@ -293,14 +308,29 @@ export default function FixturesPage() {
     },
   };
 
-  const fixturesForSelectedDate = React.useMemo(() => {
-    if (!selectedCalendarDate || !fixtures) return [];
-    return fixtures.filter(fixture => {
-      const fixtureDate = parseISO(fixture.date);
-      return isEqual(fixtureDate, selectedCalendarDate);
-    });
-  }, [selectedCalendarDate, fixtures]);
+  const [fixtureToDelete, setFixtureToDelete] = React.useState<string | null>(null);
 
+  const handleDeleteFixture = async (fixtureIdToDelete: string) => {
+    if (!fixtureIdToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'fixtures', fixtureIdToDelete));
+      toast({
+        title: "Fixture Deleted",
+        description: `The fixture was successfully deleted.`,
+        variant: "default",
+      });
+      queryClient.invalidateQueries({ queryKey: ['fixtures'] });
+    } catch (err: any) {
+      console.error("Error deleting fixture:", err);
+      toast({
+        title: "Deletion Failed",
+        description: `There was an error deleting the fixture: ${err.message}. Please try again.`,
+        variant: "destructive",
+      });
+    } finally {
+      setFixtureToDelete(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -355,7 +385,7 @@ export default function FixturesPage() {
               {fixtures && fixtures.length > 0 ? (
                 <div className="space-y-4">
                   {fixtures.map((fixture) => (
-                    <FixtureCard key={`card-${fixture.id}`} fixture={fixture} />
+                    <FixtureCard key={`card-${fixture.id}`} fixture={fixture} onAttemptDelete={setFixtureToDelete} />
                   ))}
                 </div>
               ) : (
@@ -417,7 +447,7 @@ export default function FixturesPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem asChild>
-                                    <Link href="#"> {/* Placeholder for edit */}
+                                    <Link href={`/fixtures/edit/${fixture.id}`}>
                                       <Edit3 className="mr-2 h-4 w-4" />
                                       Edit Fixture
                                     </Link>
@@ -440,10 +470,7 @@ export default function FixturesPage() {
                                   )}
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
-                                    onClick={() => {
-                                      console.log(`Attempting to delete fixture: ${fixture.id} - ${fixture.homeTeamName} vs ${fixture.awayTeamName}`);
-                                      toast({ title: "Delete Action", description: `Delete action for fixture ${fixture.id} (UI only).`});
-                                    }}
+                                    onClick={() => setFixtureToDelete(fixture.id)}
                                     className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                                   >
                                     <Trash2 className="mr-2 h-4 w-4" />
@@ -484,7 +511,7 @@ export default function FixturesPage() {
                     <ScrollArea className="h-[400px] pr-3">
                       <div className="space-y-3">
                         {fixturesForSelectedDate.map((fixture) => (
-                           <FixtureCard key={`calendar-${fixture.id}`} fixture={fixture} />
+                           <FixtureCard key={`calendar-${fixture.id}`} fixture={fixture} onAttemptDelete={setFixtureToDelete} />
                         ))}
                       </div>
                     </ScrollArea>
@@ -503,7 +530,21 @@ export default function FixturesPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!fixtureToDelete} onOpenChange={(open) => !open && setFixtureToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this fixture? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleDeleteFixture(fixtureToDelete!)}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
-
