@@ -1,4 +1,3 @@
-
 export interface PlayerSkills {
   technical?: {
     battingTechnique?: number;
@@ -66,6 +65,10 @@ export interface PlayerStats {
   stumpings?: number;
 }
 
+export interface PlayerStatsWithSeason extends PlayerStats {
+  season: string;
+}
+
 export interface PlayerProfile {
   id: string;
   name: string;
@@ -79,6 +82,7 @@ export interface PlayerProfile {
   stats: PlayerStats;
   careerSpan?: string;
   skills?: PlayerSkills;
+  seasonalStats?: PlayerStatsWithSeason[];
 }
 
 export const playersData: PlayerProfile[] = [
@@ -146,7 +150,52 @@ export const playersData: PlayerProfile[] = [
         leadership: 65,
       }
     },
+    seasonalStats: [
+      {
+        season: '2022',
+        matchesPlayed: 25,
+        runs: 550,
+        average: 27.5,
+        strikeRate: 105.0,
+        highestScore: {
+          value: '88', opponent: 'Lions College', year: 2022, venue: 'City Stadium',
+        },
+        bestBatting: {
+          value: '88', opponent: 'Lions College', year: 2022,
+        },
+        wickets: 25,
+        bowlingAverage: 28.0,
+        economyRate: 5.0,
+        bestBowling: {
+          value: '3/40', opponent: 'Panthers Academy', year: 2022, venue: 'Northwood Main Oval',
+        },
+        catches: 10,
+        stumpings: 0,
+      },
+      {
+        season: '2023',
+        matchesPlayed: 25,
+        runs: 700,
+        average: 35.0,
+        strikeRate: 115.0,
+        highestScore: {
+          value: '102*', opponent: 'Panthers Academy', year: 2023, venue: 'Northwood Main Oval',
+        },
+        bestBatting: {
+          value: '102*', opponent: 'Panthers Academy', year: 2023,
+        },
+        wickets: 35,
+        bowlingAverage: 19.28,
+        economyRate: 4.5,
+        bestBowling: {
+          value: '4/35', opponent: 'Panthers Academy', year: 2023, venue: 'Academy Ground',
+        },
+        catches: 15,
+        stumpings: 0,
+      },
+    ],
   },
+
   {
     id: "player-2",
     name: "Jane Smith",
@@ -197,6 +246,42 @@ export const playersData: PlayerProfile[] = [
         teamSpirit: 70,
       }
     },
+    seasonalStats: [
+      {
+        season: '2021',
+        matchesPlayed: 20,
+        runs: 350,
+        average: 25.0,
+        strikeRate: 90.0,
+        highestScore: {
+          value: '65', opponent: 'Eagles High', year: 2021, venue: 'Panthers Home Ground',
+        },
+        bestBatting: {
+          value: '65', opponent: 'Eagles High', year: 2021,
+        },
+        hundreds: 0,
+        fifties: 2,
+        catches: 15,
+        stumpings: 5,
+      },
+      {
+        season: '2022',
+        matchesPlayed: 25,
+        runs: 630,
+        average: 31.5,
+        strikeRate: 100.0,
+        highestScore: {
+          value: '85', opponent: 'Eagles High', year: 2022, venue: 'Panthers Home Ground',
+        },
+        bestBatting: {
+          value: '85', opponent: 'Eagles High', year: 2022,
+        },
+        hundreds: 0,
+        fifties: 3,
+        catches: 25,
+        stumpings: 10,
+      },
+    ],
   },
   {
     id: "player-3",
@@ -247,6 +332,56 @@ export const playersData: PlayerProfile[] = [
         workEthic: 80,
       }
     },
+    seasonalStats: [
+      {
+        season: '2019',
+        matchesPlayed: 15,
+        runs: 400,
+        average: 26.67,
+        strikeRate: 70.0,
+        highestScore: {
+          value: '70', opponent: 'Sharks United', year: 2019, venue: 'City Stadium',
+        },
+        bestBatting: {
+          value: '70', opponent: 'Sharks United', year: 2019,
+        },
+        hundreds: 0,
+        fifties: 3,
+        catches: 5,
+      },
+      {
+        season: '2020',
+        matchesPlayed: 15,
+        runs: 600,
+        average: 40.0,
+        strikeRate: 78.0,
+        highestScore: {
+          value: '110', opponent: 'Eagles High', year: 2020, venue: 'Lions Main Ground',
+        },
+        bestBatting: {
+          value: '110', opponent: 'Eagles High', year: 2020,
+        },
+        hundreds: 1,
+        fifties: 4,
+        catches: 3,
+      },
+      {
+        season: '2021',
+        matchesPlayed: 15,
+        runs: 700,
+        average: 46.67,
+        strikeRate: 80.0,
+        highestScore: {
+          value: '150', opponent: 'Eagles High', year: 2021, venue: 'Lions Main Ground',
+        },
+        bestBatting: {
+          value: '150', opponent: 'Eagles High', year: 2021,
+        },
+        hundreds: 3,
+        fifties: 5,
+        catches: 4,
+      },
+    ],
   },
    {
     id: "player-4",
@@ -303,5 +438,50 @@ export const playersData: PlayerProfile[] = [
         workEthic: 88,
       }
     },
+    seasonalStats: [
+      {
+        season: '2020',
+        matchesPlayed: 10,
+        runs: 50,
+        average: 7.14,
+        strikeRate: 60.0,
+        highestScore: {
+          value: '15', opponent: 'Lions College', year: 2020, venue: 'Lions College Oval',
+        },
+        bestBatting: {
+          value: '15', opponent: 'Lions College', year: 2020,
+        },
+        wickets: 15,
+        bowlingAverage: 25.0,
+        economyRate: 4.5,
+        bestBowling: {
+          value: '4/30', opponent: 'Panthers Academy', year: 2020, venue: 'Academy Ground',
+        },
+        catches: 2,
+      },
+      {
+        season: '2021',
+        matchesPlayed: 15,
+        runs: 70,
+        average: 8.75,
+        strikeRate: 70.0,
+        highestScore: {
+          value: '20*', opponent: 'Sharks United', year: 2021, venue: 'City Stadium',
+        },
+        bestBatting: {
+          value: '20*', opponent: 'Sharks United', year: 2021,
+        },
+        wickets: 25,
+        bowlingAverage: 22.0,
+        economyRate: 4.3,
+        bestBowling: {
+          value: '5/25', opponent: 'Lions College', year: 2021, venue: 'Lions College Oval',
+        },
+        catches: 3,
+      },
+    ],
   },
+
+  // Add more players here as needed for comprehensive testing
+
 ];

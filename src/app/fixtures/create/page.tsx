@@ -381,7 +381,13 @@ export default function CreateFixturePage() {
                         </FormItem>
                       )}
                     />
-                  ) : AGE_DIVISIONS.includes(watchAgeDivision) && watchAgeDivision !== "Open" ? (
+                  ) : // Check if watchAgeDivision is one of the U-age divisions (implicitly not "Open")
+                  // Also ensure watchAgeDivision is not null or undefined before checking includes
+                  watchAgeDivision && (AGE_DIVISIONS as readonly string[]).includes(watchAgeDivision) && watchAgeDivision !== "Open" ? (
+                    // The redundant check `AGE_DIVISIONS.includes(watchAgeDivision) && watchAgeDivision !== "Open"`
+                    // is intentionally kept here to maintain the original logic flow for U-age divisions,
+                    // even though `watchAgeDivision !== "Open"` is sufficient given the context
+                    // after the initial `watchAgeDivision === "Open"` check.
                     <FormField
                       control={form.control}
                       name="ageSpecificClass"

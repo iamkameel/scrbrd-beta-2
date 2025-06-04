@@ -19,38 +19,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // Placeholder data:
-// A school/club (affiliation) can have many teams. Each team has a teamName (e.g., "1st XI", "U14A"), age group, division.
-// The 'mascot' can be the general nickname for all teams from that affiliation.
-const teamsData = [
-  { id: "1", teamName: "1st XI", affiliation: "Northwood School", ageGroup: "Open", division: "A", mascot: "Knights" },
-  { id: "2", teamName: "U15A", affiliation: "Northwood School", ageGroup: "U15", division: "A", mascot: "Knights" },
-  { id: "3", teamName: "Seniors", affiliation: "Riverdale Cricket Club", ageGroup: "Senior", division: "Premier League", mascot: "Panthers" },
-  { id: "4", teamName: "U16", affiliation: "Hillcrest College", ageGroup: "U16", division: "B", mascot: "Lions" },
-  { id: "5", teamName: "Colts XI", affiliation: "Michaelhouse", ageGroup: "U16", division: "A", mascot: "Knights" },
-  { id: "6", teamName: "U14B", affiliation: "DHS", ageGroup: "U14", division: "C", mascot: "Stallions" },
-  { id: "7", teamName: "2nd XI", affiliation: "Hilton College", ageGroup: "Open", division: "A", mascot: "Elephants" },
-  { id: "8", teamName: "U14A", affiliation: "Kearsney College", ageGroup: "U14", division: "A", mascot: "One-And-All" },
-  { id: "9", teamName: "U15B", affiliation: "Westville Boys' High", ageGroup: "U15", division: "B", mascot: "Griffin" },
-  { id: "10", teamName: "3rd XI", affiliation: "Maritzburg College", ageGroup: "Open", division: "C", mascot: "Red Black White" },
-];
+import { detailedTeamsData, type Team } from "@/lib/team-data";
 
 export default function TeamsPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [ageGroupFilter, setAgeGroupFilter] = React.useState("all");
   const [divisionFilter, setDivisionFilter] = React.useState("all");
 
-  const uniqueAgeGroups = React.useMemo(() => {
-    const ageGroups = new Set(teamsData.map(team => team.ageGroup));
-    return ["all", ...Array.from(ageGroups).sort()];
-  }, []);
-
-  const uniqueDivisions = React.useMemo(() => {
-    const divisions = new Set(teamsData.map(team => team.division));
-    return ["all", ...Array.from(divisions).sort()];
-  }, []);
-
   const filteredTeams = React.useMemo(() => {
-    return teamsData.filter(team => {
+    return detailedTeamsData.filter((team: Team) => {
       const matchesSearch = 
         team.teamName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         team.affiliation.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -66,8 +43,18 @@ export default function TeamsPage() {
     });
   }, [searchTerm, ageGroupFilter, divisionFilter]);
 
+  const uniqueAgeGroups = React.useMemo(() => {
+    const ageGroups = new Set(detailedTeamsData.map(team => team.ageGroup));
+    return ["all", ...Array.from(ageGroups).sort()];
+  }, [detailedTeamsData]);
+
+  const uniqueDivisions = React.useMemo(() => {
+    const divisions = new Set(detailedTeamsData.map(team => team.division));
+    return ["all", ...Array.from(divisions).sort()];
+  }, [searchTerm, ageGroupFilter, divisionFilter]);
+
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto py-8 space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">Team Directory</CardTitle>
@@ -130,7 +117,7 @@ export default function TeamsPage() {
           {filteredTeams.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredTeams.map((team) => (
-                <Card key={team.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                <Card key={team.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
                   <Image
                     src={`https://placehold.co/600x400.png`}
                     alt={`${team.affiliation} ${team.teamName} ${team.mascot ? `(${team.mascot})` : ''} Logo/Crest`}
