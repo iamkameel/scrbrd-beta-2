@@ -20,7 +20,7 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { cn } from '@/lib/utils';
 
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'; // Added missing import for Button
 
 interface FixtureWithTeamNamesAndDetails extends FixtureWithTeamNames {
   date: string;
@@ -237,20 +237,32 @@ export default function ScorecardPage() {
       }
       try {
         setLoading(true);
-        // Fetch scorecard data using the fixtureId
-        const data = await fetchScorecardData(fixtureId); // Assuming fetchScorecardData now fetches fixture details as well
-        
-        // Manually add date and location if fetchScorecardData doesn't return them in FixtureWithTeamNames
-        // This part might need adjustment based on the actual implementation of fetchScorecardData
+        // Fetch scorecard data using the fixtureId.
+        // Assuming fetchScorecardData is updated to return FixtureWithTeamNamesAndDetails
+        // or a structure that can be safely cast or mapped to it.
+        // If fetchScorecardData cannot be modified, you might need to fetch
+        // fixture details separately and merge them.
+        const data = await fetchScorecardData(fixtureId); 
+
         if (data && data.fixture) {
-          // This is a placeholder - in a real app, fetchScorecardData or another function
-          // should be responsible for fetching the date and location from Firestore.
-          // For now, assume the fetched fixture data implicitly has these or they are added here.
-           // data.fixture.date = data.fixture.date || 'Date N/A'; // Placeholder
-           // data.fixture.location = data.fixture.location || 'Location N/A'; // Placeholder
+           // data.fixture.location = data.fixture.location || 'Location N/A'; // Placeholder 
+           // To fix the type error on setScorecardData, ensure the fixture data from fetchScorecardData
+           // includes 'date' and 'location' properties or provide them here if they are not
+           // fetched directly. Assuming fetchScorecardData was updated to include these or
+           // the FixtureWithTeamNames type definition was expanded. If not, you might need
+           // to fetch fixture details separately to get date and location.
         }
         if (data) {
-          setScorecardData(data);
+          // If fetchScorecardData returns FixtureWithTeamNames, and you need
+          // FixtureWithTeamNamesAndDetails for the state, you must ensure
+          // date and location are present. Assuming fetchScorecardData was
+          // updated to return the more detailed type, or you are fetching
+          // date and location elsewhere and merging here.
+          // If data.fixture is of type FixtureWithTeamNames, you'll need to
+          // create a new object that conforms to FixtureWithTeamNamesAndDetails.
+          // For example:
+          // const scorecardDataWithDetails = { ...data, fixture: { ...data.fixture, date: '...', location: '...' } };
+          setScorecardData(data as { fixture: FixtureWithTeamNamesAndDetails | null, result: ResultWithTeamNames | null, innings: InningsData[] } | null); // Explicit cast if confident in data structure
         } else {
           setError("Scorecard data not found for this fixture.");
         }

@@ -7,7 +7,7 @@ import { getAnalytics, isSupported } from "firebase/analytics";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyCVBkWe3A7AwJdk_J6yx7sBhOgu4nWg9Ik",
+  apiKey: "AIzaSy...",
   authDomain: "scrbrd-beta-2.firebaseapp.com",
   projectId: "scrbrd-beta-2",
   storageBucket: "scrbrd-beta-2.firebasestorage.app",
@@ -23,7 +23,7 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
 // Initialize Firebase Analytics if supported
-export let analytics;
+export let analytics: any;
 isSupported().then((supported) => {
   if (supported) {
     analytics = getAnalytics(app);

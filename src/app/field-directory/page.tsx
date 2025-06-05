@@ -14,7 +14,7 @@ interface FieldEntry {
   id: string; // Unique ID for the field entry, e.g., schoolId-fieldName
   fieldName: string;
   schoolName: string;
-  schoolId: number;
+  schoolId: string;
   schoolLocation: string;
 }
 

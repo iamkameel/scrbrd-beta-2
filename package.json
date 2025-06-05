@@ -12,7 +12,10 @@
     "typecheck": "tsc --noEmit",
     "build-migrate-teams": "tsc -p tsconfig.json",
     "run-migrate-teams": "node migrateTeams.js",
-    "migrate-teams": "npm run build-migrate-teams && npm run run-migrate-teams"
+    "migrate-teams": "npm run build-migrate-teams && npm run run-migrate-teams",
+    "build-migrate-schools": "tsc -p tsconfig.json",
+    "run-migrate-schools": "node migrateSchools.js",
+    "migrate-schools": "npm run build-migrate-schools && npm run run-migrate-schools"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.8.0",

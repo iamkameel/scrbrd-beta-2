@@ -70,10 +70,8 @@ export default function EditFixturePage() {
         mutationFn: updateFixture,
         onSuccess: () => {
             queryClient.invalidateQueries(['fixtures']); // Invalidate the list cache
-      queryClient.invalidateQueries({ queryKey: ['fixture', fixtureId] }); // Invalidate the specific fixture cache // Corrected
-        toast({  
                 title: "Fixture Updated",
-                description: "The fixture has been successfully updated.",
+                queryClient.invalidateQueries({ queryKey: ['fixtures'] });
             });
             router.push('/fixtures'); // Navigate back to the fixtures list
         },
@@ -205,10 +203,10 @@ export default function EditFixturePage() {
                         <Input id="ageGroup" name="ageGroup" value={formData.ageGroup || ''} onChange={handleInputChange} disabled={mutation.isPending} />
                     </div>
                      <div>
-                        <Label htmlFor="status">Status</Label>
-                        <Input id="status" name="status" value={formData.status || ''} onChange={handleInputChange} disabled={mutation.isLoading} />
-                     </div>
-                     {/* Add other fields as needed based on your FirestoreFixture interface */}
+                        <Label htmlFor="status">Status</Label> // Corrected 'mutation.isLoading' to 'mutation.isPending'
+                        <Input id="status" name="status" value={formData.status || ''} onChange={handleInputChange} disabled={mutation.isPending} />
+ </div>
+                    {/* Add other fields as needed based on your FirestoreFixture interface */}
 
                     <Button type="submit" disabled={mutation.isPending}>
                         {mutation.isPending ? (

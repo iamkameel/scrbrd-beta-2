@@ -7,7 +7,7 @@ import { detailedTeamsData, type Team } from '@/lib/team-data';
 import { PlayerProfile } from '@/lib/player-data';
 import { fixtures as allFixtures, type Fixture } from '@/lib/fixtures-data';
 import { resultsData, type Result } from '@/lib/results-data';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -192,7 +192,7 @@ export default function TeamDetailsPage() {
                 <div className="space-y-4">
                   {teamFixtures.map((fixture) => {
                     const matchResult = fixture.status === "Completed"
-                      ? resultsData.find(r => r.fixtureId === fixture.id)
+ ? resultsData.find((r: Result) => r.fixtureId === fixture.id)
                       : undefined;
                     return (
                       <div key={fixture.id} className="p-4 border rounded-lg bg-muted/50 shadow-sm space-y-3">

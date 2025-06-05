@@ -61,7 +61,7 @@ export interface Fixture {
 }
 
 export interface Result {
-  id: number; // Unique ID for the result itself
+  id: string; // Unique ID for the result itself
   fixtureId: number; // Corresponds to Fixture.id in fixtures-data.ts
   teamAId: string;
   teamAScore: string; // Summary score string
@@ -107,7 +107,7 @@ export async function fetchResultsWithTeamNames(): Promise<ResultWithTeamNames[]
 export interface ScorecardData {
  fixture: FixtureWithTeamNames | null; // Assuming you need fixture data here with team names
   result: ResultWithTeamNames | null; // Assuming the result contains the detailed innings data
- innings: InnningsData[];
+ innings: InningsData[];
 }
 
 // Dummy data for ScorecardData (replace with actual fetch logic)
@@ -129,14 +129,13 @@ export async function fetchScorecardData(fixtureId: string): Promise<ScorecardDa
     // Placeholder result data
     result: null, // Or a dummy ResultWithTeamNames object
     // result: ... fetch and include the actual result with innings data if available
-    result: undefined, // Or a dummy ResultWithTeamNames object
+    innings: [] // Initialize innings as an empty array
   };
 }
 
-/*
-export const resultsData: Result[] = [
+export const resultsData: ResultWithTeamNames[] = [
   {
-    id: \"1\", // Changed to string to match potential Firestore doc.id
+    id: "1",
     fixtureId: 3, // Corresponds to Riverdale Cricket Club Seniors vs Sharks United
     teamAId: "team_a_id_1", teamAScore: "185/7",
     teamBId: "team_b_id_1", teamBScore: "170/9",
@@ -253,8 +252,8 @@ export const resultsData: Result[] = [
     ]
   },
   {
-    id: \"2\", // Changed to string
-    fixtureId: 5, // Corresponds to Panthers Academy vs Hillcrest College U16
+    id: "2",
+    fixtureId: 5,
     teamAId: "team_a_id_2", teamAScore: "150/8",
     teamBId: "team_b_id_2", teamBScore: "151/5",
     winner: "Hillcrest College U16", margin: "5 wickets",
@@ -262,8 +261,8 @@ export const resultsData: Result[] = [
     // No detailed innings for this one yet
   },
   {
-    id: \"3\", // Changed to string
-    fixtureId: 6, // Corresponds to Northwood School 1st XI vs Michaelhouse Colts XI
+    id: "3",
+    fixtureId: 6,
     teamAId: "team_a_id_3", teamAScore: "205/4",
     teamBId: "team_b_id_3", teamBScore: "180/9",
     winner: "Northwood School 1st XI", margin: "25 runs",
@@ -271,7 +270,7 @@ export const resultsData: Result[] = [
     // No detailed innings for this one yet
   },
   {
-    id: \"4\", // Changed to string
+    id: "4",
     fixtureId: 2,
     teamAId: "team_a_id_4", teamAScore: "170/6",
     teamBId: "team_b_id_4", teamBScore: "165/8",
@@ -279,4 +278,4 @@ export const resultsData: Result[] = [
     playerOfTheMatch: "Jane Doe (Hillcrest - 45 runs, 1 wkt)"
     // No detailed innings for this one yet
   },
-];*/
+];

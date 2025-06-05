@@ -1,7 +1,7 @@
 
 import * as admin from 'firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
-import { schoolsData, type SchoolProfile, type SchoolTeam } from '@/lib/schools-data';
+import { schoolsData, type SchoolProfile, type SchoolTeam } from './src/lib/schools-data'; // Changed path from @/lib/schools-data
 import type { PlayerProfile, PlayerStats, PlayerSkills, ScoreDetail } from '@/lib/player-data'; // Ensure this import is correct
 
 // IMPORTANT: Replace with the actual path to your downloaded Firebase Admin SDK JSON file if needed.
@@ -169,7 +169,7 @@ async function generateSchoolSquads() {
     process.exit(1);
   }
 
-  console.log(`Found ${schoolsData.length} schools to process from @/lib/schools-data.ts.`);
+  console.log(`Found ${schoolsData.length} schools to process from ./src/lib/schools-data.ts.`);
   if (schoolsData.length > 0) {
     console.log(`First school data sample: ${JSON.stringify(schoolsData[0], null, 2)}`);
   }

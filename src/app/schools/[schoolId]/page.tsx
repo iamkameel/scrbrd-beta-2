@@ -90,15 +90,19 @@ const fetchSchoolFixtures = async (teamIds: string[]): Promise<DisplayFixture[]>
     snapshot.docs.forEach((docSnap: any) => {
       const data = docSnap.data() as Omit<FirestoreFixtureDoc, 'id'>;
       const scheduledDateTime = data.scheduledDate.toDate();
-      const fixtureDisplayData = {
-        id: docSnap.id,
-        teamA: data.homeTeamName || data.homeTeamId,
-        teamB: data.awayTeamName || data.awayTeamId,
-        date: format(scheduledDateTime, 'yyyy-MM-dd'),
+      const fixtureDisplayData: DisplayFixture & { displayDate: string } = {
+ id: docSnap.id,
+        homeTeamId: data.homeTeamId,
+        homeTeamName: data.homeTeamName || data.homeTeamId,
+        awayTeamId: data.awayTeamId,
+        awayTeamName: data.awayTeamName || data.awayTeamId,
+ date: format(scheduledDateTime, 'yyyy-MM-dd'),
+ location: data.venueId, // Assuming venueId is the location name
         displayDate: format(scheduledDateTime, 'EEE, MMM d, yyyy'),
         time: data.time,
-        location: data.venueId,
-        status: data.status,
+ matchType: (data as any).matchType || 'Unknown', // Attempt to get matchType, default to Unknown if not present
+ // Note: Consider refining matchType handling if it's stored in Firestore
+ status: data.status,
       } as DisplayFixture & { displayDate: string };
       fixturesMap.set(docSnap.id, fixtureDisplayData);
     });
@@ -341,11 +345,11 @@ export default function SchoolProfilePage() {
                   {schoolResults.map((result) => {
                     const fixture = schoolFixtures?.find(f => f.id === result.fixtureId);
                     return (
-                      <div key={result.id} className="p-4 border rounded-lg bg-muted/50 shadow-sm space-y-2">
-                        <p className="font-semibold text-md">{fixture?.teamA || result.teamAId} vs {fixture?.teamB || result.teamBId}</p>
-                        {fixture && <p className="text-xs text-muted-foreground">{format(parseISO(fixture.date), 'EEE, MMM d, yyyy')}</p>}
-                        <p className="text-sm"><span className="font-medium">{fixture?.teamA || result.teamAId}:</span> {result.teamAScore} &nbsp;&nbsp; <span className="font-medium">{fixture?.teamB || result.teamBId}:</span> {result.teamBScore}</p>
-                        <p className="text-sm font-semibold text-[hsl(var(--accent))]">{result.winner} won by {result.margin}</p>
+                      <div key={result.id} className="p-4 border rounded-lg bg-muted/50 shadow-sm space-y-2"> {/* Line before the target line */}
+ <p className="font-semibold text-md"><span className="font-medium">{fixture?.homeTeamName || result.teamAId}:</span> {result.teamAScore} &nbsp;&nbsp; <span className="font-medium">{fixture?.awayTeamName || result.teamBId}:</span> {result.teamBScore}</p>
+ {fixture && <p className="text-xs text-muted-foreground">{format(parseISO(fixture.date), 'EEE, MMM d, yyyy')}</p>}
+                        <p className="text-sm"><span className="font-medium">{fixture?.homeTeamName || result.teamAId}:</span> {result.teamAScore} &nbsp;&nbsp; <span className="font-medium">{fixture?.awayTeamName || result.teamBId}:</span> {result.teamBScore}</p>
+                        <p className="text-sm font-semibold text-[hsl(var(--accent))]">{result.winner} won by {result.margin}</p>\n"
                         <Button asChild variant="outline" size="sm" className="mt-2">
                           <Link href={`/scorecard/${result.fixtureId}`}>
                             <FileText className="mr-2 h-4 w-4" />
@@ -375,10 +379,10 @@ export default function SchoolProfilePage() {
                   {upcomingSchoolFixtures.map((fixture) => {
                     const currentStatus = getStatusDisplayName(fixture.status, fixture.date);
                     const badgeVariant = getStatusBadgeVariant(fixture.status, fixture.date);
-                    return (
+ return (
                       <div key={fixture.id} className="p-4 border rounded-lg bg-muted/50 shadow-sm space-y-2">
-                        <div className="flex justify-between items-start">
-                          <p className="font-semibold text-md">{fixture.teamA} vs {fixture.teamB}</p>
+ <div className="flex justify-between items-start">
+ <p className="font-semibold text-md">{fixture.homeTeamName} vs {fixture.awayTeamName}</p>
                           <Badge
                             variant={badgeVariant}
                             className={cn(
