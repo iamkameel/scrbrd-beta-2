@@ -1,0 +1,69 @@
+{
+  "Northwood_Main_Oval_Northwood_School": {
+    "fieldName": "Northwood Main Oval",
+    "location": "Northwood School",
+    "conditionNotes": "Excellent condition, well-drained."
+  },
+  "Knights_Field_B_Northwood_School": {
+    "fieldName": "Knights Field B",
+    "location": "Northwood School",
+    "conditionNotes": "Good for practice sessions."
+  },
+  "Hilton_College_Main_Field_Hilton_College": {
+    "fieldName": "Hilton College Main Field",
+    "location": "Hilton College"
+  },
+  "Weightman_Smith_Oval_Hilton_College": {
+    "fieldName": "Weightman-Smith Oval",
+    "location": "Hilton College",
+    "conditionNotes": "Currently undergoing minor aeration."
+  },
+  "Kingsmead_Stadium__Contract__Durban": {
+    "fieldName": "Kingsmead Stadium (Contract)",
+    "location": "Durban"
+  },
+  "Chatsworth_Oval__Consultant__Chatsworth": {
+    "fieldName": "Chatsworth Oval (Consultant)",
+    "location": "Chatsworth"
+  },
+  "All_Westville_Boys__High_Fields_Westville_Boys__High_School": {
+    "fieldName": "All Westville Boys' High Fields",
+    "location": "Westville Boys' High School"
+  },
+  "Hillcrest_College_Green_Hillcrest_College": {
+    "fieldName": "Hillcrest College Green",
+    "location": "Hillcrest College"
+  },
+  "City_Stadium_City_Council": {
+    "fieldName": "City Stadium",
+    "location": "City Council"
+  },
+  "Michaelhouse_Oval_Michaelhouse_School": {
+    "fieldName": "Michaelhouse Oval",
+    "location": "Michaelhouse School"
+  },
+  "Academy_Ground_Panthers_Academy": {
+    "fieldName": "Academy Ground",
+    "location": "Panthers Academy"
+  },
+  "Training_Pitches_Panthers_Academy": {
+    "fieldName": "Training Pitches",
+    "location": "Panthers Academy"
+  },
+  "DHS_Memorial_Ground_DHS": {
+    "fieldName": "DHS Memorial Ground",
+    "location": "DHS"
+  },
+  "Kearsney_AH_Smith_Oval_Kearsney_College": {
+    "fieldName": "Kearsney AH Smith Oval",
+    "location": "Kearsney College"
+  },
+  "Clifton_Riverside_Clifton_School": {
+    "fieldName": "Clifton Riverside",
+    "location": "Clifton School"
+  },
+  "Goldstones_Maritzburg_College": {
+    "fieldName": "Goldstones",
+    "location": "Maritzburg College"
+  }
+}

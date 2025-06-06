@@ -69,9 +69,10 @@ export default function EditFixturePage() {
     const mutation = useMutation({
         mutationFn: updateFixture,
         onSuccess: () => {
-            queryClient.invalidateQueries(['fixtures']); // Invalidate the list cache
+            queryClient.invalidateQueries({ queryKey: ['fixtures'] }); // Invalidate the list cache
+            toast({
                 title: "Fixture Updated",
-                queryClient.invalidateQueries({ queryKey: ['fixtures'] });
+                description: "The fixture has been successfully updated.",
             });
             router.push('/fixtures'); // Navigate back to the fixtures list
         },
