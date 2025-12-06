@@ -1,0 +1,1228 @@
+import { FieldValue, Timestamp, GeoPoint } from 'firebase/firestore';
+
+// Re-export types from store for convenience (used by transport module)
+export type { Trip, Vehicle } from '@/lib/store';
+
+export interface FirestoreEntity {
+  id: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// --- 0. Geographic & Organizational Hierarchy ---
+export interface Country extends FirestoreEntity {
+  name: string;
+}
+
+export interface Province extends FirestoreEntity {
+  name: string;
+  countryId: string;
+}
+
+export type LeagueType = 'League' | 'Series' | 'Cup' | 'Friendly';
+
+export interface League extends FirestoreEntity {
+  name: string;
+  provinceId: string;
+  type: LeagueType;
+}
+
+export type AgeGroup = 'Open' | 'U19' | 'U16' | 'U15' | 'U14' | 'U13';
+
+export interface Division extends FirestoreEntity {
+  name: string;
+  leagueId: string;
+  ageGroup: AgeGroup;
+  season?: string;
+}
+
+export interface School extends FirestoreEntity {
+  name: string;
+  divisionId?: string;
+  provinceId?: string;
+  address?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  logoUrl?: string; // Changed from emblemUrl to match existing
+  abbreviation?: string;
+  motto?: string;
+  establishmentYear?: number;
+  location?: string;
+  brandColors?: {
+    primary: string;
+    secondary: string;
+  };
+  principal?: string;
+  contactName?: string;
+}
+
+export type PitchType = "Natural Turf" | "Artificial Astro-Turf" | "Hybrid" | "Matting" | "Concrete" | "Indoor";
+export type ScoreboardType = "Manual" | "Digital (Basic)" | "Electronic LED" | "Video Screen";
+
+export interface Field extends FirestoreEntity {
+  name: string; // Official ground name
+  abbreviatedName?: string; // Short code, e.g. 'WDV Field'
+  nickName?: string; // Local nickname
+  location?: string; // Address or description
+  status?: 'Available' | 'Maintenance' | 'Booked' | 'Closed'; // Status from UI
+  address?: string; // Full street address
+  coordinates?: { lat: number; lng: number }; // GPS coordinates for map integration
+  geoLocation?: GeoPoint; // Center point for mapping
+  geoFence?: GeoPoint[]; // Boundary polygon for field limits
+  schoolId?: string; // FK → Primary school owner (optional)
+
+  // Physical Specs
+  capacity?: number; // Spectator capacity
+  pitchCount?: number; // Number of pitches available
+  boundaryMin?: number; // meters
+  boundaryMax?: number; // meters
+  pitchLength?: number; // meters
+  pitchWidth?: number; // meters
+  fieldSize?: 'Full Size' | 'Youth' | 'Training Area'; // From UI
+
+  // Surface Engine
+  pitchType?: PitchType | string; // Allow string for legacy or custom
+  surfaceConditionRating?: number; // 1-5
+  surfaceDetails?: {
+    grassCover?: number; // %
+    moistureLevel?: string;
+    firmness?: string;
+    [key: string]: any;
+  };
+
+  // Facilities
+  floodlights?: boolean;
+  changingRoomsCount?: number;
+  practiceNetsCount?: number;
+  scoreboardType?: ScoreboardType | string;
+
+  // Amenities
+  amenities?: string[]; // Stored as array of strings, mapped to categories in UI
+
+  // Staffing
+  contactPerson?: string;
+  contactPhone?: string;
+  groundsKeeperIds?: string[];
+
+  // Legacy/Existing fields (kept for compatibility)
+  orientation?: 'N-S' | 'E-W' | string;
+  boundaryDimensions?: {
+    front?: number;
+    square?: number;
+    behind?: number;
+  };
+  facilityDetails?: {
+    pavilions?: string[];
+    sightScreens?: string[];
+    floodlights?: boolean;
+    lightingDetails?: string;
+    clubhouse?: string;
+    parkingCapacity?: number;
+  };
+  drainageSystem?: string;
+  outfieldType?: 'grass' | 'synthetic';
+  lastPitchPreparation?: Timestamp;
+  notes?: string;
+}
+
+// --- 0.a. School ↔ Field Usage (many-to-many) ---
+export interface SchoolField extends FirestoreEntity {
+  schoolId: string; // FK → School
+  fieldId: string; // FK → Field
+  availability?: Array<{ // Optional usage windows
+    start: Timestamp;
+    end: Timestamp;
+  }>;
+  notes?: string;
+}
+
+// --- 1. Team & Squad Structures ---
+export type OpenSuffix = '1st XI' | '2nd XI' | '3rd XI';
+export type YouthSuffix = `${Extract<AgeGroup, `U${string}`>}${'A' | 'B' | 'C' | 'D'}`;
+export type TeamSuffix = OpenSuffix | YouthSuffix | 'Development' | 'Academy' | string;
+
+export interface Team extends FirestoreEntity {
+  name: string;
+  abbreviatedName?: string; // e.g., 'WBHS'
+  nickname?: string; // e.g., 'The Griffins'
+  schoolId: string;
+  divisionId?: string;
+  suffix?: TeamSuffix;
+  defaultCaptainId?: string;
+  defaultViceCaptainId?: string;
+  coachIds?: string[];
+  defaultScorerId?: string;
+  teamColors?: {
+    primary: string;
+    secondary?: string;
+  };
+  logoUrl?: string;
+}
+
+export interface Squad extends FirestoreEntity {
+  teamId: string;
+  season: string;
+  squadName?: string;
+  captainId?: string;
+  viceCaptainId?: string;
+  coachIds?: string[];
+}
+
+// --- 1.a. Player & Skill Ratings (FM-Style Schema) ---
+
+export interface BattingAttributes {
+  frontFoot: number;
+  backFoot: number;
+  powerHitting: number;
+  timing: number;
+  shotRange: number;
+  sweep: number;
+  reverseSweep: number;
+  spinReading: number;
+  seamAdaptation: number;
+  strikeRotation: number;
+  finishing: number;
+}
+
+export interface BowlingAttributes {
+  stockBallControl: number;
+  variations: number;
+  powerplaySkill: number;
+  middleOversControl: number;
+  deathOversSkill: number;
+  lineLengthConsistency: number;
+  spinManipulation: number;
+  releaseMechanics: number;
+  tacticalOverConstruction: number;
+}
+
+export interface FieldingAttributes {
+  closeCatching: number;
+  deepCatching: number;
+  groundFielding: number;
+  throwingPower: number;
+  throwingAccuracy: number;
+  reactionSpeed: number;
+  anticipation: number;
+}
+
+export interface MentalAttributes {
+  temperament: number;
+  gameAwareness: number;
+  pressureHandling: number;
+  patience: number;
+  killerInstinct: number;
+  decisionMaking: number;
+  adaptability: number;
+  workEthic: number;
+  leadership: number;
+  competitiveness: number;
+}
+
+export interface PhysicalAttributes {
+  speed: number;
+  acceleration: number;
+  agility: number;
+  strength: number;
+  stamina: number;
+  balance: number;
+  coreFitness: number;
+  injuryResistance: number;
+}
+
+export interface PlayerTrait {
+  traitId: string;
+  name: string;
+}
+
+export interface RoleRating {
+  roleRatingId: string;
+  roleCode: string;
+  rating: number; // 1-5 stars or 1-20
+}
+
+export interface SeasonStats {
+  seasonStatsId: string;
+  seasonId: string;
+  teamId: string;
+  format: string; // T20, 50-over, 2-day, etc.
+  matches: number;
+  runs: number;
+  battingAverage: number;
+  strikeRate: number;
+  wickets: number;
+  economy: number;
+  catches: number;
+  momAwards: number;
+}
+
+export interface ZoneAnalysis {
+  zoneId: string;
+  type: 'strength' | 'weakness';
+  zoneLabel: string; // e.g. "Extra Cover", "Short Ball 4th Stump"
+  description: string;
+}
+
+export interface Achievement {
+  achievementId: string;
+  title: string;
+  description: string;
+  achievedOn: Timestamp | Date | string;
+}
+
+export interface CoachReport {
+  reportId: string;
+  summary: string;
+  pros: string;
+  cons: string;
+  createdAt: Timestamp | Date | string;
+  coachId: string;
+}
+
+export interface PlayerProfile {
+  // Core
+  primaryRole: string;
+  battingStyle: string;
+  bowlingStyle: string;
+  preferredFormats: string[];
+  currentAbility: number; // 1-20 or 1-100
+  potentialAbility: number; // 1-20 or 1-100
+  reputation: number; // 1-10
+  heightCm?: number;
+  weightKg?: number;
+
+  // Attributes
+  battingAttributes?: BattingAttributes;
+  bowlingAttributes?: BowlingAttributes;
+  fieldingAttributes?: FieldingAttributes;
+  mentalAttributes?: MentalAttributes;
+  physicalAttributes?: PhysicalAttributes;
+
+  // Traits & Analysis
+  playerTraits?: PlayerTrait[];
+  roleRatings?: RoleRating[];
+  zoneAnalysis?: ZoneAnalysis[];
+  coachReports?: CoachReport[];
+  achievements?: Achievement[];
+  seasonStats?: SeasonStats[];
+}
+
+// --- 1.b. Coach Profile & Attributes (FM-Style Schema) ---
+
+export interface CoachingAttributes {
+  battingCoaching: number;
+  fastBowlingCoaching: number;
+  spinBowlingCoaching: number;
+  fieldingCoaching: number;
+  wicketkeepingCoaching: number;
+  youthDevelopment: number;
+  seniorDevelopment: number;
+  oneToOneCoaching: number;
+  sessionPlanning: number;
+  videoAnalysisUse: number;
+}
+
+export interface TacticalAttributes {
+  tacticsLimitedOvers: number;
+  tacticsLongFormat: number;
+  fieldSetting: number;
+  bowlingChanges: number;
+  battingOrderConstruction: number;
+  inGameAdaptability: number;
+  analyticsUse: number;
+  oppositionAnalysis: number;
+}
+
+export interface ManManagementAttributes {
+  playerCommunication: number;
+  parentCommunication: number;
+  motivation: number;
+  conflictManagement: number;
+  disciplineStandards: number;
+  leadershipPresence: number;
+  playerWelfare: number;
+  feedbackQuality: number;
+}
+
+export interface ProfessionalAttributes {
+  organisation: number;
+  attentionToDetail: number;
+  opennessToNewMethods: number;
+  consistency: number;
+  workEthic: number;
+  pressureComposure: number;
+  longTermPlanning: number;
+}
+
+export interface CoachSeasonStats {
+  seasonId: string;
+  teamId: string;
+  matches: number;
+  wins: number;
+  losses: number;
+  noResults: number;
+  titlesWon: number;
+  finalsReached: number;
+  avgMarginRuns: number;
+  avgMarginWickets: number;
+  chaseSuccessRate: number;
+}
+
+export interface CoachProfile {
+  currentRole: string;
+  qualificationLevel: string;
+  coachingSince: number;
+  primaryTeams: string[];
+  preferredFormats: string[];
+  philosophySummary: string;
+  currentAbility: number; // 1-20
+  potentialAbility: number; // 1-20
+  reputation: number; // 1-5 stars
+
+  // Attribute Blocks
+  coachingAttributes?: CoachingAttributes;
+  tacticalAttributes?: TacticalAttributes;
+  manManagementAttributes?: ManManagementAttributes;
+  professionalAttributes?: ProfessionalAttributes;
+
+  // Tags & Stats
+  coachTraits?: string[];
+  coachSeasonStats?: CoachSeasonStats[];
+}
+
+// Legacy SkillMatrix (kept for backward compatibility, can be derived from above)
+export interface SkillMatrix {
+  battingTechnique?: number;
+  battingPower?: number;
+  battingTemperament?: number;
+  bowlingPace?: number;
+  bowlingSpinControl?: number;
+  bowlingAccuracy?: number;
+  fieldingAgility?: number;
+  fieldingCatching?: number;
+  fieldingThrowing?: number;
+  fitnessEndurance?: number;
+  fitnessStrength?: number;
+  fitnessAgility?: number;
+  leadership?: number;
+  tacticalAwareness?: number;
+  teamwork?: number;
+  overallRating?: number;
+}
+
+export interface PlayerSkillRating extends FirestoreEntity {
+  playerId: string;
+  coachId: string;
+  skillCategory: string;
+  rating: number;
+  algorithmVersion?: string;
+  comments?: string;
+  ratedAt: Timestamp;
+}
+
+export interface Person extends FirestoreEntity {
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  displayName?: string;
+  email?: string;
+  phone?: string;
+  dateOfBirth?: string | Timestamp | Date;
+  nationality?: string;
+  profileImageUrl?: string;
+  status?: 'active' | 'injured' | 'inactive';
+
+  // FM-Style Player Profile (The new source of truth)
+  playerProfile?: PlayerProfile;
+
+  // FM-Style Coach Profile
+  coachProfile?: CoachProfile;
+
+  // Cricket Attributes (Legacy/Top-level accessors)
+  battingStyle?: string;
+  bowlingStyle?: string;
+  battingHand?: 'RHB' | 'LHB';
+  bowlingHand?: 'RHB' | 'LHB';
+  playingRole?: 'Batsman' | 'Bowler' | 'AllRounder' | 'Wicketkeeper';
+  primaryFieldingPosition?: string;
+  skillMatrix?: SkillMatrix;
+
+  // Links
+  schoolId?: string;
+  teamIds?: string[];
+  squadHistory?: string[];
+  careerStatisticsId?: string;
+  dataAiHint?: string;
+  assignedSchools?: string[];
+
+  // Physical Attributes (Legacy - prefer playerProfile.physicalAttributes)
+  physicalAttributes?: {
+    height?: number;
+    weight?: number;
+    battingHand?: string;
+    bowlingStyle?: string;
+  };
+
+  // Contact
+  contactEmail?: string;
+  contactPhone?: string;
+  address?: string;
+
+  // Legacy/Existing fields support
+  role?: string;
+  title?: string;
+  specializations?: string[];
+  skills?: {
+    batting?: number;
+    bowling?: number;
+    fielding?: number;
+    leadership?: number;
+    experience?: number;
+    fitness?: number;
+    mental?: number;
+  };
+  stats?: {
+    matchesPlayed?: number;
+    totalRuns?: number;
+    wicketsTaken?: number;
+    battingAverage?: number;
+    bowlingAverage?: number;
+    strikeRate?: number;
+    economy?: number;
+  };
+}
+
+export interface SquadPlayer extends FirestoreEntity {
+  squadId: string;
+  playerId: string;
+  joinedAt?: Timestamp;
+  isPrimary?: boolean;
+  position?: string;
+  isWicketkeeper?: boolean;
+}
+
+// --- 2. Fixture, Scheduling & Notifications ---
+export interface Fixture extends FirestoreEntity {
+  matchId: string;
+  scheduledAt: Timestamp;
+  fieldId: string;
+  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+}
+
+export interface FixtureNotification extends FirestoreEntity {
+  fixtureId: string;
+  userIds: string[];
+  notifiedAt: Timestamp;
+}
+
+// --- 3. Pre-Match Procedure & Team Confirmation ---
+export interface PreMatchProcedure extends FirestoreEntity {
+  fixtureId: string;
+  coachesNotifiedAt?: Timestamp;
+  captainNotifiedAt?: Timestamp;
+  groundskeeperNotifiedAt?: Timestamp;
+  playersNotifiedAt?: Timestamp;
+  reservesNotifiedAt?: Timestamp;
+  teamSelection?: {
+    homePlayingXI: string[];
+    homeReserves: string[];
+    awayPlayingXI: string[];
+    awayReserves: string[];
+    selectedAt?: Timestamp;
+    selectedBy?: string;
+  };
+  teamConfirmed?: {
+    homeConfirmedAt?: Timestamp;
+    homeConfirmedBy?: string;
+    awayConfirmedAt?: Timestamp;
+    awayConfirmedBy?: string;
+  };
+  scorerChecklist?: Array<{
+    item: string;
+    completed: boolean;
+    completedBy?: string;
+    completedAt?: Timestamp;
+    approved?: boolean;
+    approvedBy?: string;
+    approvedAt?: Timestamp;
+  }>;
+  battingOrder?: Array<{
+    teamId: string;
+    order: string[];
+    arrangedAt?: Timestamp;
+    arrangedBy?: string;
+  }>;
+  bowlingOrder?: Array<{
+    teamId: string;
+    order: string[];
+    arrangedAt?: Timestamp;
+    arrangedBy?: string;
+  }>;
+  notifications?: Array<{
+    playerIds: string[];
+    notifiedAt?: Timestamp;
+    notifiedBy?: string;
+    type: 'teamConfirmation' | 'lineupChange' | string;
+  }>;
+}
+
+// --- 4. Matches & Results ---
+export interface Match extends FirestoreEntity {
+  homeTeamId: string;
+  awayTeamId: string;
+  homeTeamName?: string; // Added for UI convenience
+  awayTeamName?: string; // Added for UI convenience
+  matchDate: Timestamp | string; // Support both for now
+  matchTime?: Timestamp;
+  fieldId?: string;
+  isDayNight?: boolean;
+
+  // STATE MACHINE (New!)
+  state?: 'SCHEDULED' | 'TEAM_SELECTION' | 'PRE_MATCH' | 'LIVE' | 'INNINGS_BREAK' | 'COMPLETED' | 'CANCELLED' | 'POSTPONED';
+  stateHistory?: Array<{
+    from: string;
+    to: string;
+    timestamp: Timestamp | Date | string;
+    triggeredBy: string;
+    reason?: string;
+  }>;
+
+  // Legacy status field (keep for backwards compatibility)
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'postponed' | 'live';
+  isLive?: boolean;
+
+  // Legacy/Existing fields
+  dateTime?: string;
+  venue?: string;
+  location?: string;
+  division?: string;
+  leagueId?: string;
+  seasonId?: string;
+
+  // Scores
+  score?: {
+    home?: string; // e.g., "245/8"
+    away?: string;
+  };
+  homeScore?: number;
+  awayScore?: number;
+
+  // Match details
+  result?: string; // e.g., "Team A won by 5 wickets"
+  tossWinner?: string;
+  tossChoice?: 'bat' | 'field';
+  matchType?: 'T20' | 'ODI' | 'Test' | 'T10' | 'Other';
+  overs?: number;
+
+  // Officials
+  umpires?: string[];
+  referee?: string;
+  scorer?: string;
+
+  // Additional metadata
+  weather?: string;
+  pitchCondition?: string;
+  notes?: string;
+  inningsData?: {
+    firstInnings?: Innings;
+    secondInnings?: Innings;
+  };
+
+  // TEAM SELECTION (New workflow data)
+  teamSelection?: {
+    home?: {
+      playingXI: string[];
+      reserves: string[];
+      captain: string;
+      viceCaptain?: string;
+      confirmedAt?: Timestamp | Date | string;
+      confirmedBy?: string;
+    };
+    away?: {
+      playingXI: string[];
+      reserves: string[];
+      captain: string;
+      viceCaptain?: string;
+      confirmedAt?: Timestamp | Date | string;
+      confirmedBy?: string;
+    };
+  };
+
+  // PRE-MATCH WORKFLOW (New!)
+  preMatch?: {
+    toss?: {
+      winner: 'home' | 'away';
+      decision: 'bat' | 'field';
+      conductedAt: Timestamp | Date | string;
+      conductedBy: string;
+    };
+    scorerChecklist?: {
+      scorebookPrepared: boolean;
+      teamSheetsReceived: boolean;
+      umpiresBriefed: boolean;
+      equipmentChecked: boolean;
+      completedBy?: string;
+      completedAt?: Timestamp | Date | string;
+    };
+    battingOrder?: {
+      team: 'home' | 'away';
+      order: string[];
+    };
+  };
+
+  // LIVE MATCH DATA (New!)
+  liveData?: {
+    currentInnings: 1 | 2;
+    currentOver: number;
+    currentBall: number;
+    striker: string;
+    nonStriker: string;
+    bowler: string;
+    lastBallTimestamp: Timestamp | Date | string;
+  };
+
+  liveScore?: {
+    innings: Innings;
+    currentOver: Ball[];
+    partnership: {
+      runs: number;
+      balls: number;
+    };
+    target?: number;
+  };
+
+  // COMPLETION DATA (New!)
+  completion?: {
+    winner: 'home' | 'away' | 'tie' | 'draw' | 'no-result';
+    margin?: string;
+    completedAt: Timestamp | Date | string;
+    finalResult: string;
+    playerOfTheMatch?: string;
+  };
+}
+
+export interface MatchResult extends FirestoreEntity {
+  matchId: string;
+  winnerTeamId?: string;
+  margin?: string;
+  summary?: string;
+}
+
+// --- 5. Officials & Assignments ---
+export interface MatchOfficial extends FirestoreEntity {
+  matchId: string;
+  officialType: 'umpire' | 'scorer' | 'groundskeeper';
+  officialId: string;
+  role: string;
+  assignedAt?: Timestamp;
+}
+
+export interface Umpire extends FirestoreEntity {
+  firstName: string;
+  lastName: string;
+  certification?: string;
+  phoneNumber?: string;
+}
+
+export interface ScorerProfile extends FirestoreEntity {
+  userId: string;
+  organisationId: string;
+  certificationLevel?: string;
+  availability?: Record<string, any>[];
+  isActive?: boolean;
+}
+
+export interface Groundskeeper extends FirestoreEntity {
+  firstName: string;
+  lastName: string;
+  qualification?: string;
+  phoneNumber?: string;
+  experienceLevel?: string;
+}
+
+// --- 6. Primary Scoring Actions & Live Scoring Tools ---
+export interface ScoringAction extends FirestoreEntity {
+  fixtureId: string;
+  inningsId: string;
+  overNumber: number;
+  ballInOver: number;
+  zoneId: string;
+  runs: number;
+  extras: number;
+  isWicket: boolean;
+  wicketType?: string;
+  dismissedPlayerId?: string;
+  fielderIds?: string[];
+  eventTime: Timestamp;
+}
+
+export interface Delivery extends FirestoreEntity {
+  actionId: string;
+  fixtureId: string;
+  inningsId: string;
+  overNumber: number;
+  ballInOver: number;
+  batsmanId: string;
+  nonStrikerId: string;
+  bowlerId: string;
+  runsOffBat: number;
+  extras: number;
+  extraType?: 'wide' | 'no-ball' | 'bye' | 'leg-bye' | 'penalty';
+  isWicket: boolean;
+  wicketType?: string;
+  dismissedPlayerId?: string;
+  fielderIds?: string[];
+  eventTime: Timestamp;
+}
+
+export interface BatterInnings extends FirestoreEntity {
+  inningsId: string;
+  playerId: string;
+  battingPosition: number;
+  runsScored: number;
+  ballsFaced: number;
+  fours: number;
+  sixes: number;
+  notOut: boolean;
+  dismissalType?: string;
+  dismissalBowlerId?: string;
+  dismissalFielderId?: string;
+}
+
+export interface BowlerInnings extends FirestoreEntity {
+  inningsId: string;
+  playerId: string;
+  overs: number;
+  maidens: number;
+  runsConceded: number;
+  wickets: number;
+  wides: number;
+  noBalls: number;
+  economyRate: number;
+}
+
+export interface OverSummary extends FirestoreEntity {
+  inningsId: string;
+  overNumber: number;
+  runsScored: number;
+  wickets: number;
+  extras: number;
+  cumulativeRuns: number;
+  cumulativeWickets: number;
+}
+
+export interface BowlingSpell extends FirestoreEntity {
+  bowlerInningsId: string;
+  startOver: number;
+  endOver: number;
+}
+
+export interface ScoringZone extends FirestoreEntity {
+  name: string;
+  polygon: GeoPoint[];
+}
+
+export interface DeliveryZone extends FirestoreEntity {
+  zoneId: string;
+  runs: number;
+}
+
+export interface WagonWheel {
+  inningsId: string;
+  actionSeries: Record<string, string[]>;
+}
+
+export interface SpiderSegment extends FirestoreEntity {
+  name: string;
+  angleStart: number;
+  angleEnd: number;
+}
+
+export interface SpiderWheel {
+  inningsId: string;
+  segmentActions: Record<string, string[]>;
+}
+
+// --- 6.a Scorecards & Cards ---
+export interface BattingCardEntry {
+  playerId: string;
+  name: string;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  strikeRate?: number;
+  dismissal?: string;
+}
+
+export interface BowlingCardEntry {
+  playerId: string;
+  name: string;
+  overs: number;
+  maidens: number;
+  runsConceded: number;
+  wickets: number;
+  economyRate?: number;
+}
+
+export interface ExtraSummary {
+  type: 'wide' | 'no-ball' | 'bye' | 'leg-bye' | 'penalty';
+  count: number;
+}
+
+export interface Partnership {
+  battingTeamId: string;
+  partners: [string, string];
+  runs: number;
+  balls: number;
+  wicketAtScore: number;
+  wicketAtOver: number;
+}
+
+export interface FallOfWicket {
+  wicketNumber: number;
+  score: number;
+  over: string;
+  batsmanOutId: string;
+}
+
+export type ChartType = 'worm' | 'manhattan' | 'runRate' | 'partnership' | 'overProgress';
+
+export interface ChartData {
+  type: ChartType;
+  dataPoints: any[];
+}
+
+export interface Scorecard {
+  fixtureId: string;
+  matchId: string;
+  date: Timestamp;
+  fieldId: string;
+  status: Match['status'];
+  isLive: boolean;
+  battingCards: BattingCardEntry[];
+  bowlingCards: BowlingCardEntry[];
+  extras: ExtraSummary[];
+  partnerships: Partnership[];
+  fallOfWickets: FallOfWicket[];
+  overSummaries: OverSummary[];
+  wagonWheel: WagonWheel;
+  charts: ChartData[];
+}
+
+// --- 7. Aggregated & Head-to-Head Statistics ---
+export interface SquadStatistics extends FirestoreEntity {
+  squadId: string;
+  matchesPlayed: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  points: number;
+}
+
+export interface TeamHeadToHeadStats extends FirestoreEntity {
+  teamAId: string;
+  teamBId: string;
+  matchesPlayed: number;
+  teamAWins: number;
+  teamBWins: number;
+  draws: number;
+}
+
+// --- 8. Coaching & Awards ---
+export interface Coach extends FirestoreEntity {
+  firstName: string;
+  lastName: string;
+  qualifications?: Record<string, any>[];
+  phoneNumber?: string;
+}
+
+export interface CoachingNote extends FirestoreEntity {
+  coachId: string;
+  squadId?: string;
+  playerId?: string;
+  note: string;
+}
+
+export interface Award extends FirestoreEntity {
+  fixtureId: string;
+  playerId?: string;
+  awardType: string;
+  details?: string;
+}
+
+// --- 9. Match Predictions ---
+export interface MatchPrediction extends FirestoreEntity {
+  fixtureId: string;
+  predictedWinnerId?: string;
+  probability: number;
+  factors?: Record<string, any>;
+}
+
+export interface Sponsor extends FirestoreEntity {
+  name: string;
+  industry: string;
+  contributionAmount: number;
+  active: boolean;
+  logoUrl: string;
+  website?: string;
+}
+
+// --- Legacy Interfaces (Kept for compatibility) ---
+export interface Ball {
+  runs: number;
+  extras?: number;
+  extrasType?: 'wide' | 'noball' | 'bye' | 'legbye';
+  isWicket: boolean;
+  wicketType?: string;
+  playerOutId?: string;
+  bowlerId?: string;
+  batsmanId?: string;
+  fielderId?: string; // Added in previous session
+  shotType?: string;
+  coordinates?: { x: number; y: number }; // For wagon wheel
+  length?: 'Full' | 'Good' | 'Short' | 'Yorker';
+  line?: 'Off Stump' | 'Middle Stump' | 'Leg Stump' | 'Wide Outside Off' | 'Wide Down Leg';
+}
+
+export interface Over {
+  overNumber: number;
+  balls: Ball[];
+  bowlerId: string;
+  runsConceded: number;
+  wicketsTaken: number;
+}
+
+export interface Innings {
+  teamId: string;
+  runs: number;
+  wickets: number;
+  overs: number;
+  overHistory: Over[];
+  battingCard?: BattingCardEntry[];
+  bowlingCard?: BowlingCardEntry[];
+  currentBatsmen?: string[]; // Added for live scoring
+  currentBowler?: string; // Added for live scoring
+
+  // Added for scorecard display
+  batsmen?: Array<{
+    playerId: string;
+    runs: number;
+    ballsFaced: number;
+    fours?: number;
+    sixes?: number;
+    strikeRate?: number;
+    isOut: boolean;
+    dismissal?: string;
+  }>;
+  bowlers?: Array<{
+    playerId: string;
+    overs?: number;
+    maidens?: number;
+    runsConceded: number;
+    wickets?: number;
+    economy?: number;
+  }>;
+  extras?: {
+    wides?: number;
+    noballs?: number;
+    byes?: number;
+    legbyes?: number;
+  };
+}
+
+export interface RosterMember extends FirestoreEntity {
+  teamId: string;
+  personId: string;
+  role: string;
+  isCaptain?: boolean;
+  isViceCaptain?: boolean;
+  jerseyNumber?: string;
+  personName?: string;
+}
+
+export interface Season extends FirestoreEntity {
+  name: string;
+  startDate: string;
+  endDate: string;
+  active: boolean;
+}
+
+export interface Equipment extends FirestoreEntity {
+  name: string;
+  type: string;
+  brand: string;
+  category: string;
+  status: string;
+  condition: string;
+  quantity: number;
+  assignedTo: string | null;
+  cost?: number;
+  itemId?: string; // For legacy support if needed
+}
+
+export interface Transaction extends FirestoreEntity {
+  transactionId?: string; // Legacy support
+  date: string;
+  type: string;
+  category: string;
+  amount: number;
+  description: string;
+  status: string;
+}
+
+export interface StaffProfile extends FirestoreEntity {
+  schoolId: string;
+  name: string;
+  title: string;
+  role: 'Principal' | 'Director of Sport' | 'Head Coach' | 'Admin' | 'Other';
+  bio?: string;
+  email?: string;
+  phone?: string;
+  imageUrl?: string;
+}
+
+export interface NewsPost extends FirestoreEntity {
+  schoolId: string;
+  title: string;
+  excerpt: string;
+  content?: string;
+  date: string;
+  imageUrl?: string;
+  author?: string;
+  tags?: string[];
+}
+
+export interface SchoolStats extends FirestoreEntity {
+  schoolId: string;
+  totalTeams: number;
+  activePlayers: number;
+  coachingStaff: number;
+  upcomingFixtures: number;
+  lastUpdated: string;
+}
+
+// --- 10. Live Scoring Types ---
+export type BowlingAngle = 'Over the Wicket' | 'Round the Wicket';
+
+export interface LiveMatchUpdateOutput {
+  winProbability: number;
+  summary: string;
+}
+
+export interface MatchForecast {
+  details: {
+    condition: string;
+    temperature: number;
+  };
+}
+
+export interface PlayerOfTheMatch {
+  name: string;
+  teamName: string;
+  justification: string;
+}
+
+export interface RosterMemberWithStats extends RosterMember {
+  stats: {
+    oversBowled: number;
+    wicketsTaken: number;
+    runsConceded: number;
+    economyRate: number;
+    oversDisplay?: string;
+  };
+  physicalAttributes?: {
+    bowlingHand?: string;
+    bowlingStyles?: string[];
+  };
+  profileImageUrl?: string;
+}
+
+export interface LiveFallOfWicket extends FallOfWicket {
+  batsmanName?: string;
+}
+
+export interface LiveBatsman {
+  playerId: string;
+  runs: number;
+  ballsFaced: number;
+  fours: number;
+  sixes: number;
+  strikeRate: number;
+  isOut: boolean;
+  howOut?: string;
+  bowlerId?: string;
+}
+
+export interface LiveBowler {
+  playerId: string;
+  overs: number;
+  balls: number;
+  maidens: number;
+  runsConceded: number;
+  wickets: number;
+  economy: number;
+  wides: number;
+  noBalls: number;
+}
+
+export interface LiveScore {
+  matchId: string;
+  status: 'live' | 'completed' | 'scheduled';
+  inningsNumber: number;
+  battingTeamId: string;
+  bowlingTeamId: string;
+
+  currentInnings: {
+    runs: number;
+    wickets: number;
+    overs: number;
+    balls: number;
+    battingTeamId: string;
+    bowlingTeamId: string;
+    target?: number;
+  };
+
+  // Previous innings data (if 2nd innings)
+  innings1?: {
+    runs: number;
+    wickets: number;
+    overs: number;
+    balls?: number;
+    batsmen?: LiveBatsman[];
+    bowlers?: LiveBowler[];
+    battingTeamId?: string;
+  };
+
+  // Second innings data (if match completed)
+  innings2?: {
+    runs: number;
+    wickets: number;
+    overs: number;
+    balls?: number;
+    batsmen?: LiveBatsman[];
+    bowlers?: LiveBowler[];
+    battingTeamId?: string;
+  };
+
+  winnerId?: string;
+  winMargin?: string;
+
+  currentPlayers: {
+    strikerId?: string;
+    nonStrikerId?: string;
+    bowlerId?: string;
+    bowlingAngle?: BowlingAngle;
+  };
+
+  batsmen: LiveBatsman[];
+  bowlers: LiveBowler[];
+
+  ballHistory: any[]; // Ideally defined as Ball[]
+  undoLog?: any[];
+
+  // Legacy/Alternative fields (keeping for compatibility if needed, or removing if unused)
+  extras?: { total: number; wides: number; noBalls: number; byes: number; legByes: number; partnership: number };
+  fallOfWickets?: LiveFallOfWicket[];
+  partnerships?: Partnership[];
+}

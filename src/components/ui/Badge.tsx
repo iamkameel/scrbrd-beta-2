@@ -1,34 +1,36 @@
-import React from 'react';
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
 
-interface BadgeProps {
-  children: React.ReactNode;
-  variant?: 'active' | 'inactive' | 'default';
-}
+import { cn } from "@/lib/utils"
 
-export function Badge({ children, variant = 'default' }: BadgeProps) {
-  let style = {};
-  
-  switch (variant) {
-    case 'active':
-      style = { background: 'rgba(16, 185, 129, 0.2)', color: 'var(--color-primary)' };
-      break;
-    case 'inactive':
-      style = { background: 'rgba(255, 255, 255, 0.1)', color: 'var(--color-text-muted)' };
-      break;
-    default:
-      style = { background: 'var(--color-bg-card-hover)', color: 'var(--color-text-main)' };
+const badgeVariants = cva(
+  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  {
+    variants: {
+      variant: {
+        default:
+          "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
+        secondary:
+          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        destructive:
+          "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
+        outline: "text-foreground",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
   }
+)
 
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof badgeVariants> {}
+
+function Badge({ className, variant, ...props }: BadgeProps) {
   return (
-    <span className="badge" style={{
-      padding: '0.25rem 0.75rem',
-      borderRadius: '999px',
-      fontSize: '0.75rem',
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      ...style
-    }}>
-      {children}
-    </span>
-  );
+    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+  )
 }
+
+export { Badge, badgeVariants }

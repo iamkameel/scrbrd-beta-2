@@ -1,83 +1,154 @@
-:root {
-  /* Premium Color Palette */
-  --color-bg-dark: #0a0a0a;
-  --color-bg-card: #141414;
-  --color-bg-card-hover: #1a1a1a;
-  
-  --color-primary: #10b981; /* Emerald */
-  --color-primary-glow: rgba(16, 185, 129, 0.3);
-  
-  --color-secondary: #f59e0b; /* Gold */
-  
-  --color-text-main: #ffffff;
-  --color-text-muted: #a3a3a3;
-  
-  --color-border: #262626;
-  
-  --font-main: 'Outfit', sans-serif;
-  
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-glow: 0 0 15px var(--color-primary-glow);
-  
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  
-  --transition-fast: 0.2s ease;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 body {
-  background-color: var(--color-bg-dark);
-  color: var(--color-text-main);
-  line-height: 1.5;
-  overflow-x: hidden;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
-/* Typography */
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
-  letter-spacing: -0.02em;
+@layer base {
+  :root {
+    /* Light Theme - Default */
+    --background: 0 0% 100%; /* White */
+    --foreground: 0 0% 5%; /* Near Black */
+
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 0 0% 5%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 5%;
+
+    --primary: 142 71% 45%; /* Emerald 500 #22c55e */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 4.8% 95.9%; /* Light Gray */
+    --secondary-foreground: 240 5.9% 10%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 35%; /* Darker for legibility on light bg */
+
+    --accent: 46 99% 52%; /* Fox Gold #FEC50C */
+    --accent-foreground: 0 0% 5%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 142 71% 45%;
+
+    --radius: 0.75rem; /* Increased for more rounded corners */
+
+    /* Sidebar Light Theme */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 10% 3.9%;
+    --sidebar-primary: 142 71% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 142 71% 95%;
+    --sidebar-accent-foreground: 142 71% 30%;
+    --sidebar-border: 240 5.9% 90%;
+    --sidebar-ring: 142 71% 45%;
+
+    --chart-1: 142 71% 45%;
+    --chart-2: 46 99% 52%;
+    --chart-3: 120 39% 55%;
+    --chart-4: 0 70% 65%;
+    --chart-5: 280 70% 65%;
+  }
+
+  .dark {
+    /* Deep Dark Theme - Based on Design System Reference */
+    
+    /* Main Backgrounds - Layered depth */
+    --background: 220 13% 9%; /* #121418 - Deepest app background */
+    --foreground: 0 0% 98%; /* #FAFAFA - Near white for primary text */
+
+    /* Surface Layers */
+    --card: 220 13% 11%; /* #1A1D21 - Cards, modals, elevated surfaces */
+    --card-foreground: 0 0% 98%;
+
+    --popover: 220 13% 11%; /* #1A1D21 - Matching card */
+    --popover-foreground: 0 0% 98%;
+
+    /* Primary Action - Vibrant Green */
+    --primary: 142 77% 58%; /* #4ADE80 - Mint green accent */
+    --primary-foreground: 0 0% 100%; /* White text on green */
+
+    /* Secondary - Subtle variations */
+    --secondary: 220 8% 16%; /* Slightly lighter than card */
+    --secondary-foreground: 0 0% 98%;
+
+    /* Muted/Labels */
+    --muted: 220 8% 16%;
+    --muted-foreground: 220 9% 62%; /* #9CA3AF - Grey for labels */
+
+    /* Accent - Keep fox gold for secondary highlights */
+    --accent: 46 99% 52%; /* #FEC50C - Fox Gold */
+    --accent-foreground: 0 0% 10%;
+
+    /* Destructive */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Inputs & Borders */
+    --input: 220 13% 8%; /* #16181D - Darker than card for inset feel */
+    --border: 220 10% 20%; /* Subtle borders */
+    --ring: 142 77% 58%; /* Green focus rings */
+
+    /* Sidebar - Matching card layer */
+    --sidebar-background: 220 13% 11%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 142 77% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent:  220 13% 14%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 220 10% 20%;
+    --sidebar-ring: 142 77% 58%;
+
+    /* Charts - Green-based palette */
+    --chart-1: 142 77% 58%; /* Primary green */
+    --chart-2: 46 99% 52%; /* Fox gold */
+    --chart-3: 120 39% 55%;
+    --chart-4: 0 70% 60%;
+    --chart-5: 280 70% 60%;
+  }
 }
 
-h1 {
-  font-size: 2.5rem;
-  margin-bottom: 1.5rem;
-  background: linear-gradient(to right, #fff, #a3a3a3);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
-h2 {
-  font-size: 1.75rem;
-  margin-bottom: 1rem;
-}
+@layer utilities {
+  .bg-grid-white\/\[0\.02\] {
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  }
 
-p {
-  color: var(--color-text-muted);
-}
+  .glass-card {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-white/20 dark:border-slate-700/50 shadow-xl;
+  }
 
-/* Utilities */
-.text-primary { color: var(--color-primary); }
-.text-secondary { color: var(--color-secondary); }
-.text-muted { color: var(--color-text-muted); }
-.mb-4 { margin-bottom: 1rem; }
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-500;
+  }
 
-/* Grid Layouts */
-.grid-dashboard {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
+  .animate-slide-in-up {
+    animation: slideInUp 0.5s ease-out forwards;
+  }
 
-.grid-players {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1.5rem;
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }

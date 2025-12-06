@@ -1,71 +1,91 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Trophy, Shield, Dumbbell } from 'lucide-react';
+import { useState } from 'react';
+import { Menu, X } from 'lucide-react';
+import { navGroups, dashboardLink } from '@/lib/nav-links';
+import CollapsibleNavGroup from './CollapsibleNavGroup';
 
 export default function Sidebar() {
   const pathname = usePathname();
-
-  const navItems = [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/players', label: 'Players', icon: Users },
-    { href: '/matches', label: 'Matches', icon: Trophy },
-    { href: '/teams', label: 'Teams', icon: Shield },
-    { href: '/training', label: 'Training', icon: Dumbbell },
-  ];
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const DashboardIcon = dashboardLink.icon;
 
   return (
-    <nav className="sidebar" style={{
-      width: '260px',
-      backgroundColor: 'var(--color-bg-card)',
-      borderRight: '1px solid var(--color-border)',
-      padding: '2rem',
-      display: 'flex',
-      flexDirection: 'column',
-      position: 'fixed',
-      height: '100vh',
-      zIndex: 10
-    }}>
-      <div className="nav-brand" style={{
-        fontSize: '1.5rem',
-        fontWeight: 700,
-        color: 'var(--color-primary)',
-        marginBottom: '3rem',
-        letterSpacing: '0.05em',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem'
-      }}>
-        <span>🏏</span> SCRBRD
-      </div>
-      
-      <ul className="nav-list" style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          const Icon = item.icon;
-          
-          return (
-            <li key={item.href}>
-              <Link href={item.href} style={{
-                padding: '0.75rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                color: isActive ? 'var(--color-text-main)' : 'var(--color-text-muted)',
-                backgroundColor: isActive ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-                borderLeft: isActive ? '3px solid var(--color-primary)' : '3px solid transparent',
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                transition: 'var(--transition-fast)'
-              }}>
-                <Icon size={20} />
-                {item.label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-sidebar border border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+        aria-label="Toggle menu"
+      >
+        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-30"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <nav 
+        className={`
+          sidebar fixed h-screen z-40 transition-transform duration-300
+          w-[280px] bg-sidebar border-r border-sidebar-border p-6 flex flex-col overflow-y-auto overflow-x-hidden
+          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+      >
+        {/* Logo */}
+        <div className="mb-8 flex items-center justify-center shrink-0">
+          <Image 
+            src="/images/scrbrd-logo.png" 
+            alt="SCRBRD" 
+            width={200} 
+            height={50}
+            priority
+            style={{ objectFit: 'contain' }}
+          />
+        </div>
+        
+        {/* Navigation Content */}
+        <div className="flex flex-col gap-3 flex-1">
+          {/* Dashboard Link (always visible) */}
+          <Link 
+            href={dashboardLink.href} 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={`
+              flex items-center gap-3 px-4 py-3 rounded-lg
+              text-[0.95rem] font-medium transition-all duration-200
+              ${pathname === dashboardLink.href 
+                ? 'bg-sidebar-primary/10 text-sidebar-primary border border-sidebar-primary/30 font-semibold' 
+                : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground border border-transparent'}
+            `}
+          >
+            {DashboardIcon && <DashboardIcon size={20} />}
+            {dashboardLink.label}
+          </Link>
+
+          {/* Spacer */}
+          <div className="h-2" />
+
+          {/* Collapsible Navigation Groups */}
+          <div onClick={() => setIsMobileMenuOpen(false)} className="space-y-1">
+            {navGroups.map((group) => (
+              <CollapsibleNavGroup key={group.key} group={group} />
+            ))}
+          </div>
+        </div>
+
+        {/* Footer / Version Info */}
+        <div className="mt-auto pt-4 border-t border-sidebar-border text-xs text-sidebar-foreground/30 text-center">
+          <p>v2.0.0</p>
+        </div>
+      </nav>
+    </>
   );
 }

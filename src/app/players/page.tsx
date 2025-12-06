@@ -1,58 +1,35 @@
-import { store } from "@/lib/store";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import Image from "next/image";
+import { getPlayers } from '@/services/playerService';
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Plus, Users } from "lucide-react";
+import { PlayersClient } from "@/components/players/PlayersClient";
 
-export default function PlayersPage() {
-  const players = store.players;
+export const dynamic = 'force-dynamic';
+
+export default async function PlayersPage() {
+  const players = await getPlayers();
 
   return (
-    <div>
-      <header className="flex-between mb-4">
-        <h1>Players</h1>
-        <button className="btn btn-primary" style={{
-          backgroundColor: 'var(--color-primary)',
-          color: '#000',
-          border: 'none',
-          padding: '0.75rem 1.5rem',
-          borderRadius: 'var(--radius-md)',
-          fontWeight: 500,
-          cursor: 'pointer',
-          boxShadow: 'var(--shadow-glow)'
-        }}>+ Add Player</button>
-      </header>
-
-      <div className="grid-players">
-        {players.map(p => (
-          <Card key={p.personId} className="text-center" style={{ textAlign: 'center' } as any}>
-            <div style={{ position: 'relative', width: '80px', height: '80px', margin: '0 auto 1rem auto' }}>
-              <Image 
-                src={p.profileImageUrl} 
-                alt={`${p.firstName} ${p.lastName}`}
-                fill
-                style={{ borderRadius: '50%', border: '2px solid var(--color-primary)', objectFit: 'cover' }}
-              />
-            </div>
-            <h3>{p.firstName} {p.lastName}</h3>
-            <p className="text-secondary" style={{ marginBottom: '1rem' }}>{p.role}</p>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', textAlign: 'left', background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: 'var(--radius-md)' }}>
-              <div>
-                <div className="text-muted" style={{ fontSize: '0.8rem' }}>Matches</div>
-                <div>{p.stats.matchesPlayed}</div>
-              </div>
-              <div>
-                <div className="text-muted" style={{ fontSize: '0.8rem' }}>{p.role === 'Bowler' ? 'Wickets' : 'Runs'}</div>
-                <div>{p.role === 'Bowler' ? p.stats.wicketsTaken : p.stats.totalRuns}</div>
-              </div>
-            </div>
-            
-            <div style={{ marginTop: '1rem' }}>
-              <Badge variant={p.status === 'active' ? 'active' : 'inactive'}>{p.status}</Badge>
-            </div>
-          </Card>
-        ))}
+    <div className="container mx-auto py-8 max-w-6xl space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <Users className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold">Players</h1>
+          </div>
+          <p className="text-muted-foreground">
+            Manage player profiles, track stats, and view performance
+          </p>
+        </div>
+        <Link href="/players/add">
+          <Button className="bg-gradient-to-r from-primary to-emerald-600 hover:from-primary/90 hover:to-emerald-600/90 shadow-lg shadow-primary/20">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Player
+          </Button>
+        </Link>
       </div>
+
+      <PlayersClient players={players} />
     </div>
   );
 }

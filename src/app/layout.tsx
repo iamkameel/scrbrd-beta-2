@@ -1,13 +1,26 @@
-import type { Metadata } from "next";
-import { Outfit } from "next/font/google";
-import "./globals.css";
-import Sidebar from "@/components/layout/Sidebar";
+import type { Metadata } from 'next';
+import { Inter, Outfit } from 'next/font/google';
+import './globals.css';
+import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "@/components/layout/ThemeProvider";
+import Providers from '@/components/layout/Providers';
+import { PermissionViewProvider } from '@/contexts/PermissionViewContext';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { AppShell } from "@/components/layout/AppShell";
 
-const outfit = Outfit({ subsets: ["latin"] });
+const inter = Inter({
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
+});
+
+const outfit = Outfit({
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
+});
 
 export const metadata: Metadata = {
-  title: "SCRBRD | Premium Cricket Management",
-  description: "Advanced cricket management platform for teams, players, and matches.",
+  title: 'SCRBRD Beta - Cricket Management',
+  description: 'Manage cricket teams, players, matches, and more with SCRBRD Beta.',
 };
 
 export default function RootLayout({
@@ -16,14 +29,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={outfit.className}>
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
-          <Sidebar />
-          <main style={{ flex: 1, padding: '2rem 3rem', marginLeft: '260px', maxWidth: '1600px' }}>
-            {children}
-          </main>
-        </div>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} ${outfit.variable} antialiased bg-background text-foreground`} suppressHydrationWarning>
+        <Providers>
+          <AuthProvider>
+            <PermissionViewProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+              >
+                <AppShell>
+                  {children}
+                </AppShell>
+              </ThemeProvider>
+            </PermissionViewProvider>
+          </AuthProvider>
+        </Providers>
+        <Toaster />
       </body>
     </html>
   );
