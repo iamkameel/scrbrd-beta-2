@@ -1,22 +1,61 @@
-import React from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
 import { PageHeader } from '../dashboard/PageHeader';
 import { MetricCard } from '../dashboard/MetricCard';
 import FixtureCentreCard from '../dashboard/FixtureCentreCard';
 import { ClipboardList, Shield, CalendarDays, Users } from "lucide-react";
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchPersonByEmail } from '@/app/actions/personActions';
+import { getTeamsBySchool, fetchCoachesBySchool } from '@/lib/firestore';
+import { Person, Team } from '@/types/firestore';
 
 export default function SportsmasterDashboard() {
+  const { user } = useAuth();
+  const [person, setPerson] = useState<Person | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [coaches, setCoaches] = useState<Person[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user?.email) return;
+      
+      try {
+        const profile = await fetchPersonByEmail(user.email);
+        setPerson(profile);
+        
+        if (profile?.schoolId) {
+          const [schoolTeams, schoolCoaches] = await Promise.all([
+            getTeamsBySchool(profile.schoolId),
+            fetchCoachesBySchool(profile.schoolId)
+          ]);
+          setTeams(schoolTeams);
+          setCoaches(schoolCoaches);
+        }
+      } catch (error) {
+        console.error("Error loading sportsmaster dashboard:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user]);
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <PageHeader 
         title="Sports Master Dashboard" 
-        description="Oversee all teams, fixtures, and administrative tasks."
+        description={`Welcome back, ${person?.firstName || user?.displayName || 'Sports Master'}. Oversee all teams and fixtures.`}
       />
 
       {/* Fixture Centre */}
       <FixtureCentreCard 
         role="Sports-Master"
         maxMatches={3}
+        schoolId={person?.schoolId}
       />
 
       {/* Stats Grid */}
@@ -26,25 +65,25 @@ export default function SportsmasterDashboard() {
           <MetricCard
             icon={Shield}
             label="Total Teams"
-            value={12}
+            value={teams.length}
             subtitle="Across all divisions"
           />
           <MetricCard
             icon={CalendarDays}
             label="Fixtures Set"
-            value="100%"
+            value="100%" // Placeholder until we have fixture completion logic
             subtitle="For current term"
           />
           <MetricCard
             icon={Users}
             label="Coaches"
-            value={8}
+            value={coaches.length}
             subtitle="Active staff"
           />
           <MetricCard
             icon={ClipboardList}
             label="Pending Approvals"
-            value={3}
+            value={3} // Placeholder
             subtitle="Team sheets needing review"
           />
         </div>

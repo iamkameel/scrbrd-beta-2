@@ -2,9 +2,17 @@ import { fetchPersonById, fetchSchools } from "@/lib/firestore";
 import { PlayerForm } from "@/components/players/PlayerForm";
 import { updatePlayerAction } from "@/app/actions/playerActions";
 import { updateCoachAction, CoachActionState } from "@/app/actions/coachActions";
+import { updateUmpireAction } from "@/app/actions/umpireActions";
+import { updateScorerAction } from "@/app/actions/scorerActions";
+import { updateMedicalAction } from "@/app/actions/medicalActions";
+import { updateGroundskeeperAction } from "@/app/actions/groundskeeperActions";
 import { notFound } from "next/navigation";
 import { PlayerActionState } from "@/app/actions/playerActions";
 import { CoachForm } from "@/components/coaches/CoachForm";
+import { UmpireForm } from "@/components/umpires/UmpireForm";
+import { ScorerForm } from "@/components/scorers/ScorerForm";
+import { MedicalForm } from "@/components/medical/MedicalForm";
+import { GroundskeeperForm } from "@/components/groundskeepers/GroundskeeperForm";
 import { USER_ROLES } from "@/lib/roles";
 
 export default async function EditPersonPage(props: { params: Promise<{ id: string }> }) {
@@ -51,6 +59,49 @@ export default async function EditPersonPage(props: { params: Promise<{ id: stri
           initialState={{ success: false }}
           initialData={person}
           schools={schools}
+        />
+      ) : person.role === USER_ROLES.UMPIRE ? (
+        <UmpireForm
+          mode="edit"
+          umpireAction={async (prevState, formData) => {
+            'use server';
+            return updateUmpireAction(id, prevState, formData);
+          }}
+          initialState={{ success: false }}
+          initialData={person}
+        />
+      ) : person.role === USER_ROLES.SCORER ? (
+        <ScorerForm
+          mode="edit"
+          scorerAction={async (prevState, formData) => {
+            'use server';
+            return updateScorerAction(id, prevState, formData);
+          }}
+          initialState={{ success: false }}
+          initialData={person}
+        />
+      ) : (person.role === USER_ROLES.DOCTOR || 
+           person.role === USER_ROLES.PHYSIOTHERAPIST || 
+           person.role === USER_ROLES.TRAINER || 
+           person.role === USER_ROLES.FIRST_AID) ? (
+        <MedicalForm
+          mode="edit"
+          medicalAction={async (prevState, formData) => {
+            'use server';
+            return updateMedicalAction(id, prevState, formData);
+          }}
+          initialState={{ success: false }}
+          initialData={person}
+        />
+      ) : person.role === USER_ROLES.GROUNDS_KEEPER ? (
+        <GroundskeeperForm
+          mode="edit"
+          groundskeeperAction={async (prevState, formData) => {
+            'use server';
+            return updateGroundskeeperAction(id, prevState, formData);
+          }}
+          initialState={{ success: false }}
+          initialData={person}
         />
       ) : (
         <PlayerForm 

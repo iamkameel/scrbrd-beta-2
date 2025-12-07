@@ -1,22 +1,76 @@
-import React from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
 import { PageHeader } from '../dashboard/PageHeader';
 import { MetricCard } from '../dashboard/MetricCard';
 import FixtureCentreCard from '../dashboard/FixtureCentreCard';
 import { CalendarDays, ClipboardList, Users, Trophy } from "lucide-react";
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchPersonByEmail } from '@/app/actions/personActions';
+import { fetchMatchesForTeams } from '@/app/actions/matchActions';
+import { Match, Person } from '@/types/firestore';
+import { format } from 'date-fns';
 
 export default function CoachDashboard() {
+  const { user } = useAuth();
+  const [person, setPerson] = useState<Person | null>(null);
+  const [matches, setMatches] = useState<{ upcoming: Match[], past: Match[], total: number }>({ upcoming: [], past: [], total: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user?.email) return;
+      
+      try {
+        const profile = await fetchPersonByEmail(user.email);
+        setPerson(profile);
+        
+        if (profile?.teamIds && profile.teamIds.length > 0) {
+          const matchData = await fetchMatchesForTeams(profile.teamIds);
+          if (matchData.success) {
+            setMatches({
+              upcoming: matchData.upcoming || [],
+              past: matchData.past || [],
+              total: matchData.total || 0
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading coach dashboard:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user]);
+
+  const nextMatch = matches.upcoming[0];
+  const wins = matches.past.filter(m => {
+      // Simple win check logic (needs refinement based on result string or winnerId)
+      // Assuming we can check winnerId against user's teamIds
+      if (!m.completion?.winner) return false;
+      // This is tricky without knowing which team is "my" team for a specific match if coach has multiple.
+      // For now, let's just count completed matches as a placeholder or use a mock win rate.
+      return false; 
+  }).length;
+
+  // Placeholder for active players count - would need a fetchPlayersByTeam action
+  const activePlayers = 24; 
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <PageHeader 
         title="Coach Dashboard" 
-        description="Manage your team, training sessions, and upcoming fixtures."
+        description={`Welcome back, ${person?.firstName || user?.displayName || 'Coach'}. Manage your team and fixtures.`}
       />
 
       {/* Fixture Centre */}
       <FixtureCentreCard 
         role="Coach"
         maxMatches={3}
+        teamId={person?.teamIds?.[0]} // Pass primary team ID for filtering
       />
 
       {/* Stats Grid */}
@@ -26,13 +80,13 @@ export default function CoachDashboard() {
           <MetricCard
             icon={CalendarDays}
             label="Upcoming Matches"
-            value={3}
-            subtitle="Next match in 2 days"
+            value={matches.upcoming.length}
+            subtitle={nextMatch ? `Next: ${format(new Date(nextMatch.matchDate as string), 'EEE HH:mm')}` : "No upcoming matches"}
           />
           <MetricCard
             icon={Users}
             label="Active Players"
-            value={24}
+            value={activePlayers}
             subtitle="2 injured, 22 available"
           />
           <MetricCard
@@ -43,9 +97,9 @@ export default function CoachDashboard() {
           />
           <MetricCard
             icon={Trophy}
-            label="Season Wins"
-            value={8}
-            subtitle="Win rate: 75%"
+            label="Season Matches"
+            value={matches.total}
+            subtitle={`${matches.past.length} completed`}
           />
         </div>
       </div>

@@ -1,7 +1,32 @@
 import { FieldValue, Timestamp, GeoPoint } from 'firebase/firestore';
 
+// Re-export V3 Scoring Types (Event-Sourced Architecture)
+// These types implement the single-source-of-truth scoring engine
+// See /docs/SCHEMA_V3_PROPOSAL.md for architecture details
+export * from './scoring';
+
 // Re-export types from store for convenience (used by transport module)
-export type { Trip, Vehicle } from '@/lib/store';
+// --- Transport Types ---
+export interface Vehicle {
+  vehicleId: string;
+  name: string;
+  type: string;
+  capacity: number;
+  licensePlate: string;
+  status: string;
+}
+
+export interface Trip {
+  tripId: string;
+  vehicleId: string;
+  date: string;
+  destination: string;
+  purpose: string;
+  passengers: number;
+  passengerCount?: number; // Alias for passengers
+  status: string;
+  driverName?: string;
+}
 
 export interface FirestoreEntity {
   id: string;
@@ -390,6 +415,150 @@ export interface CoachProfile {
   coachSeasonStats?: CoachSeasonStats[];
 }
 
+// --- 1.c. Umpire Profile & Attributes ---
+
+export interface UmpireDecisionAttributes {
+  lbwJudgement: number;
+  caughtBehindAccuracy: number;
+  runOutPositioning: number;
+  boundaryCalls: number;
+  drsAccuracy: number; // If applicable
+  consistency: number;
+}
+
+export interface UmpireMatchControlAttributes {
+  playerManagement: number;
+  conflictResolution: number;
+  timeManagement: number;
+  lawApplication: number;
+  communication: number;
+  pressureHandling: number;
+}
+
+export interface UmpirePhysicalAttributes {
+  fitness: number;
+  endurance: number;
+  positioningAgility: number;
+  concentration: number;
+  vision: number;
+}
+
+export interface UmpireProfile {
+  certificationLevel: 'Level 1' | 'Level 2' | 'Level 3' | 'Level 4' | 'Elite Panel' | string;
+  homeAssociation: string;
+  yearsActive: number;
+  preferredFormats: string[];
+
+  // Attribute Blocks
+  decisionAttributes?: UmpireDecisionAttributes;
+  matchControlAttributes?: UmpireMatchControlAttributes;
+  physicalAttributes?: UmpirePhysicalAttributes;
+
+  // Stats & Traits
+  matchesOfficiated?: number;
+  umpireTraits?: string[];
+}
+
+// --- 1.d. Scorer Profile & Attributes ---
+
+export interface ScorerTechnicalAttributes {
+  softwareProficiency: number; // PlayHQ, CricHQ, SCRBRD
+  lawKnowledge: number; // DLS, Penalty runs, etc.
+  linearScoring: number; // Paper scoring ability
+  digitalScoring: number;
+  problemSolving: number;
+}
+
+export interface ScorerProfessionalAttributes {
+  concentration: number;
+  speed: number;
+  accuracy: number;
+  communication: number; // With umpires
+  punctuality: number;
+  collaboration: number;
+}
+
+export interface ScorerProfile {
+  certificationLevel: 'Level 1' | 'Level 2' | 'Level 3' | 'Level 4' | string;
+  preferredMethod: 'Digital' | 'Linear (Paper)' | 'Hybrid';
+  experienceYears: number;
+
+  // Attribute Blocks
+  technicalAttributes?: ScorerTechnicalAttributes;
+  professionalAttributes?: ScorerProfessionalAttributes;
+
+  // Stats & Traits
+  matchesScored?: number;
+  correctionRate?: number; // Lower is better
+  scorerTraits?: string[];
+}
+
+// --- 1.e. Medical Profile & Attributes ---
+
+export interface MedicalClinicalAttributes {
+  diagnosisAccuracy: number;
+  tapingStrapping: number;
+  emergencyResponse: number;
+  massageTherapy: number;
+  injuryPrevention: number;
+}
+
+export interface MedicalRehabAttributes {
+  returnToPlayPlanning: number;
+  strengthConditioning: number;
+  loadManagement: number;
+  rehabProgramDesign: number;
+  psychologicalSupport: number;
+}
+
+export interface MedicalProfile {
+  qualification: string; // e.g. "BSc Physiotherapy"
+  registrationNumber: string; // Professional body reg
+  specializations: string[]; // e.g. "Shoulder", "Knee"
+  experienceYears: number;
+
+  // Attribute Blocks
+  clinicalAttributes?: MedicalClinicalAttributes;
+  rehabAttributes?: MedicalRehabAttributes;
+
+  // Stats & Traits
+  patientsTreated?: number;
+  medicalTraits?: string[];
+}
+
+// --- 1.f. Groundskeeper Profile & Attributes ---
+
+export interface GroundskeeperPitchAttributes {
+  paceGeneration: number;
+  spinPromotion: number;
+  durability: number;
+  evenness: number;
+  moistureControl: number;
+}
+
+export interface GroundskeeperOutfieldAttributes {
+  drainageManagement: number;
+  grassHealth: number;
+  boundaryMarking: number;
+  rollering: number;
+  mowing: number;
+}
+
+export interface GroundskeeperProfile {
+  experienceYears: number;
+  machineryLicenses: string[]; // e.g. "Heavy Roller", "Mower"
+  primaryVenues: string[]; // Field IDs they manage
+
+  // Attribute Blocks
+  pitchAttributes?: GroundskeeperPitchAttributes;
+  outfieldAttributes?: GroundskeeperOutfieldAttributes;
+
+  // Stats & Traits
+  matchesPrepared?: number;
+  avgPitchRating?: number; // From captain/umpire feedback
+  groundskeeperTraits?: string[];
+}
+
 // Legacy SkillMatrix (kept for backward compatibility, can be derived from above)
 export interface SkillMatrix {
   battingTechnique?: number;
@@ -438,7 +607,20 @@ export interface Person extends FirestoreEntity {
   // FM-Style Coach Profile
   coachProfile?: CoachProfile;
 
+  // FM-Style Umpire Profile
+  umpireProfile?: UmpireProfile;
+
+  // FM-Style Scorer Profile
+  scorerProfile?: ScorerProfile;
+
+  // FM-Style Medical Profile
+  medicalProfile?: MedicalProfile;
+
+  // FM-Style Groundskeeper Profile
+  groundskeeperProfile?: GroundskeeperProfile;
+
   // Cricket Attributes (Legacy/Top-level accessors)
+  primaryRole?: string;
   battingStyle?: string;
   bowlingStyle?: string;
   battingHand?: 'RHB' | 'LHB';
@@ -489,6 +671,19 @@ export interface Person extends FirestoreEntity {
     bowlingAverage?: number;
     strikeRate?: number;
     economy?: number;
+  };
+
+  // Guardian specific
+  childrenIds?: string[]; // IDs of players this guardian manages
+
+  // Player specific
+  guardianIds?: string[]; // IDs of guardians for this player
+
+  // Spectator specific
+  following?: {
+    teamIds?: string[];
+    matchIds?: string[];
+    playerIds?: string[];
   };
 }
 
@@ -596,6 +791,7 @@ export interface Match extends FirestoreEntity {
   venue?: string;
   location?: string;
   division?: string;
+  divisionId?: string;
   leagueId?: string;
   seasonId?: string;
 
@@ -611,6 +807,8 @@ export interface Match extends FirestoreEntity {
   result?: string; // e.g., "Team A won by 5 wickets"
   tossWinner?: string;
   tossChoice?: 'bat' | 'field';
+  tossWinnerId?: string;
+  tossDecision?: 'bat' | 'bowl';
   matchType?: 'T20' | 'ODI' | 'Test' | 'T10' | 'Other';
   overs?: number;
 
@@ -724,7 +922,7 @@ export interface Umpire extends FirestoreEntity {
   phoneNumber?: string;
 }
 
-export interface ScorerProfile extends FirestoreEntity {
+export interface LegacyScorerProfile extends FirestoreEntity {
   userId: string;
   organisationId: string;
   certificationLevel?: string;

@@ -32,6 +32,7 @@ import { UserService } from "@/lib/userService";
 const InvitationSchema = z.object({
   email: z.string().email("Invalid email address"),
   role: z.string().min(1, "Role is required"),
+  roles: z.array(z.string()).optional(),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   message: z.string().optional(),
@@ -46,12 +47,14 @@ interface InviteUserDialogProps {
 
 export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>(["Player"]);
 
   const form = useForm<InvitationInput>({
     resolver: zodResolver(InvitationSchema),
     defaultValues: {
       email: "",
       role: "Player",
+      roles: ["Player"],
       firstName: "",
       lastName: "",
       message: "",
@@ -62,11 +65,12 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
     setIsSubmitting(true);
     
     try {
-      await UserService.inviteUser(data.email, data.role);
+      await UserService.inviteUser(data.email, data.role, selectedRoles);
       toast.success(`Invitation sent to ${data.email}!`);
       
       // Reset form and close dialog
       form.reset();
+      setSelectedRoles(["Player"]);
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to invite user:", error);
@@ -76,9 +80,32 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
     }
   };
 
+  const handleRoleChange = (role: string) => {
+    form.setValue("role", role);
+    // Ensure primary role is in selected roles
+    if (!selectedRoles.includes(role)) {
+      setSelectedRoles([role, ...selectedRoles]);
+    }
+  };
+
+  const toggleRole = (role: string, checked: boolean) => {
+    const primaryRole = form.watch("role");
+    
+    if (checked) {
+      setSelectedRoles([...selectedRoles, role]);
+    } else {
+      // Don't allow removing primary role
+      if (role === primaryRole) {
+        toast.error("Cannot remove primary role");
+        return;
+      }
+      setSelectedRoles(selectedRoles.filter(r => r !== role));
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
@@ -123,13 +150,13 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role">Role *</Label>
+            <Label htmlFor="role">Primary Role *</Label>
             <Select
               value={form.watch("role")}
-              onValueChange={(value) => form.setValue("role", value)}
+              onValueChange={handleRoleChange}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select role" />
+                <SelectValue placeholder="Select primary role" />
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(ROLE_GROUPS).map(([group, roles]) => (
@@ -147,6 +174,43 @@ export function InviteUserDialog({ open, onOpenChange }: InviteUserDialogProps) 
             {form.formState.errors.role && (
               <p className="text-sm text-destructive">{form.formState.errors.role.message}</p>
             )}
+            <p className="text-xs text-muted-foreground">
+              The primary role determines default permissions and UI behavior
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Additional Roles</Label>
+            <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-3">
+              {Object.entries(ROLE_GROUPS).map(([group, roles]) => (
+                <div key={group} className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground">{group}</p>
+                  <div className="space-y-1.5 pl-2">
+                    {roles.map((role) => (
+                      <div key={role} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`invite-role-${role}`}
+                          checked={selectedRoles.includes(role)}
+                          onChange={(e) => toggleRole(role, e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300"
+                          disabled={role === form.watch("role")}
+                        />
+                        <label
+                          htmlFor={`invite-role-${role}`}
+                          className={`text-sm ${role === form.watch("role") ? 'font-semibold' : ''}`}
+                        >
+                          {role} {role === form.watch("role") && '(Primary)'}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Select all roles this user should have access to
+            </p>
           </div>
 
           <div className="space-y-2">

@@ -3,15 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Clock, User } from "lucide-react";
 
-interface CommentaryItem {
-  over: number;
-  ball: number;
-  description: string;
-  runs: number;
-  timestamp: string;
-  bowler?: string;
-  batsman?: string;
-}
+import { CommentaryItem } from "@/lib/commentaryUtils";
 
 interface BallByBallCommentaryProps {
   commentary: CommentaryItem[];

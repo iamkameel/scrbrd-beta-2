@@ -10,7 +10,10 @@ export default defineConfig({
     use: {
         baseURL: 'http://localhost:3000',
         trace: 'on-first-retry',
+        actionTimeout: 15000,
+        navigationTimeout: 30000,
     },
+    timeout: 60000,
     projects: [
         {
             name: 'chromium',

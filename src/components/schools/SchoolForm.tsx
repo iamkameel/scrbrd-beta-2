@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Save, CheckCircle2, AlertTriangle, GraduationCap, Palette, Shield, Image as ImageIcon } from "lucide-react";
+import { Loader2, Save, CheckCircle2, AlertTriangle, GraduationCap, Palette, Shield, Image as ImageIcon, X } from "lucide-react";
+import { storage } from "@/lib/firebase";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { useFormStatus } from "react-dom";
 import { schoolSchema } from "@/lib/validations/schoolSchema";
 import { z } from "zod";
@@ -63,6 +65,59 @@ export function SchoolForm({ mode, schoolAction, initialState, initialData = {} 
   const [schoolName, setSchoolName] = useState(initialData.name || '');
   const [abbreviation, setAbbreviation] = useState(initialData.abbreviation || '');
   const [logoUrl, setLogoUrl] = useState(initialData.logoUrl || '');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setClientErrors(prev => ({ ...prev, logoUrl: 'Please upload an image file' }));
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setClientErrors(prev => ({ ...prev, logoUrl: 'Image size must be less than 2MB' }));
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+    setClientErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors.logoUrl;
+      return newErrors;
+    });
+
+    try {
+      const storageRef = ref(storage, `schools/${Date.now()}_${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on('state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        },
+        (error) => {
+          console.error("Upload error:", error);
+          setClientErrors(prev => ({ ...prev, logoUrl: 'Failed to upload image' }));
+          setIsUploading(false);
+        },
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          setLogoUrl(downloadURL);
+          setIsUploading(false);
+        }
+      );
+    } catch (error: any) {
+      console.error("Error starting upload:", error);
+      setClientErrors(prev => ({ ...prev, logoUrl: 'Failed to start upload' }));
+      setIsUploading(false);
+    }
+  };
 
   // Client-side validation
   const validateField = (name: string, value: string) => {
@@ -76,7 +131,7 @@ export function SchoolForm({ mode, schoolAction, initialState, initialData = {} 
           return newErrors;
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         setClientErrors(prev => ({
           ...prev,
@@ -355,23 +410,59 @@ export function SchoolForm({ mode, schoolAction, initialState, initialData = {} 
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="logoUrl">Logo URL</Label>
-                  <div className="flex gap-2">
-                    <Input 
-                      id="logoUrl" 
-                      name="logoUrl" 
-                      defaultValue={initialData.logoUrl}
-                      onChange={(e) => setLogoUrl(e.target.value)}
-                      onBlur={(e) => validateField('logoUrl', e.target.value)}
-                      placeholder="https://example.com/logo.png"
-                    />
+                  <Label htmlFor="logoUpload">School Logo</Label>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-4">
+                      {logoUrl && (
+                        <div className="relative w-16 h-16 border rounded-lg overflow-hidden bg-muted shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img 
+                            src={logoUrl} 
+                            alt="Logo Preview" 
+                            className="w-full h-full object-contain" 
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setLogoUrl('')}
+                            className="absolute top-0 right-0 bg-destructive text-destructive-foreground p-0.5 rounded-bl-md hover:bg-destructive/90"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <Input
+                          id="logoUpload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          disabled={isUploading}
+                          className="cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                    
+                    {isUploading && (
+                      <div className="space-y-1">
+                        <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary transition-all duration-300" 
+                            style={{ width: `${uploadProgress}%` }} 
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground text-right">{Math.round(uploadProgress)}%</p>
+                      </div>
+                    )}
+                    
+                    <input type="hidden" name="logoUrl" value={logoUrl} />
+                    
+                    <p className="text-xs text-muted-foreground">
+                      Upload a PNG or JPG file (max 2MB).
+                    </p>
+                    {clientErrors.logoUrl && (
+                      <p className="text-sm text-destructive">{clientErrors.logoUrl}</p>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Enter a URL for the school logo.
-                  </p>
-                  {clientErrors.logoUrl && (
-                    <p className="text-sm text-destructive">{clientErrors.logoUrl}</p>
-                  )}
                 </div>
               </div>
 

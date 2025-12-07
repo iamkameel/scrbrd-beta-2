@@ -124,7 +124,7 @@ export function PlayerSelectionDialog({
           <div className="space-y-2">
             <Label>Striker (On Strike) *</Label>
             <Select value={strikerId} onValueChange={setStrikerId}>
-              <SelectTrigger>
+              <SelectTrigger data-testid="select-striker">
                 <SelectValue placeholder="Select striker" />
               </SelectTrigger>
               <SelectContent>
@@ -141,7 +141,7 @@ export function PlayerSelectionDialog({
           <div className="space-y-2">
             <Label>Non-Striker *</Label>
             <Select value={nonStrikerId} onValueChange={setNonStrikerId}>
-              <SelectTrigger>
+              <SelectTrigger data-testid="select-non-striker">
                 <SelectValue placeholder="Select non-striker" />
               </SelectTrigger>
               <SelectContent>
@@ -162,7 +162,7 @@ export function PlayerSelectionDialog({
           <div className="space-y-2">
             <Label>Bowler *</Label>
             <Select value={bowlerId} onValueChange={setBowlerId}>
-              <SelectTrigger>
+              <SelectTrigger data-testid="select-bowler">
                 <SelectValue placeholder="Select bowler" />
               </SelectTrigger>
               <SelectContent>

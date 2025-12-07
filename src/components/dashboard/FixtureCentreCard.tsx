@@ -9,9 +9,11 @@ import { Calendar, Trophy, Activity, ArrowRight, Clock } from "lucide-react";
 import Link from "next/link";
 import { Match } from "@/types/firestore";
 import { 
-  getLiveMatches, 
-  getRecentResults, 
-  getUpcomingFixtures, 
+  getLiveMatchesAction, 
+  getRecentMatchesAction, 
+  getUpcomingMatchesAction 
+} from "@/app/actions/matchActions";
+import { 
   filterMatchesByRole,
   getMatchStatusColor,
   getMatchStatusText,
@@ -59,37 +61,43 @@ export default function FixtureCentreCard({
     const assignedMatchesStr = JSON.stringify(assignedMatches);
 
     useEffect(() => {
-    const fetchMatches = () => {
+    const fetchMatches = async () => {
       setLoading(true);
       
-      // Fetch all categories
-      const live = getLiveMatches();
-      const recent = getRecentResults(undefined, maxMatches * 2); // Fetch more to filter
-      const upcoming = getUpcomingFixtures(undefined, maxMatches * 2);
+      try {
+        // Fetch all categories using Server Actions
+        const [live, recent, upcoming] = await Promise.all([
+          getLiveMatchesAction(),
+          getRecentMatchesAction(maxMatches * 2),
+          getUpcomingMatchesAction(maxMatches * 2)
+        ]);
 
-      // Apply role-based filtering
-      const filteredLive = filterMatchesByRole(live, role, roleContext);
-      const filteredRecent = filterMatchesByRole(recent, role, roleContext).slice(0, maxMatches);
-      const filteredUpcoming = filterMatchesByRole(upcoming, role, roleContext).slice(0, maxMatches);
+        // Apply role-based filtering
+        const filteredLive = filterMatchesByRole(live, role, roleContext);
+        const filteredRecent = filterMatchesByRole(recent, role, roleContext).slice(0, maxMatches);
+        const filteredUpcoming = filterMatchesByRole(upcoming, role, roleContext).slice(0, maxMatches);
 
-      setLiveMatches(filteredLive);
-      setRecentMatches(filteredRecent);
-      setUpcomingMatches(filteredUpcoming);
-      
-      // Auto-switch tab if no live matches but we have upcoming/recent
-      if (filteredLive.length === 0 && activeTab === 'live') {
-        if (filteredUpcoming.length > 0) setActiveTab('upcoming');
-        else if (filteredRecent.length > 0) setActiveTab('results');
+        setLiveMatches(filteredLive);
+        setRecentMatches(filteredRecent);
+        setUpcomingMatches(filteredUpcoming);
+        
+        // Auto-switch tab if no live matches but we have upcoming/recent
+        if (filteredLive.length === 0 && activeTab === 'live') {
+          if (filteredUpcoming.length > 0) setActiveTab('upcoming');
+          else if (filteredRecent.length > 0) setActiveTab('results');
+        }
+      } catch (error) {
+        console.error('Error fetching matches:', error);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     fetchMatches();
 
     // Auto-refresh live matches every 30 seconds
-    const interval = setInterval(() => {
-      const live = getLiveMatches();
+    const interval = setInterval(async () => {
+      const live = await getLiveMatchesAction();
       const filteredLive = filterMatchesByRole(live, role, roleContext);
       setLiveMatches(filteredLive);
     }, 30000);

@@ -74,10 +74,10 @@ export function SmartDailyBriefing({ userName, role }: SmartDailyBriefingProps) 
             </Badge>
           </div>
           <CardTitle className="text-2xl text-indigo-950 dark:text-indigo-100">
-            Good {new Date().getHours() < 12 ? "Morning" : "Afternoon"}, {userName || "Coach"}!
+            Good {new Date().getHours() < 12 ? "Morning" : "Afternoon"}, {userName || "User"}!
           </CardTitle>
           <CardDescription className="text-indigo-900/70 dark:text-indigo-200/70 text-base">
-            Here is what&apos;s happening in your cricket world today.
+            {role && <span className="font-semibold">{role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} Dashboard</span>} - Here&apos;s what&apos;s happening in your cricket world today.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -90,13 +90,17 @@ export function SmartDailyBriefing({ userName, role }: SmartDailyBriefingProps) 
           )}
           
           <div className="flex gap-4">
-            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20">
-              <Activity className="mr-2 h-4 w-4" />
-              View Full Report
-            </Button>
-            <Button variant="outline" className="border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
-              Schedule Match
-            </Button>
+            <Link href="/analytics">
+              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20">
+                <Activity className="mr-2 h-4 w-4" />
+                View Full Report
+              </Button>
+            </Link>
+            <Link href="/matches/add">
+              <Button variant="outline" className="border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
+                Schedule Match
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>

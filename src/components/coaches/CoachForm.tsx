@@ -21,6 +21,7 @@ import { USER_ROLES, ROLE_GROUPS } from "@/lib/roles";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CoachTraitsManager, CoachSeasonStatsManager } from "./CoachArrayFields";
 import { Textarea } from "@/components/ui/textarea";
+import { SchoolTeamAssignment } from "@/components/common/SchoolTeamAssignment";
 
 interface CoachFormProps {
   mode: 'create' | 'edit';
@@ -334,20 +335,13 @@ export function CoachForm({ mode, coachAction, initialState, initialData = {}, s
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="schoolId">School *</Label>
-                <Select name="schoolId" defaultValue={initialData.schoolId} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select School" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {schools.map(school => (
-                      <SelectItem key={school.id} value={school.id}>
-                        {school.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="md:col-span-3">
+                <SchoolTeamAssignment 
+                  initialSchools={initialData.assignedSchools || (initialData.schoolId ? [initialData.schoolId] : [])}
+                  initialTeams={initialData.teamIds || []}
+                />
+                {/* Fallback for legacy schoolId if needed by other components, though SchoolTeamAssignment handles assignedSchools */}
+                <input type="hidden" name="schoolId" value={initialData.schoolId || ''} /> 
               </div>
 
               <div className="space-y-2">

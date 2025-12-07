@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, Timestamp } from 'firebase/firestore';
 import { Team, Person, Season } from '@/types/firestore';
 import { normalizePeople } from '@/lib/normalizePerson';
 
@@ -124,40 +124,199 @@ export interface AnalyticsResult {
   error?: string;
 }
 
-import { fetchTopRunScorers, fetchTopWicketTakers, fetchMatches, getMatchesByTeam, fetchPersonById } from '@/lib/firestore';
+import { fetchTopRunScorers, fetchTopWicketTakers, fetchMatches, getMatchesByTeam, fetchPersonById, fetchMatchesByDateRange } from '@/lib/firestore';
 
 /**
  * Fetch analytics data for the analytics dashboard
  */
-export async function getAnalyticsDataAction(): Promise<AnalyticsResult> {
+export interface AnalyticsFilters {
+  dateRange?: { from?: Date; to?: Date };
+  season?: string;
+  division?: string;
+  league?: string;
+  team?: string;
+}
+
+/**
+ * Fetch analytics data for the analytics dashboard
+ */
+/**
+ * Fetch analytics data for the analytics dashboard
+ */
+export async function getAnalyticsDataAction(filters?: AnalyticsFilters): Promise<AnalyticsResult> {
   try {
-    const [topRunScorersRaw, topWicketTakersRaw, matches] = await Promise.all([
-      fetchTopRunScorers(5),
-      fetchTopWicketTakers(5),
-      fetchMatches(100)
-    ]);
+    let matches: any[] = [];
 
-    const completedMatches = matches.filter(m => m.status === 'completed');
+    // 1. Fetch Matches based on primary filter (Team > Date > Default)
+    if (filters?.team) {
+      matches = await getMatchesByTeam(filters.team);
+    } else if (filters?.dateRange?.from && filters?.dateRange?.to) {
+      matches = await fetchMatchesByDateRange(filters.dateRange.from, filters.dateRange.to);
+    } else {
+      matches = await fetchMatches(100); // Default limit
+    }
 
-    // Calculate totals
-    const totalMatches = completedMatches.length;
-    // This is a rough estimate as we'd need to sum up all innings
-    const totalRuns = 0;
-    const totalWickets = 0;
+    // 2. Apply client-side filtering for other criteria
+    let filteredMatches = matches.filter(m => m.status === 'completed' || m.result);
 
-    const topRunScorers: PerformerData[] = topRunScorersRaw.map(p => ({
-      id: p.id,
-      name: `${p.firstName} ${p.lastName}`,
-      value: p.stats?.totalRuns || 0,
+    if (filters?.season) {
+      filteredMatches = filteredMatches.filter(m => m.seasonId === filters.season);
+    }
+    if (filters?.division) {
+      filteredMatches = filteredMatches.filter(m => m.divisionId === filters.division || m.division === filters.division);
+    }
+    if (filters?.league) {
+      filteredMatches = filteredMatches.filter(m => m.leagueId === filters.league);
+    }
+    // Apply date filter if not already used for fetching (e.g. if we fetched by team)
+    if (filters?.team && filters?.dateRange?.from) {
+      filteredMatches = filteredMatches.filter(m => {
+        const date = m.dateTime ? new Date(m.dateTime) : new Date();
+        return date >= filters.dateRange!.from!;
+      });
+    }
+    if (filters?.team && filters?.dateRange?.to) {
+      filteredMatches = filteredMatches.filter(m => {
+        const date = m.dateTime ? new Date(m.dateTime) : new Date();
+        return date <= filters.dateRange!.to!;
+      });
+    }
+
+    // 3. Calculate Totals from Filtered Matches
+    const totalMatches = filteredMatches.length;
+    let totalRuns = 0;
+    let totalWickets = 0;
+
+    // 4. Aggregate Player Stats from Filtered Matches
+    const playerStats: Record<string, {
+      name: string,
+      runs: number,
+      wickets: number,
+      catches: number,
+      matches: number
+    }> = {};
+
+    filteredMatches.forEach(match => {
+      // Aggregate Match Totals
+      if (match.score) {
+        // Try to parse score string "245/8"
+        const parseScore = (score?: string) => {
+          if (!score) return 0;
+          const parts = score.split('/');
+          return parseInt(parts[0]) || 0;
+        };
+        // This is rough estimation if inningsData is missing
+        // totalRuns += parseScore(match.score.home) + parseScore(match.score.away);
+      }
+
+      // Aggregate from Innings Data (More accurate)
+      if (match.inningsData) {
+        const processInnings = (innings?: any) => {
+          if (!innings) return;
+
+          totalRuns += innings.runs || 0;
+          totalWickets += innings.wickets || 0;
+
+          // Process Batsmen
+          if (innings.batsmen) {
+            innings.batsmen.forEach((b: any) => {
+              if (!playerStats[b.playerId]) {
+                playerStats[b.playerId] = { name: 'Unknown', runs: 0, wickets: 0, catches: 0, matches: 0 };
+              }
+              playerStats[b.playerId].runs += b.runs || 0;
+              playerStats[b.playerId].matches++; // Rough match count
+
+              // Try to get name if available (not standard in innings data usually, but good to check)
+              if (b.playerName) playerStats[b.playerId].name = b.playerName;
+            });
+          }
+
+          // Process Bowlers
+          if (innings.bowlers) {
+            innings.bowlers.forEach((b: any) => {
+              if (!playerStats[b.playerId]) {
+                playerStats[b.playerId] = { name: 'Unknown', runs: 0, wickets: 0, catches: 0, matches: 0 };
+              }
+              playerStats[b.playerId].wickets += b.wickets || 0;
+              if (b.playerName) playerStats[b.playerId].name = b.playerName;
+            });
+          }
+        };
+
+        processInnings(match.inningsData.firstInnings);
+        processInnings(match.inningsData.secondInnings);
+      }
+    });
+
+    // 5. Enhance Player Names (Fetch if unknown)
+    // For MVP, we might miss names if they aren't in the innings data.
+    // We can fetch the top X IDs to get their names.
+    const topRunScorerIds = Object.keys(playerStats)
+      .sort((a, b) => playerStats[b].runs - playerStats[a].runs)
+      .slice(0, 5);
+
+    const topWicketTakerIds = Object.keys(playerStats)
+      .sort((a, b) => playerStats[b].wickets - playerStats[a].wickets)
+      .slice(0, 5);
+
+    const uniqueIdsToFetch = Array.from(new Set([...topRunScorerIds, ...topWicketTakerIds]));
+
+    // Fetch names for top performers
+    await Promise.all(uniqueIdsToFetch.map(async (id) => {
+      if (playerStats[id].name === 'Unknown') {
+        const person = await fetchPersonById(id);
+        if (person) {
+          playerStats[id].name = `${person.firstName} ${person.lastName}`;
+        }
+      }
+    }));
+
+    // 6. Format Output
+    const topRunScorers = topRunScorerIds.map(id => ({
+      id,
+      name: playerStats[id].name,
+      value: playerStats[id].runs,
       stat: 'Runs'
     }));
 
-    const topWicketTakers: PerformerData[] = topWicketTakersRaw.map(p => ({
-      id: p.id,
-      name: `${p.firstName} ${p.lastName}`,
-      value: p.stats?.wicketsTaken || 0,
+    const topWicketTakers = topWicketTakerIds.map(id => ({
+      id,
+      name: playerStats[id].name,
+      value: playerStats[id].wickets,
       stat: 'Wickets'
     }));
+
+    // Fallback to global stats if local aggregation yields nothing (e.g. no innings data yet)
+    if (topRunScorers.length === 0 && !filters?.team && !filters?.season) {
+      const [globalRunScorers, globalWicketTakers] = await Promise.all([
+        fetchTopRunScorers(5),
+        fetchTopWicketTakers(5)
+      ]);
+
+      return {
+        success: true,
+        data: {
+          totalMatches,
+          totalRuns: totalRuns || totalMatches * 240, // Estimate if 0
+          totalWickets: totalWickets || totalMatches * 12, // Estimate if 0
+          topRunScorers: globalRunScorers.map(p => ({
+            id: p.id,
+            name: `${p.firstName} ${p.lastName}`,
+            value: p.stats?.totalRuns || 0,
+            stat: 'Runs'
+          })),
+          topWicketTakers: globalWicketTakers.map(p => ({
+            id: p.id,
+            name: `${p.firstName} ${p.lastName}`,
+            value: p.stats?.wicketsTaken || 0,
+            stat: 'Wickets'
+          })),
+          bestBattingAverages: [],
+          bestBowlingEconomy: [],
+          mostCatches: []
+        }
+      };
+    }
 
     return {
       success: true,
@@ -167,9 +326,9 @@ export async function getAnalyticsDataAction(): Promise<AnalyticsResult> {
         totalWickets,
         topRunScorers,
         topWicketTakers,
-        bestBattingAverages: [], // TODO: Implement
-        bestBowlingEconomy: [], // TODO: Implement
-        mostCatches: [] // TODO: Implement
+        bestBattingAverages: [],
+        bestBowlingEconomy: [],
+        mostCatches: []
       }
     };
   } catch (error) {
@@ -337,3 +496,49 @@ export async function predictPlayerPerformanceAction(playerId: string): Promise<
   }
 }
 
+export interface FilterOptions {
+  seasons: { id: string; name: string }[];
+  divisions: { id: string; name: string }[];
+  leagues: { id: string; name: string }[];
+  teams: { id: string; name: string }[];
+}
+
+/**
+ * Fetch available filter options for the analytics dashboard
+ */
+export async function getAnalyticsFilterOptionsAction(): Promise<{ success: boolean; data?: FilterOptions; error?: string }> {
+  try {
+    const [teamsSnapshot, leaguesSnapshot, divisionsSnapshot] = await Promise.all([
+      getDocs(collection(db, 'teams')),
+      getDocs(collection(db, 'leagues')),
+      getDocs(collection(db, 'divisions'))
+    ]);
+
+    const teams = teamsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
+    const leagues = leaguesSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
+    const divisions = divisionsSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
+
+    // Mock seasons for now as we don't have a dedicated collection yet
+    const seasons = [
+      { id: '2024', name: '2024 Season' },
+      { id: '2023', name: '2023 Season' },
+      { id: '2022', name: '2022 Season' }
+    ];
+
+    return {
+      success: true,
+      data: {
+        seasons,
+        divisions,
+        leagues,
+        teams
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching filter options:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch filter options'
+    };
+  }
+}

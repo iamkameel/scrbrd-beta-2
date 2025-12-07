@@ -2,6 +2,7 @@
 
 import { store } from "@/lib/store";
 import { setDocument, fetchCollection } from "@/lib/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -50,57 +51,57 @@ export async function migrateSampleDataAction() {
   try {
     // 1. Schools
     for (const school of store.schools) {
-      await setDocument('schools', school.schoolId, school);
+      await adminDb.collection('schools').doc(school.schoolId).set(school);
     }
 
     // 2. Fields
     for (const field of store.fields) {
-      await setDocument('fields', field.fieldId, field);
+      await adminDb.collection('fields').doc(field.fieldId).set(field);
     }
 
     // 3. Teams
     for (const team of store.teams) {
-      await setDocument('teams', team.teamId, team);
+      await adminDb.collection('teams').doc(team.teamId).set(team);
     }
 
     // 4. People (Players, Coaches, etc.)
     for (const person of store.people) {
-      await setDocument('people', person.personId, person);
+      await adminDb.collection('people').doc(person.personId).set(person);
     }
 
     // 5. Matches
     for (const match of store.matches) {
-      await setDocument('matches', match.matchId, match);
+      await adminDb.collection('matches').doc(match.matchId).set(match);
     }
 
     // 6. Divisions
     for (const division of store.divisions) {
-      await setDocument('divisions', division.divisionId, division);
+      await adminDb.collection('divisions').doc(division.divisionId).set(division);
     }
 
     // 7. Equipment
     for (const item of store.equipment) {
-      await setDocument('equipment', item.itemId, item);
+      await adminDb.collection('equipment').doc(item.itemId).set(item);
     }
 
     // 8. Seasons
     for (const season of store.seasons) {
-      await setDocument('seasons', season.seasonId, season);
+      await adminDb.collection('seasons').doc(season.seasonId).set(season);
     }
 
     // 9. Staff Profiles
     for (const staff of store.staffProfiles) {
-      await setDocument('staffProfiles', staff.staffId, staff);
+      await adminDb.collection('staffProfiles').doc(staff.staffId).set(staff);
     }
 
     // 10. News Posts
     for (const news of store.newsPosts) {
-      await setDocument('newsPosts', news.newsId, news);
+      await adminDb.collection('newsPosts').doc(news.newsId).set(news);
     }
 
     // 11. School Stats
     for (const stats of store.schoolStats) {
-      await setDocument('schoolStats', stats.statsId, stats);
+      await adminDb.collection('schoolStats').doc(stats.statsId).set(stats);
     }
 
     console.log("Migration complete.");

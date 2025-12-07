@@ -316,6 +316,13 @@ export async function fetchCoachesBySchool(schoolId: string) {
 }
 
 
+export async function getPlayersByTeam(teamId: string) {
+  return fetchCollection<Person>('people', [
+    where('teamIds', 'array-contains', teamId),
+    orderBy('lastName')
+  ]);
+}
+
 export async function getRosterByTeam(teamId: string) {
   return fetchCollection<RosterMember>('roster', [
     where('teamId', '==', teamId)
@@ -377,3 +384,47 @@ export async function fetchActiveSeason() {
   return seasons[0] || null;
 }
 
+
+export async function findUserByEmail(email: string) {
+  return fetchCollection<any>('users', [
+    where('email', '==', email)
+  ]);
+}
+
+export async function fetchPlayersForMatch(homeTeamId: string, awayTeamId: string) {
+  // Fetch players who belong to either team
+  // Note: 'teamIds' is an array field in Person
+  return fetchCollection<Person>('people', [
+    where('teamIds', 'array-contains-any', [homeTeamId, awayTeamId])
+  ]);
+}
+
+export async function fetchUmpires() {
+  return fetchCollection<Person>('people', [
+    where('role', '==', 'Umpire'),
+    orderBy('lastName')
+  ]);
+}
+
+export async function fetchScorers() {
+  return fetchCollection<Person>('people', [
+    where('role', '==', 'Scorer'),
+    orderBy('lastName')
+  ]);
+}
+
+export async function getMatchesByOfficial(officialId: string) {
+  return fetchCollection<Match>('matches', [
+    where('umpires', 'array-contains', officialId),
+    orderBy('matchDate', 'desc'),
+    limit(10)
+  ]);
+}
+
+export async function getMatchesByScorer(scorerId: string) {
+  return fetchCollection<Match>('matches', [
+    where('scorer', '==', scorerId),
+    orderBy('matchDate', 'desc'),
+    limit(10)
+  ]);
+}

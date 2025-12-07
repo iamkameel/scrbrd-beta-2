@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/Badge";
 import { Search, Briefcase, CalendarClock, FilePenLine, Loader2 } from "lucide-react";
-import { fetchScorers, type ScorerProfile } from '@/lib/scorer-data';
+import { fetchScorers } from '@/lib/firestore';
+import { Person } from '@/types/firestore';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,11 +30,11 @@ const CompactStatDisplay: React.FC<{ label: string; value: string | number | und
 );
 
 export default function ScorerProfilesPage() {
-  const [scorers, setScorers] = React.useState<ScorerProfile[]>([]);
+  const [scorers, setScorers] = React.useState<Person[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [levelFilter, setLevelFilter] = React.useState<string>("all");
-  const [availabilityFilter, setAvailabilityFilter] = React.useState<string>("all");
+  const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
   React.useEffect(() => {
     const loadScorers = async () => {
@@ -50,32 +51,33 @@ export default function ScorerProfilesPage() {
   }, []);
 
   const uniqueLevels = React.useMemo(() => {
-    const levels = new Set(scorers.map(scorer => scorer.scoringLevel));
+    const levels = new Set(scorers.map(s => s.scorerProfile?.certificationLevel).filter(Boolean));
     return ["all", ...Array.from(levels).sort()];
   }, [scorers]);
 
-  const uniqueAvailabilities = React.useMemo(() => {
-    const availabilities = new Set(scorers.map(scorer => scorer.availability));
-    return ["all", ...Array.from(availabilities).sort()];
+  const uniqueStatuses = React.useMemo(() => {
+    const statuses = new Set(scorers.map(s => s.status).filter(Boolean));
+    return ["all", ...Array.from(statuses).sort()];
   }, [scorers]);
 
   const filteredScorers = React.useMemo(() => {
     return scorers.filter(scorer => {
+      const name = scorer.displayName || `${scorer.firstName} ${scorer.lastName}`;
       const searchLower = searchTerm.toLowerCase();
       const matchesSearch =
         searchTerm === "" ||
-        scorer.name.toLowerCase().includes(searchLower) ||
-        (scorer.associatedSchool && scorer.associatedSchool.toLowerCase().includes(searchLower));
+        name.toLowerCase().includes(searchLower) ||
+        (scorer.schoolId && scorer.schoolId.toLowerCase().includes(searchLower)); // Assuming schoolId is relevant for affiliation search
 
       const matchesLevel =
-        levelFilter === "all" || scorer.scoringLevel === levelFilter;
+        levelFilter === "all" || scorer.scorerProfile?.certificationLevel === levelFilter;
 
-      const matchesAvailability =
-        availabilityFilter === "all" || scorer.availability === availabilityFilter;
+      const matchesStatus =
+        statusFilter === "all" || scorer.status === statusFilter;
 
-      return matchesSearch && matchesLevel && matchesAvailability;
+      return matchesSearch && matchesLevel && matchesStatus;
     });
-  }, [scorers, searchTerm, levelFilter, availabilityFilter]);
+  }, [scorers, searchTerm, levelFilter, statusFilter]);
 
   if (loading) {
     return (
@@ -94,7 +96,7 @@ export default function ScorerProfilesPage() {
             <FilePenLine className="h-6 w-6 text-[hsl(var(--primary))]" />
             Scorer Profiles
           </CardTitle>
-          <CardDescription>Manage and view profiles of match scorers. Filter by certification and availability.</CardDescription>
+          <CardDescription>Manage and view profiles of match scorers. Filter by certification and status.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -120,7 +122,7 @@ export default function ScorerProfilesPage() {
                   <DropdownMenuSeparator />
                   <DropdownMenuRadioGroup value={levelFilter} onValueChange={setLevelFilter}>
                     {uniqueLevels.map(level => (
-                      <DropdownMenuRadioItem key={level} value={level}>
+                      <DropdownMenuRadioItem key={level as string} value={level as string}>
                         {level === "all" ? "All Levels" : level}
                       </DropdownMenuRadioItem>
                     ))}
@@ -132,16 +134,16 @@ export default function ScorerProfilesPage() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex-grow sm:flex-grow-0">
                     <CalendarClock className="mr-2 h-4 w-4" />
-                    Availability: {availabilityFilter === "all" ? "All" : availabilityFilter}
+                    Status: {statusFilter === "all" ? "All" : statusFilter}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56">
-                  <DropdownMenuLabel>Filter by Availability</DropdownMenuLabel>
+                  <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuRadioGroup value={availabilityFilter} onValueChange={setAvailabilityFilter}>
-                    {uniqueAvailabilities.map(avail => (
-                      <DropdownMenuRadioItem key={avail} value={avail}>
-                        {avail === "all" ? "All Availabilities" : avail}
+                  <DropdownMenuRadioGroup value={statusFilter} onValueChange={setStatusFilter}>
+                    {uniqueStatuses.map(status => (
+                      <DropdownMenuRadioItem key={status as string} value={status as string}>
+                        {status === "all" ? "All Statuses" : status}
                       </DropdownMenuRadioItem>
                     ))}
                   </DropdownMenuRadioGroup>
@@ -152,37 +154,39 @@ export default function ScorerProfilesPage() {
 
           {filteredScorers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredScorers.map((scorer) => (
-                <Card key={scorer.id} className="hover:shadow-lg transition-shadow flex flex-col">
-                  <CardHeader className="flex flex-row items-start gap-4 pb-3">
-                    <Avatar className="h-16 w-16 mt-1">
-                      <AvatarImage src={scorer.avatar} alt={scorer.name} data-ai-hint="person portrait" />
-                      <AvatarFallback>{scorer.name.substring(0,2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{scorer.name}</CardTitle>
-                      <CardDescription>
-                        <Badge variant="secondary" className="mr-1.5">{scorer.scoringLevel}</Badge>
-                        <Badge variant="outline">{scorer.availability}</Badge>
-                      </CardDescription>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-grow py-3 space-y-2">
-                     <div className="grid grid-cols-2 gap-2">
-                        <CompactStatDisplay label="Experience" value={`${scorer.experienceYears} Yrs`} />
-                        <CompactStatDisplay label="Matches" value={scorer.matchesScoredCount} />
-                     </div>
-                     {scorer.associatedSchool && (
-                        <p className="text-sm text-muted-foreground pt-1">Affiliation: {scorer.associatedSchool}</p>
-                     )}
-                  </CardContent>
-                  <CardContent className="pt-2 pb-4 mt-auto">
-                     <Button asChild variant="default" size="sm" className="w-full">
-                        <Link href={`/scorer/${scorer.id}`}>View Full Profile</Link>
-                      </Button>
-                  </CardContent>
-                </Card>
-              ))}
+              {filteredScorers.map((scorer) => {
+                const name = scorer.displayName || `${scorer.firstName} ${scorer.lastName}`;
+                const initials = `${scorer.firstName?.[0] || ''}${scorer.lastName?.[0] || ''}`.toUpperCase();
+                return (
+                  <Card key={scorer.id} className="hover:shadow-lg transition-shadow flex flex-col">
+                    <CardHeader className="flex flex-row items-start gap-4 pb-3">
+                      <Avatar className="h-16 w-16 mt-1">
+                        <AvatarImage src={scorer.profileImageUrl} alt={name} data-ai-hint="person portrait" />
+                        <AvatarFallback>{initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <CardTitle className="text-lg">{name}</CardTitle>
+                        <CardDescription>
+                          <Badge variant="secondary" className="mr-1.5">{scorer.scorerProfile?.certificationLevel || 'Scorer'}</Badge>
+                          <Badge variant="outline">{scorer.status || 'Active'}</Badge>
+                        </CardDescription>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="flex-grow py-3 space-y-2">
+                       <div className="grid grid-cols-2 gap-2">
+                          <CompactStatDisplay label="Experience" value={scorer.scorerProfile?.experienceYears ? `${scorer.scorerProfile.experienceYears} Yrs` : '-'} />
+                          <CompactStatDisplay label="Matches" value={scorer.scorerProfile?.matchesScored} />
+                       </div>
+                       {/* Affiliation logic might need adjustment based on available data */}
+                    </CardContent>
+                    <CardContent className="pt-2 pb-4 mt-auto">
+                       <Button asChild variant="default" size="sm" className="w-full">
+                          <Link href={`/scorer/${scorer.id}`}>View Full Profile</Link>
+                        </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <p className="text-center text-muted-foreground py-4">

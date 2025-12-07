@@ -1,22 +1,69 @@
-import React from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
 import { PageHeader } from '../dashboard/PageHeader';
 import { MetricCard } from '../dashboard/MetricCard';
 import FixtureCentreCard from '../dashboard/FixtureCentreCard';
 import { Trophy, Target, Activity, Calendar } from "lucide-react";
+import { useAuth } from '@/contexts/AuthContext';
+import { fetchPersonByEmail } from '@/app/actions/personActions';
+import { fetchMatchesForTeams } from '@/app/actions/matchActions';
+import { Match, Person } from '@/types/firestore';
+import { format } from 'date-fns';
 
 export default function PlayerDashboard() {
+  const { user } = useAuth();
+  const [person, setPerson] = useState<Person | null>(null);
+  const [matches, setMatches] = useState<{ upcoming: Match[], past: Match[], total: number }>({ upcoming: [], past: [], total: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user?.email) return;
+      
+      try {
+        const profile = await fetchPersonByEmail(user.email);
+        setPerson(profile);
+        
+        if (profile?.teamIds && profile.teamIds.length > 0) {
+          const matchData = await fetchMatchesForTeams(profile.teamIds);
+          if (matchData.success) {
+            setMatches({
+              upcoming: matchData.upcoming || [],
+              past: matchData.past || [],
+              total: matchData.total || 0
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading player dashboard:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user]);
+
+  const nextMatch = matches.upcoming[0];
+  const stats = person?.stats || {};
+  const battingAvg = stats.battingAverage || 0;
+  const matchesPlayed = stats.matchesPlayed || matches.past.length;
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <PageHeader 
         title="Player Dashboard" 
-        description="Track your performance, fitness, and upcoming schedule."
+        description={`Welcome back, ${person?.firstName || user?.displayName || 'Player'}. Track your performance and schedule.`}
       />
 
       {/* Fixture Centre */}
       <FixtureCentreCard 
         role="Player"
         maxMatches={3}
+        teamId={person?.teamIds?.[0]}
+        playerId={person?.id}
       />
 
       {/* Stats Grid */}
@@ -26,26 +73,26 @@ export default function PlayerDashboard() {
           <MetricCard
             icon={Trophy}
             label="Matches Played"
-            value={12}
+            value={matchesPlayed}
             subtitle="This season"
           />
           <MetricCard
             icon={Target}
             label="Batting Avg"
-            value={45.2}
-            subtitle="+2.5 from last season"
+            value={battingAvg}
+            subtitle={stats.totalRuns ? `${stats.totalRuns} runs` : "No runs yet"}
           />
           <MetricCard
             icon={Activity}
             label="Fitness Score"
-            value={92}
-            subtitle="Elite level"
+            value={person?.playerProfile?.physicalAttributes?.coreFitness || person?.skills?.fitness || 92}
+            subtitle="Latest assessment"
           />
           <MetricCard
             icon={Calendar}
             label="Next Match"
-            value="Sat"
-            subtitle="vs Royal Challengers"
+            value={nextMatch ? format(new Date(nextMatch.matchDate as string), 'EEE') : "-"}
+            subtitle={nextMatch ? `vs ${nextMatch.awayTeamName === 'My Team' ? nextMatch.homeTeamName : nextMatch.awayTeamName}` : "No upcoming matches"}
           />
         </div>
       </div>
@@ -69,20 +116,17 @@ export default function PlayerDashboard() {
                 <p className="text-xs text-muted-foreground">Today, 16:00 - Nets</p>
               </div>
             </div>
-            <div className="flex items-center p-3 rounded-lg bg-muted/30 border border-border">
-              <div className="w-3 h-3 bg-green-500 rounded-full mr-3 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">Physio Session</p>
-                <p className="text-xs text-muted-foreground">Tomorrow, 10:00 - Gym</p>
+            {nextMatch && (
+              <div className="flex items-center p-3 rounded-lg bg-muted/30 border border-border">
+                <div className="w-3 h-3 bg-red-500 rounded-full mr-3 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">Match Day</p>
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(nextMatch.matchDate as string), 'EEEE, HH:mm')} - {nextMatch.venue || 'Home'}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center p-3 rounded-lg bg-muted/30 border border-border">
-              <div className="w-3 h-3 bg-red-500 rounded-full mr-3 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">Match Day</p>
-                <p className="text-xs text-muted-foreground">Saturday, 09:00 - Home</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

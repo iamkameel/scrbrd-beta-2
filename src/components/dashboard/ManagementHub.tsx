@@ -1,15 +1,29 @@
+"use client";
+
+import React, { useEffect, useState } from 'react';
 import ManagementCard from './ManagementCard';
 import { 
   Users, UserCog, UserCheck, Shield, Trophy, ListChecks, 
   School, MapPin, Truck, Wallet, Handshake, Database, UsersRound 
 } from 'lucide-react';
+import { fetchPendingUserCount } from '@/app/actions/userActions';
 
 export default function ManagementHub() {
+  const [pendingUserCount, setPendingUserCount] = useState<number>(0);
+
+  useEffect(() => {
+    const loadCounts = async () => {
+      const count = await fetchPendingUserCount();
+      setPendingUserCount(count);
+    };
+    loadCounts();
+  }, []);
+
   const managementCards = [
     {
       icon: Users,
       title: 'Player Management',
-      description: 'Manage all player profiles, stats, and roles.',
+      description: 'Manage player profiles, stats, and specialized attributes.',
       href: '/players'
     },
     {
@@ -21,13 +35,13 @@ export default function ManagementHub() {
     {
       icon: UserCheck,
       title: 'Official Management',
-      description: 'Manage umpires, scorers, and other match officials.',
+      description: 'Manage umpires, scorers, and assign match officials.',
       href: '/people'
     },
     {
       icon: Shield,
       title: 'Team Management',
-      description: 'Create teams and manage rosters.',
+      description: 'Create teams, manage rosters, and assign captains.',
       href: '/teams'
     },
     {
@@ -39,7 +53,7 @@ export default function ManagementHub() {
     {
       icon: ListChecks,
       title: 'Fixture Management',
-      description: 'Schedule and manage all available grounds.',
+      description: 'Schedule matches and manage ground availability.',
       href: '/matches'
     },
     {
@@ -51,7 +65,7 @@ export default function ManagementHub() {
     {
       icon: MapPin,
       title: 'Field & Venue Management',
-      description: 'Manage all available grounds.',
+      description: 'Manage grounds, facilities, and maintenance logs.',
       href: '/fields'
     },
     {
@@ -63,7 +77,7 @@ export default function ManagementHub() {
     {
       icon: Wallet,
       title: 'Financials',
-      description: 'Track income and expenses.',
+      description: 'Track income, expenses, and sponsor contributions.',
       href: '/financials'
     },
     {
@@ -81,8 +95,9 @@ export default function ManagementHub() {
     {
       icon: UsersRound,
       title: 'User Management',
-      description: 'Invite new users or manage existing user roles.',
-      href: '/user-management'
+      description: pendingUserCount > 0 ? `${pendingUserCount} new signups awaiting role assignment.` : 'Invite new users or manage existing user roles.',
+      href: '/user-management',
+      badge: pendingUserCount > 0 ? `${pendingUserCount} New` : undefined
     },
   ];
 

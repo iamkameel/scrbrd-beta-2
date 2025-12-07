@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Save, CheckCircle2, AlertTriangle, Palette, Shield } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import { School, Division } from "@/types/firestore";
-import { teamSchema } from "@/lib/validations/teamSchema";
+import { TeamSchema } from "@/lib/schemas/teamSchemas";
 import { z } from "zod";
 import { DeleteConfirmationDialog } from "@/components/common/DeleteConfirmationDialog";
 
@@ -70,9 +70,9 @@ export function TeamForm({ mode, teamAction, initialState, initialData = {}, sch
   // Client-side validation on blur
   const validateField = (name: string, value: string) => {
     try {
-      const field = name as keyof typeof teamSchema.shape;
-      if (field in teamSchema.shape) {
-        teamSchema.shape[field].parse(value);
+      const field = name as keyof typeof TeamSchema.shape;
+      if (field in TeamSchema.shape) {
+        TeamSchema.shape[field].parse(value);
         setClientErrors(prev => {
           const newErrors = { ...prev };
           delete newErrors[name];

@@ -48,6 +48,9 @@ import { PermissionsMatrix } from "@/components/user-management/PermissionsMatri
 import { InviteUserDialog } from "@/components/user-management/InviteUserDialog";
 import { UserService, UserData } from "@/lib/userService";
 import { toast } from "sonner";
+import { deletePersonAction } from "@/app/actions/personActions";
+import { EnhancedUserEditDialog } from "@/components/user-management/EnhancedUserEditDialog";
+import { BulkActionsToolbar } from "@/components/user-management/BulkActionsToolbar";
 
 export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -85,6 +88,7 @@ export default function UserManagementPage() {
     lastName: "",
     email: "",
     role: "Player",
+    roles: ["Player"] as string[],
     status: "active" as "active" | "inactive" | "injured"
   });
 
@@ -105,6 +109,7 @@ export default function UserManagementPage() {
         lastName: user.lastName || "",
         email: user.email || "",
         role: user.role || "Player",
+        roles: user.roles || [user.role || "Player"],
         status: user.status || "active"
       });
     } else {
@@ -114,6 +119,7 @@ export default function UserManagementPage() {
         lastName: "",
         email: "",
         role: "Player",
+        roles: ["Player"],
         status: "active"
       });
     }
@@ -129,6 +135,7 @@ export default function UserManagementPage() {
           lastName: formData.lastName,
           displayName: `${formData.firstName} ${formData.lastName}`,
           role: formData.role,
+          roles: formData.roles,
           status: formData.status
         });
         toast.success("User updated successfully");
@@ -136,7 +143,7 @@ export default function UserManagementPage() {
         // Create new user (Invite)
         // For manual creation, we might want to use inviteUser or a direct create if supported
         // For now, let's assume manual creation is just an invite
-        await UserService.inviteUser(formData.email, formData.role);
+        await UserService.inviteUser(formData.email, formData.role, formData.roles);
         toast.success("User invited successfully");
       }
       
@@ -149,14 +156,24 @@ export default function UserManagementPage() {
   };
 
   const handleDelete = async (uid: string) => {
-    if (confirm("Are you sure you want to delete this user?")) {
+    const userToDelete = users.find(u => u.uid === uid);
+    if (!userToDelete) return;
+
+    if (confirm(`Are you sure you want to delete this ${userToDelete.hasAccount ? 'user' : 'person'}?`)) {
       try {
-        await UserService.deleteUser(uid);
-        toast.success("User deleted successfully");
+        if (userToDelete.hasAccount) {
+          await UserService.deleteUser(uid);
+        } else {
+          // For person without account, uid is fake "person_ID", personId is real ID
+          if (userToDelete.personId) {
+            await deletePersonAction(userToDelete.personId);
+          }
+        }
+        toast.success("Deleted successfully");
         await fetchUsers();
       } catch (error) {
-        console.error("Error deleting user:", error);
-        toast.error("Failed to delete user");
+        console.error("Error deleting:", error);
+        toast.error("Failed to delete");
       }
     }
   };
@@ -179,25 +196,73 @@ export default function UserManagementPage() {
     }
   };
 
-  const handleBulkStatusChange = async (status: 'active' | 'inactive') => {
+  const handleBulkAssignSchools = async (schools: string[], teams: string[]) => {
     if (selectedUsers.size === 0) return;
     
-    const action = status === 'active' ? 'activate' : 'deactivate';
-    if (confirm(`Are you sure you want to ${action} ${selectedUsers.size} user(s)?`)) {
+    try {
+      await Promise.all(Array.from(selectedUsers).map(async (uid) => {
+        const user = users.find(u => u.uid === uid);
+        if (!user) return;
+
+        const currentSchools = user.assignedSchools || [];
+        const currentTeams = user.teamIds || [];
+
+        // Merge new assignments with existing ones
+        const newSchools = Array.from(new Set([...currentSchools, ...schools]));
+        const newTeams = Array.from(new Set([...currentTeams, ...teams]));
+
+        await UserService.updateUser(uid, { 
+          assignedSchools: newSchools,
+          teamIds: newTeams
+        });
+      }));
+      await fetchUsers();
+      setSelectedUsers(new Set());
+    } catch (error) {
+      console.error("Error assigning schools/teams:", error);
+      throw error;
+    }
+  };
+
+  const handleBulkChangeRole = async (role: string) => {
+    // Implementation for bulk role change if needed
+    console.log("Bulk change role not implemented yet");
+  };
+
+  const handleBulkStatusChange = async (status: string) => {
+    if (selectedUsers.size === 0) return;
+    
+    try {
+      await Promise.all(Array.from(selectedUsers).map(async (uid) => {
+        await UserService.updateUser(uid, { status: status as any });
+      }));
+      await fetchUsers();
+      setSelectedUsers(new Set());
+      toast.success(`Updated status for ${selectedUsers.size} users`);
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedUsers.size === 0) return;
+    
+    if (confirm(`Are you sure you want to delete ${selectedUsers.size} user(s)?`)) {
       try {
-        await Promise.all(Array.from(selectedUsers).map(uid => 
-          UserService.updateUser(uid, { status })
-        ));
-        toast.success(`Updated ${selectedUsers.size} users`);
-        await fetchUsers();
+        await Promise.all(Array.from(selectedUsers).map(uid => handleDelete(uid)));
         setSelectedUsers(new Set());
       } catch (error) {
-        console.error("Error updating users:", error);
-        toast.error("Failed to update some users");
+        console.error("Error deleting users:", error);
+        throw error;
       }
     }
   };
 
+  const handleBulkInvite = async () => {
+    // Implementation for bulk invite if needed
+    console.log("Bulk invite not implemented yet");
+  };
 
   return (
     <div className="p-4 md:p-8 max-w-[1600px] mx-auto space-y-8">
@@ -279,38 +344,15 @@ export default function UserManagementPage() {
           </div>
 
           {/* Bulk Actions Toolbar */}
-          {selectedUsers.size > 0 && (
-            <div className="flex items-center justify-between bg-muted p-4 rounded-lg border mt-4">
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="h-8 px-3">
-                  {selectedUsers.size} selected
-                </Badge>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setSelectedUsers(new Set())}
-                >
-                  Clear Selection
-                </Button>
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="default" 
-                  size="sm"
-                  onClick={() => handleBulkStatusChange('active')}
-                >
-                  Activate Selected
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleBulkStatusChange('inactive')}
-                >
-                  Deactivate Selected
-                </Button>
-              </div>
-            </div>
-          )}
+          <BulkActionsToolbar 
+            selectedCount={selectedUsers.size}
+            onClearSelection={() => setSelectedUsers(new Set())}
+            onBulkAssignSchools={handleBulkAssignSchools}
+            onBulkChangeRole={handleBulkChangeRole}
+            onBulkChangeStatus={handleBulkStatusChange}
+            onBulkDelete={handleBulkDelete}
+            onBulkInvite={handleBulkInvite}
+          />
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
@@ -327,6 +369,7 @@ export default function UserManagementPage() {
                   </TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Assignments</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Active</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -335,7 +378,7 @@ export default function UserManagementPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       <div className="flex justify-center items-center">
                         <Loader2 className="h-6 w-6 animate-spin mr-2" />
                         Loading users...
@@ -344,7 +387,7 @@ export default function UserManagementPage() {
                   </TableRow>
                 ) : filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No users found.
                     </TableCell>
                   </TableRow>
@@ -369,15 +412,51 @@ export default function UserManagementPage() {
                           )}
                         </div>
                         <div>
-                          <div className="font-medium">{user.displayName || `${user.firstName} ${user.lastName}`}</div>
-                          <div className="text-xs text-muted-foreground">{user.email}</div>
+                          <div className="font-medium flex items-center gap-2">
+                            {user.displayName || `${user.firstName} ${user.lastName}`}
+                            {!user.hasAccount && (
+                              <Badge variant="outline" className="text-[10px] h-4 px-1">No Account</Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{user.email || 'No email'}</div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={user.role === 'Admin' ? 'destructive' : 'secondary'}>
-                        {user.role}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        {user.roles && user.roles.length > 0 ? (
+                          user.roles.map((r, idx) => (
+                            <Badge 
+                              key={idx}
+                              variant={r === user.role ? 'default' : 'secondary'}
+                              className={r === user.role ? 'border border-primary' : ''}
+                            >
+                              {r}
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge variant={user.role === 'Admin' ? 'destructive' : 'secondary'}>
+                            {user.role}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {user.assignedSchools && user.assignedSchools.length > 0 && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <span className="font-semibold">{user.assignedSchools.length}</span> Schools
+                          </div>
+                        )}
+                        {user.teamIds && user.teamIds.length > 0 && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <span className="font-semibold">{user.teamIds.length}</span> Teams
+                          </div>
+                        )}
+                        {(!user.assignedSchools?.length && !user.teamIds?.length) && (
+                          <span className="text-xs text-muted-foreground italic">None</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={user.status === 'active' ? 'default' : 'outline'}>
@@ -397,6 +476,14 @@ export default function UserManagementPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          {!user.hasAccount && (
+                             <DropdownMenuItem onClick={() => {
+                               setFormData({ ...formData, email: user.email, role: user.role });
+                               setIsInviteDialogOpen(true);
+                             }}>
+                              <Mail className="mr-2 h-4 w-4" /> Invite User
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => handleOpenDialog(user)}>
                             <Pencil className="mr-2 h-4 w-4" /> Edit Details
                           </DropdownMenuItem>
@@ -424,70 +511,35 @@ export default function UserManagementPage() {
         }}
       />
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
-            <DialogDescription>
-              {editingUser ? 'Make changes to the user profile here.' : 'Enter the details for the new user account.'}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="role">Role</Label>
-                <Select value={formData.role} onValueChange={(val) => setFormData({...formData, role: val})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(ROLE_GROUPS).map(([group, roles]) => (
-                      <SelectGroup key={group}>
-                        <SelectLabel>{group}</SelectLabel>
-                        {roles.map((role) => (
-                          <SelectItem key={role} value={role}>
-                            {role}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(val: any) => setFormData({...formData, status: val})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="injured">Injured</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="submit" onClick={handleSubmit}>Save changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EnhancedUserEditDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        user={editingUser}
+        onSave={async (data) => {
+          try {
+            if (editingUser) {
+              await UserService.updateUser(editingUser.uid, data);
+              toast.success("User updated successfully");
+            } else {
+              // For new users, we might want to use inviteUser or create a placeholder
+              // If we have an email, invite them
+              if (data.email) {
+                await UserService.inviteUser(data.email, data.role || 'Player', data.roles);
+                toast.success("User invited successfully");
+              } else {
+                // If no email (e.g. just a person record), we might need a different flow
+                // But EnhancedUserEditDialog enforces email for new users
+                toast.error("Email is required for new users");
+              }
+            }
+            await fetchUsers();
+          } catch (error) {
+            console.error("Error saving user:", error);
+            toast.error("Failed to save user");
+            throw error;
+          }
+        }}
+      />
     </div>
   );
 }

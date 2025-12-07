@@ -39,6 +39,7 @@ export interface Player {
   stats: PlayerStats;
   profileImageUrl: string;
   assignedSchools?: string[];
+  teamIds?: string[];
   phone?: string;
   qualifications?: string[];
   performanceHistory?: PerformanceHistoryItem[];
@@ -129,7 +130,14 @@ export interface Match {
   dateTime: string;
   status: 'scheduled' | 'live' | 'completed';
   venue: string;
+  fieldId?: string;
   result?: string;
+  matchType?: 'T20' | 'ODI' | 'Test' | 'Other';
+  overs?: number;
+  tossWinnerId?: string;
+  tossDecision?: 'bat' | 'bowl';
+  homeScore?: number;
+  awayScore?: number;
   liveScore?: {
     runs: number;
     wickets: number;
@@ -141,8 +149,10 @@ export interface Match {
     secondInnings?: Innings;
   };
   score?: {
-    teamA: string;
-    teamB: string;
+    teamA?: string;
+    teamB?: string;
+    home?: string;
+    away?: string;
   };
 }
 
@@ -330,7 +340,9 @@ export const store: Store = {
         hundreds: 43,
         fifties: 62
       },
-      profileImageUrl: "https://ui-avatars.com/api/?name=Virat+Kohli&background=10b981&color=fff"
+      profileImageUrl: "https://ui-avatars.com/api/?name=Virat+Kohli&background=10b981&color=fff",
+      assignedSchools: ["s1"],
+      teamIds: ["t1"]
     },
     {
       personId: "p2",
@@ -362,7 +374,9 @@ export const store: Store = {
         economyRate: 4.5,
         bestBowling: "6/19"
       },
-      profileImageUrl: "https://ui-avatars.com/api/?name=Jasprit+Bumrah&background=f59e0b&color=fff"
+      profileImageUrl: "https://ui-avatars.com/api/?name=Jasprit+Bumrah&background=f59e0b&color=fff",
+      assignedSchools: ["s1"],
+      teamIds: ["t1"]
     },
     {
       personId: "p3",
@@ -394,7 +408,78 @@ export const store: Store = {
         battingAverage: 38.2,
         bowlingAverage: 28.5
       },
-      profileImageUrl: "https://ui-avatars.com/api/?name=Ben+Stokes&background=ef4444&color=fff"
+      profileImageUrl: "https://ui-avatars.com/api/?name=Ben+Stokes&background=ef4444&color=fff",
+      assignedSchools: ["s2"],
+      teamIds: ["t2"]
+    },
+    {
+      personId: "p4",
+      firstName: "Kane",
+      lastName: "Williamson",
+      displayName: "Kane Williamson",
+      email: "kane.w@nzc.nz",
+      role: "Player",
+      activeRole: "Batsman",
+      status: "active",
+      dateOfBirth: "1990-08-08",
+      physicalAttributes: {
+        height: 173,
+        weight: 68,
+        battingHand: "Right",
+        bowlingStyle: "Right-arm offbreak"
+      },
+      skills: {
+        batting: 18,
+        bowling: 8,
+        fielding: 16,
+        fitness: 16,
+        mental: 20
+      },
+      stats: {
+        matchesPlayed: 160,
+        totalRuns: 6000,
+        battingAverage: 48.5,
+        strikeRate: 125.0,
+        hundreds: 20,
+        fifties: 40
+      },
+      profileImageUrl: "https://ui-avatars.com/api/?name=Kane+Williamson&background=000000&color=fff",
+      assignedSchools: ["s3"],
+      teamIds: ["t3"]
+    },
+    {
+      personId: "p5",
+      firstName: "Rashid",
+      lastName: "Khan",
+      displayName: "Rashid Khan",
+      email: "rashid.k@acb.af",
+      role: "Player",
+      activeRole: "Bowler",
+      status: "active",
+      dateOfBirth: "1998-09-20",
+      physicalAttributes: {
+        height: 168,
+        weight: 65,
+        battingHand: "Right",
+        bowlingStyle: "Right-arm legbreak"
+      },
+      skills: {
+        batting: 12,
+        bowling: 19,
+        fielding: 17,
+        fitness: 18,
+        mental: 16
+      },
+      stats: {
+        matchesPlayed: 100,
+        wicketsTaken: 200,
+        bowlingAverage: 18.5,
+        economyRate: 6.2,
+        bestBowling: "5/10"
+      },
+      profileImageUrl: "https://ui-avatars.com/api/?name=Rashid+Khan&background=0000FF&color=fff",
+      assignedSchools: ["s1"],
+      teamIds: ["t4"]
     }
   ],
   matches: [
@@ -406,34 +491,65 @@ export const store: Store = {
       teamBName: "Super Kings",
       dateTime: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
       status: "scheduled",
-      venue: "Chinnaswamy Stadium"
+      venue: "Main Oval",
+      fieldId: "f1",
+      matchType: "T20",
+      overs: 20
     },
     {
       matchId: "m2",
       teamAId: "t2",
-      teamBId: "t3", // Assuming t3 is Knight Riders
+      teamBId: "t3",
       teamAName: "Mumbai Indians",
-      teamBName: "Knight Riders",
+      teamBName: "Capitals",
       dateTime: new Date(Date.now() - 86400000).toISOString(), // Yesterday
       status: "completed",
       result: "Mumbai Indians won by 5 wickets",
-      venue: "Wankhede Stadium"
+      venue: "Piley Rees",
+      fieldId: "f2",
+      matchType: "T20",
+      overs: 20,
+      tossWinnerId: "t3",
+      tossDecision: "bat",
+      score: {
+        home: "180/5",
+        away: "178/8"
+      },
+      homeScore: 180,
+      awayScore: 178,
+      inningsData: {
+        firstInnings: {
+          totalRuns: 178,
+          totalWickets: 8,
+          overs: [],
+          overHistory: []
+        },
+        secondInnings: {
+          totalRuns: 180,
+          totalWickets: 5,
+          overs: [],
+          overHistory: []
+        }
+      }
     },
     {
       matchId: "m3",
-      teamAId: "t3", // Capitals
-      teamBId: "t4", // Sunrisers (assuming t4 is Sunrisers/Super Kings reuse or new ID)
+      teamAId: "t3",
+      teamBId: "t4",
       teamAName: "Capitals",
-      teamBName: "Sunrisers",
+      teamBName: "Super Kings",
       dateTime: new Date().toISOString(), // Today
       status: "live",
+      matchType: "T20",
+      overs: 20,
       liveScore: {
         runs: 145,
         wickets: 3,
         overs: 15.4,
         battingTeam: "Capitals"
       },
-      venue: "Feroz Shah Kotla"
+      venue: "Hilton Oval",
+      fieldId: "f3"
     }
   ],
   divisions: [
@@ -474,7 +590,23 @@ export const store: Store = {
       teamColors: { primary: "#005DA0", secondary: "#FFFFFF" },
       schoolId: "s2",
       division: "d1",
-      logoUrl: "" // Will use school logo as fallback
+      logoUrl: ""
+    },
+    {
+      teamId: "t3",
+      name: "Capitals",
+      teamColors: { primary: "#282968", secondary: "#FFFFFF" },
+      schoolId: "s3",
+      division: "d1",
+      logoUrl: ""
+    },
+    {
+      teamId: "t4",
+      name: "Super Kings",
+      teamColors: { primary: "#FDB913", secondary: "#000000" },
+      schoolId: "s1",
+      division: "d1",
+      logoUrl: ""
     }
   ],
   equipment: [
@@ -803,6 +935,28 @@ export const store: Store = {
       isCaptain: true,
       isViceCaptain: false,
       jerseyNumber: 55
+    },
+    {
+      assignmentId: "r4",
+      personId: "p4",
+      teamId: "t3",
+      personName: "Kane Williamson",
+      role: "Batsman",
+      status: "active",
+      isCaptain: true,
+      isViceCaptain: false,
+      jerseyNumber: 22
+    },
+    {
+      assignmentId: "r5",
+      personId: "p5",
+      teamId: "t4",
+      personName: "Rashid Khan",
+      role: "Bowler",
+      status: "active",
+      isCaptain: true,
+      isViceCaptain: false,
+      jerseyNumber: 19
     }
   ],
   transactions: [

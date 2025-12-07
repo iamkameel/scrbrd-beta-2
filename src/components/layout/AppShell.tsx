@@ -6,6 +6,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Navbar } from "@/components/layout/Navbar";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
+import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Loader2 } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
@@ -44,6 +45,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Header />
           <EmailVerificationBanner />
           <div className="p-4 sm:p-6 md:p-8">
+            <Breadcrumbs />
             {children}
           </div>
         </main>

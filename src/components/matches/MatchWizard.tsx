@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useState, useEffect, useMemo, useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { MatchActionState } from "@/app/actions/matchActions";
 import { getLeaguesAction } from "@/app/actions/leagueActions";
 import { fetchSeasons } from "@/lib/firestore";
-import { Team, Field, Person } from "@/types/firestore";
+import { Team, Field, Person, School, Division } from "@/types/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +25,10 @@ import {
   ArrowRight,
   ArrowLeft,
   Moon,
-  AlertTriangle
+  AlertTriangle,
+  Search,
+  Filter,
+  X
 } from "lucide-react";
 import { WeatherWidget } from "@/components/fixtures/WeatherWidget";
 import { getAvailableOfficialsAction } from "@/app/actions/fixtureActions";
@@ -38,6 +41,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 interface MatchWizardProps {
   teams: Team[];
   fields: Field[];
+  schools?: School[];
+  divisions?: Division[];
   matchAction: (prevState: MatchActionState, formData: FormData) => Promise<MatchActionState>;
   initialState: MatchActionState;
   mode?: 'create' | 'edit';
@@ -73,7 +78,7 @@ const MATCH_FORMATS = [
   { value: 'Other', label: 'Custom', overs: null },
 ];
 
-export function MatchWizard({ teams, fields, matchAction, initialState, mode = 'create', initialData = {} }: MatchWizardProps) {
+export function MatchWizard({ teams, fields, schools = [], divisions = [], matchAction, initialState, mode = 'create', initialData = {} }: MatchWizardProps) {
   const { currentRole } = usePermissionView();
   const ALLOWED_ROLES = [
     "System Architect",
@@ -87,7 +92,7 @@ export function MatchWizard({ teams, fields, matchAction, initialState, mode = '
 
   const isAllowed = ALLOWED_ROLES.includes(currentRole);
 
-  const [state, action] = useFormState(matchAction, initialState);
+  const [state, action] = useActionState(matchAction, initialState);
   
   // Wizard Step
   const [step, setStep] = useState(1);
@@ -202,10 +207,10 @@ export function MatchWizard({ teams, fields, matchAction, initialState, mode = '
           {/* Hidden Inputs */}
           <input type="hidden" name="homeTeamId" value={homeTeamId} />
           <input type="hidden" name="awayTeamId" value={awayTeamId} />
-          <input type="hidden" name="scheduledDate" value={date} />
-          <input type="hidden" name="scheduledTime" value={time} />
-          <input type="hidden" name="venueId" value={venueId} />
-          <input type="hidden" name="format" value={format} />
+          <input type="hidden" name="matchDate" value={date} />
+          <input type="hidden" name="matchTime" value={time} />
+          <input type="hidden" name="fieldId" value={venueId} />
+          <input type="hidden" name="matchType" value={format} />
           <input type="hidden" name="overs" value={overs} />
           <input type="hidden" name="isDayNight" value={isDayNight ? "true" : "false"} />
           <input type="hidden" name="competition" value={competition} />
@@ -217,7 +222,7 @@ export function MatchWizard({ teams, fields, matchAction, initialState, mode = '
           <input type="hidden" name="notes" value={notes} />
           <input type="hidden" name="umpire1Id" value={umpire1Id} />
           <input type="hidden" name="umpire2Id" value={umpire2Id} />
-          <input type="hidden" name="scorerId" value={scorerId} />
+          <input type="hidden" name="scorer" value={scorerId} />
 
           {/* Progress */}
           <div className="flex items-center justify-between mb-6">
@@ -249,44 +254,26 @@ export function MatchWizard({ teams, fields, matchAction, initialState, mode = '
               </CardHeader>
               <CardContent className="grid gap-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Home Team *</Label>
-                    <Select value={homeTeamId} onValueChange={setHomeTeamId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Home Team" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teams.map(team => (
-                          <SelectItem 
-                            key={team.id} 
-                            value={team.id}
-                            disabled={team.id === awayTeamId}
-                          >
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Away Team *</Label>
-                    <Select value={awayTeamId} onValueChange={setAwayTeamId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Away Team" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teams.map(team => (
-                          <SelectItem 
-                            key={team.id} 
-                            value={team.id}
-                            disabled={team.id === homeTeamId}
-                          >
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <TeamSelectionWidget
+                    label="Home Team"
+                    teams={teams}
+                    schools={schools}
+                    divisions={divisions}
+                    selectedTeamId={homeTeamId}
+                    onSelectTeam={setHomeTeamId}
+                    excludeTeamId={awayTeamId}
+                    testIdPrefix="home"
+                  />
+                  <TeamSelectionWidget
+                    label="Away Team"
+                    teams={teams}
+                    schools={schools}
+                    divisions={divisions}
+                    selectedTeamId={awayTeamId}
+                    onSelectTeam={setAwayTeamId}
+                    excludeTeamId={homeTeamId}
+                    testIdPrefix="away"
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -744,6 +731,271 @@ function SearchableOfficialSelect({
             </CommandGroup>
           </CommandList>
         </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function TeamSelectionWidget({
+  teams,
+  schools,
+  divisions,
+  selectedTeamId,
+  onSelectTeam,
+  label,
+  excludeTeamId,
+  testIdPrefix
+}: {
+  teams: Team[];
+  schools: School[];
+  divisions: Division[];
+  selectedTeamId: string;
+  onSelectTeam: (id: string) => void;
+  label: string;
+  excludeTeamId?: string;
+  testIdPrefix?: string;
+}) {
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string>("");
+  const [selectedDivisionId, setSelectedDivisionId] = useState<string>("");
+
+  // Initialize filters based on selected team
+  useEffect(() => {
+    if (selectedTeamId && !selectedSchoolId) {
+      const team = teams.find(t => t.id === selectedTeamId);
+      if (team?.schoolId) {
+        setSelectedSchoolId(team.schoolId);
+      }
+      if (team?.divisionId) {
+        setSelectedDivisionId(team.divisionId);
+      }
+    }
+  }, [selectedTeamId, teams]);
+
+  // Dynamic filtering for Schools based on selected Division
+  const availableSchools = useMemo(() => {
+    if (!selectedDivisionId) return schools;
+    const schoolIdsInDivision = new Set(
+      teams
+        .filter(t => t.divisionId === selectedDivisionId)
+        .map(t => t.schoolId)
+    );
+    return schools.filter(s => schoolIdsInDivision.has(s.id));
+  }, [schools, teams, selectedDivisionId]);
+
+  // Dynamic filtering for Divisions based on selected School
+  const availableDivisions = useMemo(() => {
+    if (!selectedSchoolId) return divisions;
+    const divisionIdsInSchool = new Set(
+      teams
+        .filter(t => t.schoolId === selectedSchoolId)
+        .map(t => t.divisionId)
+        .filter(id => !!id) as string[]
+    );
+    return divisions.filter(d => divisionIdsInSchool.has(d.id));
+  }, [divisions, teams, selectedSchoolId]);
+
+  const filteredTeams = useMemo(() => {
+    return teams.filter(team => {
+      if (excludeTeamId && team.id === excludeTeamId) return false;
+      if (selectedSchoolId && team.schoolId !== selectedSchoolId) return false;
+      if (selectedDivisionId && team.divisionId !== selectedDivisionId) return false;
+      return true;
+    });
+  }, [teams, selectedSchoolId, selectedDivisionId, excludeTeamId]);
+
+  const selectedTeam = teams.find(t => t.id === selectedTeamId);
+
+  return (
+    <div className="space-y-3 p-4 border rounded-lg bg-card/50">
+      <div className="flex items-center justify-between">
+        <Label className="text-base font-semibold">{label}</Label>
+        <div className="flex items-center gap-2">
+          {(selectedSchoolId || selectedDivisionId) && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                setSelectedSchoolId("");
+                setSelectedDivisionId("");
+              }}
+            >
+              Clear Filters
+            </Button>
+          )}
+          {selectedTeam && (
+            <Badge variant="secondary" className="text-xs">
+              {selectedTeam.name}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-3">
+        {/* Filters */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Filter by School</Label>
+            <SearchableSelect
+              value={selectedSchoolId}
+              onChange={(val) => {
+                setSelectedSchoolId(val);
+                // Clear team selection if it doesn't match new school
+                if (selectedTeam && selectedTeam.schoolId !== val && val !== "") {
+                  onSelectTeam("");
+                }
+              }}
+              items={availableSchools.map(s => ({ id: s.id, label: s.name }))}
+              placeholder="All Schools"
+              emptyMessage="No schools found"
+              testId={`${testIdPrefix}-school-select`}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Filter by Division</Label>
+            <SearchableSelect
+              value={selectedDivisionId}
+              onChange={(val) => {
+                setSelectedDivisionId(val);
+                // Clear team selection if it doesn't match new division
+                if (selectedTeam && selectedTeam.divisionId !== val && val !== "") {
+                  onSelectTeam("");
+                }
+              }}
+              items={availableDivisions.map(d => ({ id: d.id, label: d.name }))}
+              placeholder="All Divisions"
+              emptyMessage="No divisions found"
+              testId={`${testIdPrefix}-division-select`}
+            />
+          </div>
+        </div>
+
+        {/* Team Selector */}
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Select Team ({filteredTeams.length})</Label>
+          <SearchableSelect
+            value={selectedTeamId}
+            onChange={onSelectTeam}
+            items={filteredTeams.map(t => ({ id: t.id, label: t.name }))}
+            placeholder="Search teams..."
+            emptyMessage="No teams found matching filters"
+            testId={`${testIdPrefix}-team-select`}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SearchableSelect({ 
+  value, 
+  onChange, 
+  items, 
+  placeholder, 
+  disabledIds = [],
+  emptyMessage = "No item found.",
+  testId
+}: { 
+  value: string; 
+  onChange: (val: string) => void; 
+  items: { id: string; label: string }[]; 
+  placeholder: string;
+  disabledIds?: string[];
+  emptyMessage?: string;
+  testId?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const selectedItem = items.find(i => i.id === value);
+  
+  const filteredItems = items.filter(item => 
+    item.label.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal h-9"
+          data-testid={testId}
+        >
+          <span className="truncate">
+            {selectedItem ? selectedItem.label : placeholder}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <div className="flex flex-col">
+          <div className="flex items-center border-b px-3">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <input
+              className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="max-h-[300px] overflow-y-auto overflow-x-hidden p-1" role="listbox">
+            <div
+              role="option"
+              aria-selected={value === ""}
+              className={cn(
+                "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+                value === "" && "bg-accent text-accent-foreground"
+              )}
+              onClick={() => {
+                console.log("Clearing selection");
+                onChange("");
+                setOpen(false);
+                setSearch("");
+              }}
+            >
+              <Check
+                className={cn(
+                  "mr-2 h-4 w-4",
+                  value === "" ? "opacity-100" : "opacity-0"
+                )}
+              />
+              None / All
+            </div>
+            {filteredItems.map((item) => (
+              <div
+                key={item.id}
+                role="option"
+                aria-selected={value === item.id}
+                className={cn(
+                  "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+                  value === item.id && "bg-accent text-accent-foreground",
+                  disabledIds.includes(item.id) && "pointer-events-none opacity-50"
+                )}
+                onClick={() => {
+                  console.log("Selected:", item.label, "Item ID:", item.id);
+                  onChange(item.id);
+                  setOpen(false);
+                  setSearch("");
+                }}
+              >
+                <Check
+                  className={cn(
+                    "mr-2 h-4 w-4",
+                    value === item.id ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                {item.label}
+              </div>
+            ))}
+            {filteredItems.length === 0 && (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                {emptyMessage}
+              </div>
+            )}
+          </div>
+        </div>
       </PopoverContent>
     </Popover>
   );

@@ -21,6 +21,7 @@ import { USER_ROLES, ROLE_GROUPS } from "@/lib/roles";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TraitsManager, RoleRatingsManager, ZoneAnalysisManager, CoachReportsManager, AchievementsManager } from "./PlayerArrayFields";
 import { ClipboardList, Trophy, UserCog, History } from "lucide-react";
+import { SchoolTeamAssignment } from "@/components/common/SchoolTeamAssignment";
 
 interface PlayerFormProps {
   mode: 'create' | 'edit';
@@ -674,7 +675,16 @@ export function PlayerForm({ mode, playerAction, initialState, initialData = {},
           ) : (
             <div></div> 
           )}
-          <div className="flex gap-2">
+          {/* School & Team Assignment */}
+          <div className="space-y-4">
+            <SchoolTeamAssignment
+              initialSchools={initialData.assignedSchools || []}
+              initialTeams={initialData.teamIds || []}
+              mode="card"
+            />
+          </div>
+
+          <div className="flex justify-end gap-4">
             <Button variant="outline" type="button" onClick={() => window.history.back()}>
               Cancel
             </Button>

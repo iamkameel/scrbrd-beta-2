@@ -13,13 +13,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save, CheckCircle2, AlertTriangle, MapPin, Upload, User, Plus, X, Image as ImageIcon } from "lucide-react";
+import { Loader2, Save, CheckCircle2, AlertTriangle, MapPin, Upload, User, Plus, X, Image as ImageIcon, Trash2 } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import { School } from "@/types/firestore";
 import { fieldSchema } from "@/lib/validations/fieldSchema";
 import { z } from "zod";
 import { toast } from "sonner";
 import { WeatherWidget } from "@/components/fixtures/WeatherWidget";
+import { storage } from "@/lib/firebase";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 interface FieldFormProps {
   mode: 'create' | 'edit';
@@ -59,12 +61,61 @@ export function FieldForm({ mode, fieldAction, initialState, initialData = {}, s
   
   // Image URL Management
   const [imageUrls, setImageUrls] = useState<string[]>(initialData.images || []);
-  const [currentImageUrl, setCurrentImageUrl] = useState('');
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [isUploading, setIsUploading] = useState(false);
 
-  const addImageUrl = () => {
-    if (currentImageUrl && !imageUrls.includes(currentImageUrl)) {
-      setImageUrls([...imageUrls, currentImageUrl]);
-      setCurrentImageUrl('');
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+
+    // Process each file
+    const uploadPromises = Array.from(files).map(async (file) => {
+      // Validate
+      if (!file.type.startsWith('image/')) {
+        toast.error(`${file.name} is not an image`);
+        return null;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 5MB)`);
+        return null; 
+      }
+
+      const storageRef = ref(storage, `fields/${Date.now()}_${file.name}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      return new Promise<string | null>((resolve) => {
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(prev => ({ ...prev, [file.name]: progress }));
+          },
+          (error) => {
+            console.error("Upload error:", error);
+            resolve(null);
+          },
+          async () => {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            resolve(downloadURL);
+          }
+        );
+      });
+    });
+
+    try {
+      const results = await Promise.all(uploadPromises);
+      const validUrls = results.filter((url): url is string => url !== null);
+      setImageUrls(prev => [...prev, ...validUrls]);
+      toast.success(`Successfully uploaded ${validUrls.length} images`);
+    } catch (error) {
+      console.error("Error uploading gallery:", error);
+      toast.error("Failed to upload some images");
+    } finally {
+      setIsUploading(false);
+      setUploadProgress({});
+      // Reset input
+      e.target.value = '';
     }
   };
 
@@ -431,21 +482,44 @@ export function FieldForm({ mode, fieldAction, initialState, initialData = {}, s
                 <TabsContent value="images" className="space-y-6 mt-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Add Image URL</Label>
-                      <div className="flex gap-2">
-                        <Input 
-                          value={currentImageUrl}
-                          onChange={(e) => setCurrentImageUrl(e.target.value)}
-                          placeholder="https://example.com/field.jpg" 
-                          className="bg-muted/10"
-                        />
-                        <Button type="button" onClick={addImageUrl} size="icon">
-                          <Plus className="h-4 w-4" />
-                        </Button>
+                      <Label>Upload Images</Label>
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1">
+                            <div className="relative flex items-center justify-center w-full h-32 border-2 border-dashed rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                              <Input
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                onChange={handleGalleryUpload}
+                                disabled={isUploading}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                <Upload className="h-8 w-8" />
+                                <span className="text-sm font-medium">Click to upload images</span>
+                                <span className="text-xs">PNG, JPG up to 5MB</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Upload Progress */}
+                        {isUploading && Object.entries(uploadProgress).map(([fileName, progress]) => (
+                          <div key={fileName} className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span>{fileName}</span>
+                              <span>{Math.round(progress)}%</span>
+                            </div>
+                            <div className="h-1 w-full bg-secondary rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-primary transition-all duration-300" 
+                                style={{ width: `${progress}%` }} 
+                              />
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Add URLs for images of the field.
-                      </p>
                     </div>
 
                     {/* Image List */}
@@ -465,9 +539,9 @@ export function FieldForm({ mode, fieldAction, initialState, initialData = {}, s
                             <button
                               type="button"
                               onClick={() => removeImageUrl(url)}
-                              className="absolute top-2 right-2 p-1 bg-black/50 hover:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-md opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                             >
-                              <X className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
                         ))}

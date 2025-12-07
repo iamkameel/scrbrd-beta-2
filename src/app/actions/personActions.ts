@@ -151,3 +151,34 @@ export async function bulkDeletePeopleAction(personIds: string[]) {
         };
     }
 }
+
+export async function fetchPersonByEmail(email: string) {
+    try {
+        const admin = (await import('@/lib/firebase-admin')).default;
+        const snapshot = await admin.firestore().collection('people').where('email', '==', email).limit(1).get();
+
+        if (snapshot.empty) return null;
+
+        const doc = snapshot.docs[0];
+        return { id: doc.id, ...doc.data() } as Person;
+    } catch (error) {
+        console.error('Error fetching person by email:', error);
+        return null;
+    }
+}
+
+export async function fetchInjuredPlayers() {
+    try {
+        const admin = (await import('@/lib/firebase-admin')).default;
+        const snapshot = await admin.firestore().collection('people')
+            .where('status', '==', 'injured')
+            .get();
+
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Person[];
+    } catch (error) {
+        console.error('Error fetching injured players:', error);
+        return [];
+    }
+}
+
+

@@ -46,6 +46,7 @@ export const navGroups: NavGroup[] = [
     links: [
       { href: '/fixtures', label: 'Matches', icon: CalendarDays, key: 'matches' },
       { href: '/matches/add', label: 'Live Scoring', icon: Activity, key: 'live-scoring' },
+      { href: '/analytics', label: 'Analytics Dashboard', icon: BarChart3, key: 'analytics-dashboard' },
       { href: '/strategic-calendar', label: 'Strategic Calendar', icon: Calendar, key: 'strategic-calendar' },
       { href: '/scouting', label: 'Scouting Assistant', icon: Sparkles, key: 'scouting' },
       { href: '/umpire-review', label: 'Umpire Review', icon: Eye, key: 'umpire-review' },

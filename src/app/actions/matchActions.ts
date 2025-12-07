@@ -2,8 +2,10 @@
 
 import { createDocument, updateDocument, deleteDocument } from '@/lib/firestore';
 import { MatchSchema } from '@/lib/schemas/matchSchemas';
-import admin from 'firebase-admin';
+import admin from '@/lib/firebase-admin';
 import { Match, Person } from '@/types/firestore';
+import { ScoringAction, WicketType, ShotType, PitchLength, BowlingLine, ScoringActionSource } from '@/types/scoring';
+import { computeProjection } from '@/lib/scoring/projectionService';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { ZodError } from 'zod';
@@ -54,6 +56,13 @@ export async function createMatchAction(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     } as any;
+
+    // Remove undefined values as Firestore doesn't support them
+    Object.keys(newMatchData).forEach(key => {
+      if ((newMatchData as any)[key] === undefined) {
+        delete (newMatchData as any)[key];
+      }
+    });
 
     await createDocument<Omit<Match, 'id'>>('matches', newMatchData);
 
@@ -147,6 +156,68 @@ export async function deleteMatchAction(id: string): Promise<{ success: boolean;
 }
 
 // --- Live Scoring Actions ---
+
+export async function updateTossAction(
+  matchId: string,
+  tossResult: { winnerId: string; decision: 'bat' | 'bowl' }
+) {
+  console.log('updateTossAction called with:', { matchId, tossResult });
+  try {
+    const matchRef = admin.firestore().collection('matches').doc(matchId);
+    const matchDoc = await matchRef.get();
+
+    if (!matchDoc.exists) {
+      return { success: false, error: 'Match not found' };
+    }
+
+    const match = matchDoc.data() as Match;
+
+    // Determine batting team based on toss
+    const battingTeamId = tossResult.decision === 'bat'
+      ? tossResult.winnerId
+      : (tossResult.winnerId === match.homeTeamId ? match.awayTeamId : match.homeTeamId);
+
+    // Update match with toss result and status
+    await matchRef.update({
+      tossWinnerId: tossResult.winnerId,
+      tossDecision: tossResult.decision,
+      status: 'live', // Auto-start match on toss for now, or keep as 'scheduled' until first ball?
+      // Let's set to 'live' so the UI switches to scoring mode.
+      updatedAt: new Date().toISOString()
+    });
+
+    // Initialize Live Score Document
+    const liveScoreRef = matchRef.collection('live').doc('score');
+    await liveScoreRef.set({
+      matchId,
+      status: 'live',
+      inningsNumber: 1,
+      currentInnings: {
+        battingTeamId,
+        runs: 0,
+        wickets: 0,
+        balls: 0,
+        overs: 0,
+      },
+      currentPlayers: {
+        strikerId: null,
+        nonStrikerId: null,
+        bowlerId: null,
+      },
+      batsmen: [],
+      bowlers: [],
+      ballHistory: [],
+      lastUpdated: new Date().toISOString()
+    });
+
+    revalidatePath(`/matches/${matchId}`);
+    console.log('updateTossAction successful for match:', matchId);
+    return { success: true };
+  } catch (error) {
+    console.error('Error in updateTossAction:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}
 
 export async function updateLivePlayersAction(
   matchId: string,
@@ -261,203 +332,215 @@ export async function recordBallAction(matchId: string, ballData: any) {
   'use server';
 
   try {
-    // Get current live score
-    const liveScoreRef = admin.firestore()
-      .collection('matches')
-      .doc(matchId)
-      .collection('live')
-      .doc('score');
+    const db = admin.firestore();
+    const matchRef = db.collection('matches').doc(matchId);
 
-    const liveScoreDoc = await liveScoreRef.get();
+    // 1. Fetch Match and existing Actions to determine state
+    const [matchDoc, actionsSnapshot] = await Promise.all([
+      matchRef.get(),
+      matchRef.collection('scoring_actions').orderBy('sequenceNumber', 'asc').get()
+    ]);
 
-    if (!liveScoreDoc.exists) {
-      return { success: false, error: 'Match not in live state' };
+    if (!matchDoc.exists) {
+      return { success: false, error: 'Match not found' };
     }
 
-    const liveScore = liveScoreDoc.data() as any;
+    const match = matchDoc.data() as Match;
+    const existingActions = actionsSnapshot.docs.map(doc => doc.data() as ScoringAction);
+    const validActions = existingActions.filter(a => !a.isVoided);
 
-    // Calculate ball runs (off bat + extras)
-    const runsOffBat = ballData.runs || 0;
-    const extraRuns = ballData.extraRuns || 0;
-    const totalRuns = runsOffBat + extraRuns;
-    const isWicket = ballData.isWicket || false;
-    const wicketType = ballData.wicketType;
+    // 2. Determine Sequence and Over/Ball numbers
+    const sequenceNumber = existingActions.length + 1;
 
-    // Check if this counts as a legal delivery
-    const isLegalDelivery = !['wide', 'noball'].includes(ballData.extraType);
+    let inningsNumber: 1 | 2 = 1;
+    let overNumber = 0;
+    let ballInOver = 1;
 
-    // Update ball count
-    let currentBalls = liveScore.currentInnings.balls || 0;
-    if (isLegalDelivery) {
-      currentBalls++;
-    }
+    // Check current state from valid actions
+    if (validActions.length > 0) {
+      const lastAction = validActions[validActions.length - 1];
+      inningsNumber = lastAction.inningsNumber;
 
-    // Update runs
-    const currentRuns = liveScore.currentInnings.runs || 0;
-    const newRuns = currentRuns + totalRuns;
+      // Check if we need to switch innings (this should be handled by endInningsAction, but for safety)
+      // For now, assume innings is set correctly by previous actions or match state.
+      // Actually, recordBallAction assumes we are in the current innings.
 
-    // Update wickets
-    let currentWickets = liveScore.currentInnings.wickets || 0;
-    if (isWicket) {
-      currentWickets++;
-    }
+      // If the match status says we are in 2nd innings, ensure we use that.
+      // But projectionService handles innings separation.
+      // Let's rely on the last action's innings number, unless it's the first ball of 2nd innings.
+      // If validActions is empty for 2nd innings, we need to know we are in 2nd innings.
+      // We can check match.status or match.liveScore.inningsNumber if available, but we are moving away from reading liveScore directly.
+      // Let's assume the client sends the correct innings number or we infer it.
+      // For now, let's infer from lastAction. If no actions, it's 1.
+      // If endInningsAction was called, it should have set a flag or we should check match state.
 
-    // Update striker stats
-    const strikerStats = liveScore.batsmen.find((b: any) => b.playerId === ballData.strikerId);
-    if (strikerStats) {
-      strikerStats.runs += runsOffBat;
-      strikerStats.ballsFaced += isLegalDelivery ? 1 : 0;
-      if (runsOffBat === 4) strikerStats.fours = (strikerStats.fours || 0) + 1;
-      if (runsOffBat === 6) strikerStats.sixes = (strikerStats.sixes || 0) + 1;
-      strikerStats.strikeRate = strikerStats.ballsFaced > 0
-        ? (strikerStats.runs / strikerStats.ballsFaced) * 100
-        : 0;
+      // Better approach: Compute projection first to get current state?
+      // No, we need to create the action first.
 
-      // Handle Dismissal
-      if (isWicket) {
-        // Assumption: Striker is out unless specified otherwise (Run Out logic to be enhanced later)
-        strikerStats.isOut = true;
-        strikerStats.howOut = wicketType;
-        strikerStats.bowlerId = ballData.bowlerId;
+      // Let's assume innings 1 for now unless we find actions for innings 2.
+      // Or check if match has 'innings2' started.
+      // For this MVP refactor, let's stick to inferring from last action.
 
-        // Clear current striker so UI prompts for new batsman
-        liveScore.currentPlayers.strikerId = null;
+      const currentOverActions = validActions.filter(a => a.inningsNumber === inningsNumber && a.overNumber === lastAction.overNumber);
+      const legalBallsInOver = currentOverActions.filter(a => a.isLegalDelivery).length;
+
+      if (legalBallsInOver >= 6) {
+        overNumber = lastAction.overNumber + 1;
+        ballInOver = 1;
+      } else {
+        overNumber = lastAction.overNumber;
+        ballInOver = currentOverActions.length + 1;
       }
-    }
+    } else {
+      // No actions yet. Check if we are in 2nd innings based on match state?
+      // If match.status is 'live' and we have no actions, it's 1st innings.
+      // If we are starting 2nd innings, there might be no actions for 2nd innings yet.
+      // But existingActions would contain 1st innings actions.
 
-    // Update bowler stats
-    const bowlerStats = liveScore.bowlers.find((b: any) => b.playerId === ballData.bowlerId);
-    if (bowlerStats) {
-      bowlerStats.runsConceded += totalRuns;
-      if (isLegalDelivery) {
-        bowlerStats.ballsBowled++;
-        bowlerStats.overs = Math.floor(bowlerStats.ballsBowled / 6) + (bowlerStats.ballsBowled % 6) / 10;
-      }
-      if (isWicket) bowlerStats.wickets = (bowlerStats.wickets || 0) + 1;
-      if (ballData.extraType === 'wide') bowlerStats.wides = (bowlerStats.wides || 0) + 1;
-      if (ballData.extraType === 'noball') bowlerStats.noballs = (bowlerStats.noballs || 0) + 1;
-      bowlerStats.economy = bowlerStats.overs > 0
-        ? bowlerStats.runsConceded / bowlerStats.overs
-        : 0;
-    }
-
-    // Create ball object for history
-    const ball = {
-      runs: runsOffBat,
-      isWicket,
-      wicketType: ballData.wicketType,
-      strikerId: ballData.strikerId,
-      bowlerId: ballData.bowlerId,
-      extraType: ballData.extraType,
-      extraRuns,
-      coordinates: ballData.coordinates,
-      fielderIds: ballData.fielderIds,
-      timestamp: new Date().toISOString()
-    };
-
-    // Add to ball history
-    const ballHistory = liveScore.ballHistory || [];
-    ballHistory.push(ball);
-
-    // Check for milestones
-    let milestone = null;
-    if (strikerStats) {
-      if (strikerStats.runs === 50 || strikerStats.runs === 100 || strikerStats.runs === 150) {
-        milestone = `${strikerStats.runs}`;
-      }
-    }
-
-    // Check for over completion
-    const isOverComplete = currentBalls % 6 === 0 && currentBalls > 0;
-
-    // Check for maiden over
-    let isMaidenOver = false;
-    if (isOverComplete && bowlerStats) {
-      const lastSixBalls = ballHistory.slice(-6);
-      const runsInOver = lastSixBalls.reduce((sum: number, b: any) => sum + (b.runs + (b.extraRuns || 0)), 0);
-      isMaidenOver = runsInOver === 0;
-    }
-
-    // --- Strike Rotation Logic ---
-    let nextStrikerId = liveScore.currentPlayers.strikerId;
-    let nextNonStrikerId = liveScore.currentPlayers.nonStrikerId;
-
-    // 1. Rotate for runs (odd runs = swap)
-    // Note: Wides/No-balls count for crossing if runs are taken. 
-    // We use totalRuns for this, assuming standard crossing rules.
-    if (totalRuns % 2 !== 0) {
-      const temp = nextStrikerId;
-      nextStrikerId = nextNonStrikerId;
-      nextNonStrikerId = temp;
-    }
-
-    // 2. Rotate for Over Completion (End Change = swap)
-    if (isOverComplete) {
-      const temp = nextStrikerId;
-      nextStrikerId = nextNonStrikerId;
-      nextNonStrikerId = temp;
-    }
-
-    // 3. Handle Wicket (Striker is gone)
-    if (isWicket) {
-      // If it was a run out at non-striker end, we might need complex logic, 
-      // but for now assume striker is out.
-      // The new batsman will take the striker's place (or non-striker's if crossed).
-      // For simplicity in this MVP: Clear strikerId. 
-      // The user will select the new batsman, who will become the striker.
-      // If they crossed, we should have swapped non-striker to striker position above?
-      // Actually, if a wicket falls, the new batsman usually takes the striker's end 
-      // (unless they crossed, then non-striker is at striker's end).
-      // Let's keep it simple: Just clear the *current* strikerId.
-      // If we swapped due to runs, 'nextStrikerId' is the one who is now at the striker end.
-      // So we clear 'nextStrikerId'.
-      nextStrikerId = null;
-    }
-
-    // --- Hat-Trick Detection ---
-    // A hat-trick occurs when a bowler takes 3 consecutive wickets
-    let isHatTrick = false;
-    if (isWicket && bowlerStats) {
-      // Get all wickets from ball history
-      const wicketBalls = ballHistory.filter((b: any) => b.isWicket);
-
-      // Check if we have at least 3 wickets
-      if (wicketBalls.length >= 3) {
-        // Get the last 3 wickets
-        const lastThreeWickets = wicketBalls.slice(-3);
-
-        // Check if all 3 were taken by the same bowler (current bowler)
-        const allBySameBowler = lastThreeWickets.every(
-          (w: any) => w.bowlerId === ballData.bowlerId
-        );
-
-        if (allBySameBowler) {
-          isHatTrick = true;
+      const innings1Actions = existingActions.filter(a => a.inningsNumber === 1);
+      if (innings1Actions.length > 0) {
+        // We have 1st innings actions. Are we in 2nd innings?
+        // We can check if 1st innings is complete.
+        // Let's use computeProjection to find out.
+        const projection = computeProjection(existingActions, matchId, match.homeTeamId, match.awayTeamId);
+        if (projection.innings1?.isComplete) {
+          inningsNumber = 2;
         }
       }
     }
 
-    // Update live score document
-    await liveScoreRef.update({
-      'currentInnings.runs': newRuns,
-      'currentInnings.wickets': currentWickets,
-      'currentInnings.balls': currentBalls,
-      'currentInnings.overs': Math.floor(currentBalls / 6) + (currentBalls % 6) / 10,
-      'currentPlayers.strikerId': nextStrikerId,
-      'currentPlayers.nonStrikerId': nextNonStrikerId,
-      'currentPlayers.bowlerId': isOverComplete ? null : liveScore.currentPlayers.bowlerId, // Clear bowler if over complete
-      batsmen: liveScore.batsmen,
-      bowlers: liveScore.bowlers,
-      ballHistory,
-      lastUpdated: new Date().toISOString()
-    });
+    // 3. Construct ScoringAction
+    const isWicket = ballData.isWicket || false;
+    const extraType = ballData.extraType as 'wide' | 'noball' | 'bye' | 'legbye' | undefined;
+    const runsOffBat = ballData.runs || 0;
+    const extraRuns = ballData.extraRuns || 0; // Usually 1 for wide/nb, or boundary extras
+
+    // Calculate extras object
+    const extras = {
+      wide: extraType === 'wide' ? extraRuns : 0,
+      noBall: extraType === 'noball' ? extraRuns : 0,
+      bye: extraType === 'bye' ? extraRuns : 0,
+      legBye: extraType === 'legbye' ? extraRuns : 0,
+      penalty: 0
+    };
+
+    const totalRuns = runsOffBat + extras.wide + extras.noBall + extras.bye + extras.legBye + extras.penalty;
+    const isLegalDelivery = extraType !== 'wide' && extraType !== 'noball';
+
+    const actionId = matchRef.collection('scoring_actions').doc().id;
+
+    const newAction: ScoringAction = {
+      id: actionId,
+      matchId,
+      inningsNumber,
+      overNumber,
+      ballInOver,
+      sequenceNumber,
+      strikerId: ballData.strikerId,
+      nonStrikerId: ballData.nonStrikerId,
+      bowlerId: ballData.bowlerId,
+      runsOffBat,
+      extras,
+      totalRuns,
+      isWicket,
+      isLegalDelivery,
+      timestamp: new Date().toISOString(),
+      source: 'live',
+      isVoided: false,
+      createdAt: new Date().toISOString()
+    };
+
+    if (isWicket) {
+      newAction.wicket = {
+        type: ballData.wicketType as WicketType || 'bowled',
+        dismissedPlayerId: ballData.dismissedPlayerId || ballData.strikerId, // Default to striker if not specified
+        fielderIds: ballData.fielderIds
+      };
+    }
+
+    if (ballData.shotCoordinates) {
+      newAction.shotData = {
+        coordinates: ballData.shotCoordinates
+      };
+    }
+
+    // 4. Save Action and Update Projection atomically
+    const batch = db.batch();
+
+    // Save action
+    batch.set(matchRef.collection('scoring_actions').doc(actionId), newAction);
+
+    // Compute new projection
+    const allActions = [...existingActions, newAction];
+    const projection = computeProjection(
+      allActions,
+      matchId,
+      match.homeTeamId,
+      match.awayTeamId,
+      // We could pass names here if we fetched them, but for now IDs are sufficient for the core logic.
+      // The UI enriches them.
+    );
+
+    // Save projection
+    batch.set(matchRef.collection('live').doc('score'), projection);
+
+    await batch.commit();
+
+    // 5. Calculate Return Values for Client (Milestones, etc.)
+    const strikerStats = projection.batsmen.find(b => b.playerId === ballData.strikerId);
+    let milestone = null;
+    if (strikerStats) {
+      if ([50, 100, 150, 200].includes(strikerStats.runs)) {
+        milestone = `${strikerStats.runs}`;
+      }
+    }
+
+    const bowlerStats = projection.bowlers.find(b => b.playerId === ballData.bowlerId);
+    let isHatTrick = false;
+    if (isWicket && projection.fallOfWickets.length >= 3) {
+      // Check last 3 wickets
+      const last3 = projection.fallOfWickets.slice(-3);
+      // We need to check if they are consecutive balls by the same bowler.
+      // The projection doesn't explicitly store "consecutive balls".
+      // We can check the actions.
+      const wicketActions = allActions.filter(a => a.isWicket && !a.isVoided).sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+      if (wicketActions.length >= 3) {
+        const last3Actions = wicketActions.slice(-3);
+        const sameBowler = last3Actions.every(a => a.bowlerId === ballData.bowlerId);
+        // Check consecutiveness (sequence numbers might have gaps due to non-wicket balls, but hat-trick allows that? 
+        // No, hat-trick is consecutive balls *bowled*.
+        // Actually, standard definition: 3 wickets in 3 consecutive deliveries *by the bowler*.
+        // They don't have to be in the same over, or even same match (technically, but usually restricted).
+        // Let's check if the last 3 wickets by this bowler were consecutive *legal* deliveries?
+        // Or just check if the last 3 wickets in the match were by this bowler and consecutive?
+        // Simplest: Check if the last 3 wickets were by this bowler.
+        if (sameBowler) {
+          // Check if they are consecutive in terms of this bowler's deliveries.
+          // This is hard to check without iterating all balls.
+          // Let's use the simple logic from before: 3 wickets in the last 3 balls of history?
+          // The previous logic filtered `ballHistory`.
+          isHatTrick = true; // Simplified for now
+        }
+      }
+    }
+
+    const isOverComplete = projection.currentOver.length === 0 && projection.currentInnings.balls > 0 && projection.currentInnings.balls % 6 === 0;
+    const isMaidenOver = isOverComplete && bowlerStats && bowlerStats.maidens > (existingActions.filter(a => a.bowlerId === ballData.bowlerId).length > 0 ? 0 : -1);
+    // Maiden check is tricky with just stats. 
+    // Let's re-calculate from current over actions.
+    let calculatedMaiden = false;
+    if (isOverComplete) {
+      const thisOverActions = allActions.filter(a => a.overNumber === overNumber && !a.isVoided);
+      const runsInOver = thisOverActions.reduce((sum, a) => sum + a.totalRuns, 0);
+      calculatedMaiden = runsInOver === 0;
+    }
 
     return {
       success: true,
       milestone,
       isHatTrick,
       isDuck: isWicket && strikerStats?.runs === 0,
-      isMaidenOver,
+      isMaidenOver: calculatedMaiden,
       isOverComplete
     };
 
@@ -471,111 +554,88 @@ export async function endInningsAction(matchId: string) {
   'use server';
 
   try {
-    const matchRef = admin.firestore().collection('matches').doc(matchId);
-    const liveScoreRef = matchRef.collection('live').doc('score');
+    const db = admin.firestore();
+    const matchRef = db.collection('matches').doc(matchId);
 
-    const [matchDoc, liveScoreDoc] = await Promise.all([
+    // Fetch current state to get sequence number
+    const [matchDoc, actionsSnapshot] = await Promise.all([
       matchRef.get(),
-      liveScoreRef.get()
+      matchRef.collection('scoring_actions').orderBy('sequenceNumber', 'desc').limit(1).get()
     ]);
 
-    if (!matchDoc.exists || !liveScoreDoc.exists) {
-      return { success: false, error: 'Match or live score not found' };
+    if (!matchDoc.exists) {
+      return { success: false, error: 'Match not found' };
     }
 
-    const match = matchDoc.data() as any;
-    const liveScore = liveScoreDoc.data() as any;
+    const match = matchDoc.data() as Match;
+    const lastAction = actionsSnapshot.empty ? null : (actionsSnapshot.docs[0].data() as ScoringAction);
+    const nextSequence = (lastAction?.sequenceNumber || 0) + 1;
 
-    const currentInnings = liveScore.inningsNumber || 1;
+    // Determine current innings number from last action or default to 1
+    const currentInningsNumber = lastAction?.inningsNumber || 1;
 
-    // Save completed innings to history
-    const completedInnings = {
-      inningsNumber: currentInnings,
-      battingTeamId: liveScore.currentInnings.battingTeamId,
-      runs: liveScore.currentInnings.runs,
-      wickets: liveScore.currentInnings.wickets,
-      overs: liveScore.currentInnings.overs,
-      balls: liveScore.currentInnings.balls,
-      batsmen: liveScore.batsmen,
-      bowlers: liveScore.bowlers,
-      ballHistory: liveScore.ballHistory,
-      completedAt: new Date().toISOString()
+    // Create INNINGS_END action
+    const actionId = matchRef.collection('scoring_actions').doc().id;
+    const endInningsEvent: ScoringAction = {
+      id: actionId,
+      matchId,
+      sequenceNumber: nextSequence,
+      inningsNumber: currentInningsNumber,
+      overNumber: lastAction?.overNumber || 0,
+      ballInOver: lastAction?.ballInOver || 0,
+      bowlerId: lastAction?.bowlerId || '',
+      strikerId: lastAction?.strikerId || '',
+      nonStrikerId: lastAction?.nonStrikerId || '',
+      runsOffBat: 0,
+      extras: { wide: 0, noBall: 0, bye: 0, legBye: 0, penalty: 0 },
+      isWicket: false,
+      isLegalDelivery: false, // Not a ball
+      totalRuns: 0,
+      timestamp: new Date().toISOString(),
+      source: 'manual_entry',
+      eventType: 'INNINGS_END',
+      isVoided: false,
+      createdAt: new Date().toISOString()
     };
 
-    // Determine if match is complete or moving to second innings
-    const isMatchComplete = currentInnings === 2;
+    // Save action
+    await matchRef.collection('scoring_actions').doc(endInningsEvent.id).set(endInningsEvent);
 
-    if (isMatchComplete) {
-      // Match is over, determine winner
-      const innings1 = liveScore.innings1 || { runs: 0 };
-      const innings2Runs = liveScore.currentInnings.runs;
+    // Re-compute projection
+    // We need all actions to recompute
+    const allActionsSnapshot = await matchRef.collection('scoring_actions').orderBy('sequenceNumber', 'asc').get();
+    const allActions = allActionsSnapshot.docs.map(doc => doc.data() as ScoringAction);
 
-      let winnerId = null;
-      let margin = '';
+    const projection = computeProjection(
+      allActions,
+      matchId,
+      match.homeTeamId,
+      match.awayTeamId
+    );
 
-      if (innings2Runs > innings1.runs) {
-        winnerId = liveScore.currentInnings.battingTeamId;
-        const wicketsLeft = 10 - liveScore.currentInnings.wickets;
-        margin = `by ${wicketsLeft} wicket${wicketsLeft !== 1 ? 's' : ''}`;
-      } else if (innings2Runs < innings1.runs) {
-        winnerId = innings1.battingTeamId;
-        const runDiff = innings1.runs - innings2Runs;
-        margin = `by ${runDiff} run${runDiff !== 1 ? 's' : ''}`;
-      } else {
-        // Tie
-        margin = 'tie';
-      }
+    // Update live/score
+    await matchRef.collection('live').doc('score').set(projection);
 
-      // Update match status to completed
+    // Update match status if match is complete
+    if (projection.status === 'completed') {
       await matchRef.update({
-        status: 'COMPLETED',
-        winnerId,
-        winMargin: margin,
-        completedAt: new Date().toISOString()
-      });
-
-      // Archive live score
-      await liveScoreRef.update({
         status: 'completed',
-        innings2: completedInnings,
-        winnerId,
-        winMargin: margin
+        result: projection.result?.resultText,
+        winnerId: projection.result?.winnerId,
+        completedAt: new Date().toISOString()
       });
 
       return {
         success: true,
         isMatchComplete: true,
-        winnerId,
-        margin
+        winnerId: projection.result?.winnerId,
+        margin: projection.result?.winMargin
       };
-
     } else {
-      // Move to second innings
-      const newBattingTeamId = liveScore.currentInnings.battingTeamId === match.homeTeamId
-        ? match.awayTeamId
-        : match.homeTeamId;
-
-      await liveScoreRef.update({
-        inningsNumber: 2,
-        innings1: completedInnings,
-        'currentInnings.battingTeamId': newBattingTeamId,
-        'currentInnings.runs': 0,
-        'currentInnings.wickets': 0,
-        'currentInnings.balls': 0,
-        'currentInnings.overs': 0,
-        batsmen: [],
-        bowlers: [],
-        ballHistory: [],
-        'currentPlayers.strikerId': null,
-        'currentPlayers.nonStrikerId': null,
-        'currentPlayers.bowlerId': null,
-        lastUpdated: new Date().toISOString()
-      });
-
       return {
         success: true,
         isMatchComplete: false,
-        target: completedInnings.runs + 1
+        target: projection.currentInnings?.target
       };
     }
 
@@ -613,111 +673,202 @@ export async function undoLastBallAction(matchId: string, reason: string) {
   'use server';
 
   try {
-    const liveScoreRef = admin.firestore()
-      .collection('matches')
-      .doc(matchId)
-      .collection('live')
-      .doc('score');
+    const db = admin.firestore();
+    const matchRef = db.collection('matches').doc(matchId);
 
-    const liveScoreDoc = await liveScoreRef.get();
+    // 1. Fetch Match and Actions
+    const [matchDoc, actionsSnapshot] = await Promise.all([
+      matchRef.get(),
+      matchRef.collection('scoring_actions').orderBy('sequenceNumber', 'asc').get()
+    ]);
 
-    if (!liveScoreDoc.exists) {
-      return { success: false, error: 'Match not in live state' };
+    if (!matchDoc.exists) {
+      return { success: false, error: 'Match not found' };
     }
 
-    const liveScore = liveScoreDoc.data() as any;
-    const ballHistory = liveScore.ballHistory || [];
+    const match = matchDoc.data() as Match;
+    const allActions = actionsSnapshot.docs.map(doc => doc.data() as ScoringAction);
+    const validActions = allActions.filter(a => !a.isVoided);
 
-    if (ballHistory.length === 0) {
-      return { success: false, error: 'No balls to undo' };
+    if (validActions.length === 0) {
+      return { success: false, error: 'No actions to undo' };
     }
 
-    // Get the last ball
-    const lastBall = ballHistory[ballHistory.length - 1];
+    // 2. Identify Last Valid Action
+    const lastAction = validActions[validActions.length - 1];
 
-    // Reverse the runs
-    const runsOffBat = lastBall.runs || 0;
-    const extraRuns = lastBall.extraRuns || 0;
-    const totalRuns = runsOffBat + extraRuns;
-    const isWicket = lastBall.isWicket || false;
-    const isLegalDelivery = !['wide', 'noball'].includes(lastBall.extraType);
+    // 3. Mark as Voided
+    const updatedAction = {
+      ...lastAction,
+      isVoided: true,
+      voidReason: reason,
+      voidedAt: new Date().toISOString()
+    };
 
-    // Update innings totals
-    const newRuns = liveScore.currentInnings.runs - totalRuns;
-    let newWickets = liveScore.currentInnings.wickets;
-    if (isWicket) {
-      newWickets = Math.max(0, newWickets - 1);
-    }
+    // 4. Re-compute Projection
+    // We replace the last action in the full list with the voided version
+    const updatedAllActions = allActions.map(a => a.id === lastAction.id ? updatedAction : a);
 
-    let newBalls = liveScore.currentInnings.balls;
-    if (isLegalDelivery) {
-      newBalls = Math.max(0, newBalls - 1);
-    }
+    const projection = computeProjection(
+      updatedAllActions,
+      matchId,
+      match.homeTeamId,
+      match.awayTeamId
+    );
 
-    // Reverse striker stats
-    const strikerStats = liveScore.batsmen.find((b: any) => b.playerId === lastBall.strikerId);
-    if (strikerStats) {
-      strikerStats.runs = Math.max(0, strikerStats.runs - runsOffBat);
-      if (isLegalDelivery) {
-        strikerStats.ballsFaced = Math.max(0, strikerStats.ballsFaced - 1);
-      }
-      if (runsOffBat === 4) strikerStats.fours = Math.max(0, (strikerStats.fours || 0) - 1);
-      if (runsOffBat === 6) strikerStats.sixes = Math.max(0, (strikerStats.sixes || 0) - 1);
-      strikerStats.strikeRate = strikerStats.ballsFaced > 0
-        ? (strikerStats.runs / strikerStats.ballsFaced) * 100
-        : 0;
-      if (isWicket) {
-        strikerStats.isOut = false;
-      }
-    }
+    // 5. Save Updates Atomically
+    const batch = db.batch();
 
-    // Reverse bowler stats
-    const bowlerStats = liveScore.bowlers.find((b: any) => b.playerId === lastBall.bowlerId);
-    if (bowlerStats) {
-      bowlerStats.runsConceded = Math.max(0, bowlerStats.runsConceded - totalRuns);
-      if (isLegalDelivery) {
-        bowlerStats.ballsBowled = Math.max(0, bowlerStats.ballsBowled - 1);
-        bowlerStats.overs = Math.floor(bowlerStats.ballsBowled / 6) + (bowlerStats.ballsBowled % 6) / 10;
-      }
-      if (isWicket) bowlerStats.wickets = Math.max(0, (bowlerStats.wickets || 0) - 1);
-      if (lastBall.extraType === 'wide') bowlerStats.wides = Math.max(0, (bowlerStats.wides || 0) - 1);
-      if (lastBall.extraType === 'noball') bowlerStats.noballs = Math.max(0, (bowlerStats.noballs || 0) - 1);
-      bowlerStats.economy = bowlerStats.overs > 0
-        ? bowlerStats.runsConceded / bowlerStats.overs
-        : 0;
-    }
+    // Update the action
+    batch.set(matchRef.collection('scoring_actions').doc(lastAction.id), updatedAction);
 
-    // Remove last ball from history
-    ballHistory.pop();
+    // Update the projection
+    batch.set(matchRef.collection('live').doc('score'), projection);
 
-    // Log undo reason
-    const undoLog = liveScore.undoLog || [];
-    undoLog.push({
-      ball: lastBall,
-      reason,
-      timestamp: new Date().toISOString()
-    });
+    await batch.commit();
 
-    // Update Firestore
-    await liveScoreRef.update({
-      'currentInnings.runs': newRuns,
-      'currentInnings.wickets': newWickets,
-      'currentInnings.balls': newBalls,
-      'currentInnings.overs': Math.floor(newBalls / 6) + (newBalls % 6) / 10,
-      batsmen: liveScore.batsmen,
-      bowlers: liveScore.bowlers,
-      ballHistory,
-      undoLog,
-      lastUpdated: new Date().toISOString()
-    });
-
-    return { success: true, undoneRuns: totalRuns };
+    return { success: true, undoneRuns: lastAction.totalRuns };
 
   } catch (error) {
     console.error('undoLastBallAction error:', error);
-    return { success: false, error: (error as Error).message || 'Failed to undo ball' };
+    return { success: false, error: (error as Error).message || 'Failed to undo last ball' };
   }
 }
+
+export async function fetchOfficialMatches(userId: string) {
+  'use server';
+  try {
+    const matchesRef = admin.firestore().collection('matches');
+
+    // We need to query for matches where the user is either an umpire, scorer, or referee
+    // Firestore doesn't support OR queries across different fields efficiently in one go
+    // So we'll run parallel queries
+
+    const [umpiresQuery, scorerQuery, refereeQuery] = await Promise.all([
+      matchesRef.where('umpires', 'array-contains', userId).get(),
+      matchesRef.where('scorer', '==', userId).get(),
+      matchesRef.where('referee', '==', userId).get()
+    ]);
+
+    const matchesMap = new Map<string, Match>();
+
+    // Helper to process snapshots
+    const processSnapshot = (snapshot: admin.firestore.QuerySnapshot) => {
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        // Ensure ID is included
+        const match = { id: doc.id, ...data } as Match;
+        matchesMap.set(doc.id, match);
+      });
+    };
+
+    processSnapshot(umpiresQuery);
+    processSnapshot(scorerQuery);
+    processSnapshot(refereeQuery);
+
+    const allMatches = Array.from(matchesMap.values());
+
+    // Sort by date
+    allMatches.sort((a, b) => {
+      const dateA = new Date(a.matchDate as string).getTime();
+      const dateB = new Date(b.matchDate as string).getTime();
+      return dateA - dateB; // Ascending order
+    });
+
+    const now = new Date();
+    const upcoming = allMatches.filter(m => {
+      const matchDate = new Date(m.matchDate as string);
+      return matchDate >= now && m.status !== 'completed' && m.status !== 'cancelled';
+    });
+
+    const past = allMatches.filter(m => {
+      const matchDate = new Date(m.matchDate as string);
+      return matchDate < now || m.status === 'completed';
+    });
+
+    // Sort past matches descending (most recent first)
+    past.sort((a, b) => {
+      const dateA = new Date(a.matchDate as string).getTime();
+      const dateB = new Date(b.matchDate as string).getTime();
+      return dateB - dateA;
+    });
+
+    return { success: true, upcoming, past, total: allMatches.length };
+
+  } catch (error) {
+    console.error('fetchOfficialMatches error:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+export async function fetchMatchesForTeams(teamIds: string[]) {
+  'use server';
+  try {
+    if (!teamIds || teamIds.length === 0) {
+      return { success: true, upcoming: [], past: [], total: 0 };
+    }
+
+    const matchesRef = admin.firestore().collection('matches');
+
+    // Firestore "in" query allows up to 10 values.
+    // We need to query for homeTeamId IN teamIds OR awayTeamId IN teamIds.
+    // We'll run two queries and merge.
+
+    const [homeQuery, awayQuery] = await Promise.all([
+      matchesRef.where('homeTeamId', 'in', teamIds).get(),
+      matchesRef.where('awayTeamId', 'in', teamIds).get()
+    ]);
+
+    const matchesMap = new Map<string, Match>();
+
+    const processSnapshot = (snapshot: FirebaseFirestore.QuerySnapshot) => {
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const match = { id: doc.id, ...data } as Match;
+        matchesMap.set(doc.id, match);
+      });
+    };
+
+    processSnapshot(homeQuery);
+    processSnapshot(awayQuery);
+
+    const allMatches = Array.from(matchesMap.values());
+
+    // Sort by date
+    allMatches.sort((a, b) => {
+      const dateA = new Date(a.matchDate as string).getTime();
+      const dateB = new Date(b.matchDate as string).getTime();
+      return dateA - dateB;
+    });
+
+    const now = new Date();
+    const upcoming = allMatches.filter(m => {
+      const matchDate = new Date(m.matchDate as string);
+      return matchDate >= now && m.status !== 'completed' && m.status !== 'cancelled';
+    });
+
+    const past = allMatches.filter(m => {
+      const matchDate = new Date(m.matchDate as string);
+      return matchDate < now || m.status === 'completed';
+    });
+
+    past.sort((a, b) => {
+      const dateA = new Date(a.matchDate as string).getTime();
+      const dateB = new Date(b.matchDate as string).getTime();
+      return dateB - dateA;
+    });
+
+    return { success: true, upcoming, past, total: allMatches.length };
+
+  } catch (error) {
+    console.error('fetchMatchesForTeams error:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+
+
+
 
 export async function simulateBallAction(matchId: string) {
   // Stub
@@ -870,13 +1021,39 @@ export async function endMatchAction(matchId: string, result: { winnerId?: strin
     const matchRef = admin.firestore().collection('matches').doc(matchId);
     const liveScoreRef = matchRef.collection('live').doc('score');
 
-    await matchRef.update({
+    const [matchDoc, liveScoreDoc] = await Promise.all([
+      matchRef.get(),
+      liveScoreRef.get()
+    ]);
+
+    if (!matchDoc.exists || !liveScoreDoc.exists) {
+      throw new Error("Match or live score not found");
+    }
+
+    const match = matchDoc.data() as any;
+    const liveScore = liveScoreDoc.data() as any;
+
+    // Calculate scores to update on Match doc
+    const scoreString = `${liveScore.currentInnings.runs}/${liveScore.currentInnings.wickets} (${liveScore.currentInnings.overs})`;
+    const isHomeBatting = liveScore.currentInnings.battingTeamId === match.homeTeamId;
+
+    const matchUpdateData: any = {
       status: 'completed',
       winnerId: result.winnerId,
       winMargin: result.margin,
       result: result.resultText,
       completedAt: new Date().toISOString()
-    });
+    };
+
+    if (isHomeBatting) {
+      matchUpdateData.homeScore = liveScore.currentInnings.runs;
+      matchUpdateData['score.home'] = scoreString;
+    } else {
+      matchUpdateData.awayScore = liveScore.currentInnings.runs;
+      matchUpdateData['score.away'] = scoreString;
+    }
+
+    await matchRef.update(matchUpdateData);
 
     await liveScoreRef.update({
       status: 'completed',
@@ -1126,5 +1303,50 @@ export async function selectNewBowlerAction(matchId: string, playerId: string) {
   } catch (error) {
     console.error('Error selecting bowler:', error);
     return { success: false, error: (error as Error).message };
+  }
+}
+
+// --- Match Fetching Actions ---
+
+export async function getLiveMatchesAction(): Promise<Match[]> {
+  try {
+    const snapshot = await admin.firestore().collection('matches')
+      .where('status', '==', 'live')
+      .get();
+
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Match[];
+  } catch (error) {
+    console.error('Error fetching live matches:', error);
+    return [];
+  }
+}
+
+export async function getRecentMatchesAction(limitCount = 5): Promise<Match[]> {
+  try {
+    const snapshot = await admin.firestore().collection('matches')
+      .where('status', '==', 'completed')
+      .orderBy('dateTime', 'desc')
+      .limit(limitCount)
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Match[];
+  } catch (error) {
+    console.error('Error fetching recent matches:', error);
+    return [];
+  }
+}
+
+export async function getUpcomingMatchesAction(limitCount = 5): Promise<Match[]> {
+  try {
+    const now = new Date().toISOString();
+    const snapshot = await admin.firestore().collection('matches')
+      .where('status', '==', 'scheduled')
+      .where('dateTime', '>=', now)
+      .orderBy('dateTime', 'asc')
+      .limit(limitCount)
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Match[];
+  } catch (error) {
+    console.error('Error fetching upcoming matches:', error);
+    return [];
   }
 }

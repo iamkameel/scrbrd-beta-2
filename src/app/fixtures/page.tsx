@@ -33,9 +33,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format, isFuture, subDays, isWithinInterval, parseISO, isValid, isEqual } from 'date-fns';
 import { cn } from "@/lib/utils";
-import { detailedTeamsData } from '@/lib/team-data'; // Assuming Team type is implicitly handled or not strictly needed for DisplayFixture
-import { umpiresData } from '@/lib/umpire-data'; // Assuming UmpireProfile type is implicitly handled
-import { scorersData } from '@/lib/scorer-data'; // Assuming ScorerProfile type is implicitly handled
+import { fetchTeams, fetchDivisions, fetchUmpires, fetchScorers } from '@/lib/firestore';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar } from "@/components/ui/calendar";
@@ -83,7 +82,15 @@ export interface DisplayFixture {
 const fetchFixtures = async (): Promise<DisplayFixture[]> => {
   const matchesCollectionRef = collection(db, 'matches');
   const q = firestoreQuery(matchesCollectionRef, orderBy('dateTime', 'desc'));
-  const querySnapshot = await getDocs(q);
+  
+  // Fetch matches, teams, divisions, umpires, and scorers in parallel
+  const [querySnapshot, teams, divisions, umpires, scorers] = await Promise.all([
+    getDocs(q),
+    fetchTeams(),
+    fetchDivisions(),
+    fetchUmpires(),
+    fetchScorers()
+  ]);
   
   const fixturesList = querySnapshot.docs.reduce((acc, docSnapshot) => {
     const data = docSnapshot.data() as any; // Cast to any to handle Match fields flexibly
@@ -106,18 +113,33 @@ const fetchFixtures = async (): Promise<DisplayFixture[]> => {
     }
 
     if (scheduledDateTime && isValid(scheduledDateTime)) {
-      const homeTeam = detailedTeamsData.find(t => t.id === data.homeTeamId);
-      const awayTeam = detailedTeamsData.find(t => t.id === data.awayTeamId);
+      const homeTeam = teams.find(t => t.id === data.homeTeamId);
+      const awayTeam = teams.find(t => t.id === data.awayTeamId);
+
+      // Resolve Division Name
+      let divisionName = data.division; // Use stored name if available
+      if (!divisionName || divisionName === 'N/A') {
+          const divId = data.divisionId || homeTeam?.divisionId;
+          if (divId) {
+              const div = divisions.find(d => d.id === divId);
+              if (div) divisionName = div.name;
+          }
+      }
+      if (!divisionName) divisionName = 'N/A';
 
       // Use optimistic names if available, otherwise lookup or ID
-      const homeTeamName = data.homeTeamName || homeTeam?.teamName || data.homeTeamId;
-      const awayTeamName = data.awayTeamName || awayTeam?.teamName || data.awayTeamId;
+      const homeTeamName = data.homeTeamName || homeTeam?.name || data.homeTeamId;
+      const awayTeamName = data.awayTeamName || awayTeam?.name || data.awayTeamId;
 
       const umpiresDisplayList = data.umpires && data.umpires.length > 0
-        ? data.umpires.map((id: string) => umpiresData.find(u => u.id === id)?.name || id).filter(Boolean).join(', ')
+        ? data.umpires.map((id: string) => {
+            const u = umpires.find(p => p.id === id);
+            return u ? (u.displayName || `${u.firstName} ${u.lastName}`) : id;
+          }).filter(Boolean).join(', ')
         : 'N/A';
       
-      const scorerInfo = data.scorer ? scorersData.find(s => s.id === data.scorer) : null;
+      const scorer = data.scorer ? scorers.find(s => s.id === data.scorer) : null;
+      const scorerName = scorer ? (scorer.displayName || `${scorer.firstName} ${scorer.lastName}`) : null;
 
       acc.push({
         id: docSnapshot.id,
@@ -131,10 +153,10 @@ const fetchFixtures = async (): Promise<DisplayFixture[]> => {
         location: data.venue || data.fieldId || 'TBC',
         status: data.status || 'Scheduled',
         matchType: data.matchType || 'T20',
-        ageGroup: data.ageGroup || homeTeam?.ageGroup || 'N/A',
-        division: data.division || homeTeam?.division || 'N/A',
+        ageGroup: data.ageGroup || divisionName,
+        division: divisionName,
         umpiresDisplay: umpiresDisplayList,
-        scorerName: scorerInfo?.name || 'N/A',
+        scorerName: scorerName || 'N/A',
       } as DisplayFixture);
     }
     return acc;

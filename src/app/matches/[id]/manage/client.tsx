@@ -17,11 +17,17 @@ import { Users, RotateCcw, Flag, ChevronLeft, Settings } from 'lucide-react';
 import { EditMatchDialog } from './edit-match-dialog';
 import { EndInningsDialog } from './end-innings-dialog';
 import { EndMatchDialog } from './end-match-dialog';
+import { TossDialog } from './toss-dialog';
 import { endMatchAction } from '@/app/actions/matchActions';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Match, Team, Person } from '@/types/firestore';
 import { MatchInfoCard } from '@/components/match/MatchInfoCard';
 import { MatchSummary } from './match-summary';
+
+import { PlayCircle } from 'lucide-react';
+import { BallByBallCommentary } from '@/components/match/BallByBallCommentary';
+import { generateCommentaryFromHistory } from '@/lib/commentaryUtils';
 
 interface MatchManagementClientProps {
   match: Match;
@@ -40,6 +46,7 @@ export function MatchManagementClient({
 }: MatchManagementClientProps) {
   const { liveScore, loading, error, connected } = useLiveScore(match.id!);
   const { toast } = useToast();
+  const router = useRouter();
   
   const [scoringOpen, setScoringOpen] = useState(false);
   const [playersOpen, setPlayersOpen] = useState(false);
@@ -47,6 +54,7 @@ export function MatchManagementClient({
   const [editMatchOpen, setEditMatchOpen] = useState(false);
   const [endInningsOpen, setEndInningsOpen] = useState(false);
   const [endMatchOpen, setEndMatchOpen] = useState(false);
+  const [tossOpen, setTossOpen] = useState(false);
   const [shotCoords, setShotCoords] = useState<{ angle: number; distance: number } | undefined>(undefined);
   const [endingInnings, setEndingInnings] = useState(false);
 
@@ -189,7 +197,7 @@ export function MatchManagementClient({
     return <div className="flex items-center justify-center h-screen">Loading match data...</div>;
   }
 
-  if (error) {
+  if (error && match.status !== 'scheduled') {
     return <div className="p-8 text-center text-destructive">Error: {error}</div>;
   }
 
@@ -238,7 +246,11 @@ export function MatchManagementClient({
   
   const lastBall = liveScore?.ballHistory?.[liveScore.ballHistory.length - 1];
   const isOverComplete = liveScore?.currentInnings?.balls && liveScore.currentInnings.balls % 6 === 0;
+
   const unavailableBowlerIds = isOverComplete && lastBall?.bowlerId ? [lastBall.bowlerId] : [];
+
+  // Generate Commentary
+  const commentary = generateCommentaryFromHistory(liveScore?.ballHistory || [], allPlayers);
 
   return (
     <div className="container mx-auto py-8 space-y-8 max-w-7xl relative" data-testid="match-management-container">
@@ -268,7 +280,7 @@ export function MatchManagementClient({
             </p>
           </div>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
           <Button 
             variant="outline" 
             onClick={() => setEditMatchOpen(true)}
@@ -278,6 +290,18 @@ export function MatchManagementClient({
             <Settings className="h-4 w-4 text-blue-600" />
             Edit Match
           </Button>
+          
+          {!match.tossWinnerId && (
+            <Button 
+              variant="default"
+              onClick={() => setTossOpen(true)}
+              className="gap-2 flex-1 md:flex-none bg-yellow-500 hover:bg-yellow-600 text-black"
+            >
+              <PlayCircle className="h-4 w-4" />
+              Start Match / Toss
+            </Button>
+          )}
+
           <Button 
             variant="outline" 
             onClick={() => setPlayersOpen(true)}
@@ -300,7 +324,7 @@ export function MatchManagementClient({
           <Button 
             variant="destructive"
             onClick={handleEndInningsClick}
-            disabled={endingInnings}
+            disabled={endingInnings || !match.tossWinnerId}
             className="gap-2 flex-1 md:flex-none shadow-md hover:shadow-lg transition-all"
             data-testid="end-innings-button"
           >
@@ -322,13 +346,15 @@ export function MatchManagementClient({
             />
           )}
 
-          <LiveScoreboard 
-            matchId={match.id!} 
-            allPlayers={allPlayers}
-            homeTeam={homeTeam}
-            awayTeam={awayTeam}
-            matchData={match}
-          />
+          {(match.status !== 'scheduled' || liveScore) && (
+            <LiveScoreboard 
+              matchId={match.id!} 
+              allPlayers={allPlayers}
+              homeTeam={homeTeam}
+              awayTeam={awayTeam}
+              matchData={match}
+            />
+          )}
           
           <MatchInfoCard 
             competition={match.leagueId || "League"}
@@ -352,6 +378,7 @@ export function MatchManagementClient({
                   setShotCoords(undefined);
                   setScoringOpen(true);
                 }}
+                disabled={!liveScore?.currentPlayers?.strikerId || !liveScore?.currentPlayers?.bowlerId}
                 data-testid="record-ball-button"
               >
                 Record Ball
@@ -360,6 +387,7 @@ export function MatchManagementClient({
                 variant="secondary" 
                 className="h-24 text-lg font-semibold"
                 onClick={() => setPlayersOpen(true)}
+                disabled={!liveScore?.currentPlayers?.strikerId || !liveScore?.currentPlayers?.bowlerId}
                 data-testid="swap-ends-button"
               >
                 Swap Ends
@@ -378,7 +406,9 @@ export function MatchManagementClient({
               <Tabs defaultValue="wagon">
                 <TabsList className="mb-4">
                   <TabsTrigger value="wagon">Wagon Wheel</TabsTrigger>
+
                   <TabsTrigger value="pitch">Pitch Map</TabsTrigger>
+                  <TabsTrigger value="commentary">Commentary</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="wagon" className="flex justify-center">
@@ -410,6 +440,10 @@ export function MatchManagementClient({
                       })) || []
                     }
                   />
+                </TabsContent>
+
+                <TabsContent value="commentary">
+                  <BallByBallCommentary commentary={commentary} maxHeight="500px" />
                 </TabsContent>
               </Tabs>
             </CardContent>
@@ -472,6 +506,18 @@ export function MatchManagementClient({
         onOpenChange={setUndoOpen}
         matchId={match.id!}
         lastBall={liveScore?.ballHistory?.[liveScore.ballHistory.length - 1]}
+      />
+
+      <TossDialog
+        open={tossOpen}
+        onOpenChange={setTossOpen}
+        matchId={match.id!}
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        onTossRecorded={() => {
+          router.refresh();
+          setPlayersOpen(true);
+        }}
       />
     </div>
   );

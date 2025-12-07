@@ -1,8 +1,8 @@
 // Results data fetching from Firestore
 // Replaces legacy mock data with real database queries
 
-import { fetchMatches, fetchMatchById } from './firestore';
-import { Match } from '@/types/firestore';
+import { fetchMatches, fetchMatchById, fetchTeams } from './firestore';
+import { Match, Team } from '@/types/firestore';
 
 export interface ResultWithTeamNames {
     id: string;
@@ -83,39 +83,46 @@ export interface ScorecardData {
 }
 
 // Utility to convert Match to ResultWithTeamNames
-function matchToResult(match: Match): ResultWithTeamNames {
+function matchToResult(match: Match, teams: Team[] = []): ResultWithTeamNames {
+    const homeTeam = teams.find(t => t.id === match.homeTeamId);
+    const awayTeam = teams.find(t => t.id === match.awayTeamId);
+
     return {
         id: match.id,
         fixtureId: match.id, // Alias for backward compatibility
         teamAId: match.homeTeamId,
         teamBId: match.awayTeamId,
-        teamAName: match.homeTeamName || match.homeTeamId,
-        teamBName: match.awayTeamName || match.awayTeamId,
+        teamAName: match.homeTeamName || homeTeam?.name || match.homeTeamId,
+        teamBName: match.awayTeamName || awayTeam?.name || match.awayTeamId,
         teamAScore: match.score?.home || (match.homeScore ? String(match.homeScore) : ''),
         teamBScore: match.score?.away || (match.awayScore ? String(match.awayScore) : ''),
         date: match.dateTime || (typeof match.matchDate === 'string' ? match.matchDate : new Date().toISOString()),
         status: match.status,
         winner: match.completion?.winner === 'home'
-            ? (match.homeTeamName || match.homeTeamId)
+            ? (match.homeTeamName || homeTeam?.name || match.homeTeamId)
             : match.completion?.winner === 'away'
-                ? (match.awayTeamName || match.awayTeamId)
+                ? (match.awayTeamName || awayTeam?.name || match.awayTeamId)
                 : match.result?.split(' ')[0] || undefined,
         margin: match.completion?.margin || match.result,
         playerOfTheMatch: match.completion?.playerOfTheMatch,
-        innings: convertInningsData(match),
+        innings: convertInningsData(match, teams),
     };
 }
 
 // Convert match innings data to the format expected by scorecards
-function convertInningsData(match: Match): InningsData[] {
+function convertInningsData(match: Match, teams: Team[] = []): InningsData[] {
     const innings: InningsData[] = [];
+    const homeTeam = teams.find(t => t.id === match.homeTeamId);
+    const awayTeam = teams.find(t => t.id === match.awayTeamId);
+    const homeName = match.homeTeamName || homeTeam?.name || match.homeTeamId;
+    const awayName = match.awayTeamName || awayTeam?.name || match.awayTeamId;
 
     if (match.inningsData?.firstInnings) {
         const first = match.inningsData.firstInnings;
         innings.push({
             inningsNumber: 1,
-            battingTeam: first.teamId || match.homeTeamName || match.homeTeamId,
-            bowlingTeam: match.awayTeamName || match.awayTeamId,
+            battingTeam: first.teamId || homeName,
+            bowlingTeam: awayName,
             totalScoreString: `${first.runs || 0}/${first.wickets || 0}`,
             oversPlayed: `${first.overs || 0} overs`,
             battingScores: (first.batsmen || first.battingCard || []).map((b: any) => ({
@@ -147,8 +154,8 @@ function convertInningsData(match: Match): InningsData[] {
         const second = match.inningsData.secondInnings;
         innings.push({
             inningsNumber: 2,
-            battingTeam: second.teamId || match.awayTeamName || match.awayTeamId,
-            bowlingTeam: match.homeTeamName || match.homeTeamId,
+            battingTeam: second.teamId || awayName,
+            bowlingTeam: homeName,
             totalScoreString: `${second.runs || 0}/${second.wickets || 0}`,
             oversPlayed: `${second.overs || 0} overs`,
             battingScores: (second.batsmen || second.battingCard || []).map((b: any) => ({
@@ -185,9 +192,12 @@ export const resultsData: ResultWithTeamNames[] = [];
 // Fetch completed match results with team names
 export async function fetchResultsWithTeamNames(): Promise<ResultWithTeamNames[]> {
     try {
-        const matches = await fetchMatches(50);
+        const [matches, teams] = await Promise.all([
+            fetchMatches(50),
+            fetchTeams()
+        ]);
         const completedMatches = matches.filter(m => m.status === 'completed');
-        return completedMatches.map(matchToResult);
+        return completedMatches.map(m => matchToResult(m, teams));
     } catch (error) {
         console.error('Error fetching results:', error);
         return [];
@@ -197,20 +207,25 @@ export async function fetchResultsWithTeamNames(): Promise<ResultWithTeamNames[]
 // Fetch scorecard data for a specific fixture
 export async function fetchScorecardData(fixtureId: string): Promise<ScorecardData | null> {
     try {
-        const match = await fetchMatchById(fixtureId);
+        const [match, teams] = await Promise.all([
+            fetchMatchById(fixtureId),
+            fetchTeams()
+        ]);
 
         if (!match) {
             return null;
         }
 
-        const result = matchToResult(match);
+        const result = matchToResult(match, teams);
+        const homeTeam = teams.find(t => t.id === match.homeTeamId);
+        const awayTeam = teams.find(t => t.id === match.awayTeamId);
 
         const fixture: FixtureWithTeamNames = {
             id: match.id,
             teamAId: match.homeTeamId,
             teamBId: match.awayTeamId,
-            teamAName: match.homeTeamName || match.homeTeamId,
-            teamBName: match.awayTeamName || match.awayTeamId,
+            teamAName: match.homeTeamName || homeTeam?.name || match.homeTeamId,
+            teamBName: match.awayTeamName || awayTeam?.name || match.awayTeamId,
             venue: match.venue,
             location: match.location || match.venue,
             date: match.dateTime || (typeof match.matchDate === 'string' ? match.matchDate : new Date().toISOString()),

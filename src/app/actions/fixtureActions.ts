@@ -1,6 +1,6 @@
 'use server';
 
-import { createDocument, fetchMatchesByDateRange, fetchCollection } from '@/lib/firestore';
+import { createDocument, fetchMatchesByDateRange, fetchCollection, fetchTeamById, fetchDivisionById } from '@/lib/firestore';
 import { Match, Person } from '@/types/firestore';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -121,6 +121,20 @@ export async function createSmartFixtureAction(
             return { error: 'Scheduling conflicts detected', conflicts };
         }
 
+        // Fetch home team to get division/league context
+        const homeTeam = await fetchTeamById(homeTeamId);
+        let divisionId = homeTeam?.divisionId;
+        let leagueId = '';
+        let divisionName = '';
+
+        if (divisionId) {
+            const division = await fetchDivisionById(divisionId);
+            if (division) {
+                leagueId = division.leagueId;
+                divisionName = division.name;
+            }
+        }
+
         const matchData: Partial<Match> = {
             dateTime: `${date}T${time}:00.000Z`, // ISO string
             matchDate: `${date}T${time}:00.000Z`, // For compatibility
@@ -134,6 +148,9 @@ export async function createSmartFixtureAction(
             scorer: (formData.get('scorerId') as string) === 'unassigned' ? '' : (formData.get('scorerId') as string),
             homeTeamName: formData.get('homeTeamName') as string, // Optimistic
             awayTeamName: formData.get('awayTeamName') as string, // Optimistic
+            division: divisionName, // Store name for display
+            divisionId: divisionId, // Store ID for linking
+            leagueId: leagueId,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };

@@ -5,7 +5,9 @@ import {
   getDoc,
   addDoc,
   updateDoc,
-  deleteDoc
+  deleteDoc,
+  query,
+  where
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Person } from '@/types/firestore';
@@ -15,8 +17,8 @@ const COLLECTION_NAME = 'people';
 export const getPlayers = async () => {
   try {
     const colRef = collection(db, COLLECTION_NAME);
-    // Fetch all people - they may have roles in 'roles' array or 'activeRole' field
-    const snapshot = await getDocs(colRef);
+    const q = query(colRef, where('role', '==', 'Player'));
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Person));
   } catch (error) {
     console.error("Error fetching players:", error);

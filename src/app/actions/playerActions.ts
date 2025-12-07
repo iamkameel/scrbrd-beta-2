@@ -27,6 +27,18 @@ function extractPlayerData(formData: FormData) {
     return hasData ? obj : undefined;
   };
 
+  const extractArray = (prefix: string) => {
+    const items: string[] = [];
+    let i = 0;
+    while (true) {
+      const val = formData.get(`${prefix}[${i}]`);
+      if (!val) break;
+      items.push(val as string);
+      i++;
+    }
+    return items.length > 0 ? items : undefined;
+  };
+
   return {
     firstName: formData.get('firstName'),
     lastName: formData.get('lastName'),
@@ -34,6 +46,8 @@ function extractPlayerData(formData: FormData) {
     phoneNumber: formData.get('phoneNumber') || '',
     dateOfBirth: formData.get('dateOfBirth'),
     schoolId: formData.get('schoolId'),
+    assignedSchools: extractArray('assignedSchools'),
+    teamIds: extractArray('teamIds'),
     jerseyNumber: formData.get('jerseyNumber') || undefined,
     status: formData.get('status') || 'active',
     role: formData.get('role') || 'Player',

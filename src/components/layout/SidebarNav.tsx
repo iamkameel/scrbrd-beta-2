@@ -30,10 +30,10 @@ import { USER_ROLES } from '@/lib/roles';
 const rolePermissions = {
   // ADMINISTRATIVE
   [USER_ROLES.SYSTEM_ARCHITECT]: [
-    "dashboard", "teams", "people", "suggest-role", "schools",
-    "matches", "head-to-head", "umpire-review", "competitions", "divisions",
-    "scouting", "awards",
-    "session-planner", "drill-library", "player-development",
+    "dashboard", "teams", "people", "suggest-role", "schools", "umpire-profiles",
+    "matches", "live-scoring", "head-to-head", "umpire-review", "competitions", "divisions", "seasons", "rankings",
+    "scouting", "awards", "analysis-hub",
+    "session-planner", "drill-library", "player-development", "performance-analysis",
     "equipment", "fields", "transport", "financials", "sponsors",
     "user-management", "audit-log", "data-management", "user-roles", "rulebook", "strategic-calendar",
     "help-onboarding", "pitch-deck", "features"
@@ -65,8 +65,9 @@ const rolePermissions = {
   // TEAM STAFF
   [USER_ROLES.COACH]: [
     "dashboard", "teams", "people", "suggest-role", 
-    "matches", "head-to-head", "scouting",
-    "session-planner", "drill-library", "player-development",
+    "matches", "head-to-head", "scouting", "analysis-hub",
+    "competitions", "divisions", "rankings", "seasons",
+    "session-planner", "drill-library", "player-development", "performance-analysis",
     "help-onboarding"
   ],
   [USER_ROLES.ASSISTANT_COACH]: [
@@ -91,6 +92,7 @@ const rolePermissions = {
   [USER_ROLES.PLAYER]: [
     "dashboard", "people", "teams", 
     "matches", "head-to-head", 
+    "competitions", "divisions", "rankings", "seasons",
     "help-onboarding"
   ],
   [USER_ROLES.GUARDIAN]: [
@@ -126,7 +128,8 @@ const rolePermissions = {
     "dashboard", "matches", "umpire-review", "rulebook"
   ],
   [USER_ROLES.SCORER]: [
-    "dashboard", "matches", "head-to-head", "live-scoring"
+    "dashboard", "matches", "head-to-head", "live-scoring",
+    "teams", "people"
   ],
   [USER_ROLES.GROUNDS_KEEPER]: [
     "dashboard", "fields", "equipment"

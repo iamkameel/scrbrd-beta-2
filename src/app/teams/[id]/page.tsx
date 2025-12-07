@@ -2,7 +2,7 @@ import {
   fetchTeamById, 
   fetchSchoolById, 
   fetchDivisionById, 
-  getRosterByTeam, 
+  getPlayersByTeam,
   getMatchesByTeam,
   fetchPersonById,
   fetchTeams
@@ -27,21 +27,25 @@ export default async function TeamDetailPage(props: { params: Promise<{ id: stri
     notFound();
   }
 
-  const [school, division, roster, matches, allTeams] = await Promise.all([
+  const [school, division, players, matches, allTeams] = await Promise.all([
     fetchSchoolById(team.schoolId),
     team.divisionId ? fetchDivisionById(team.divisionId) : Promise.resolve(null),
-    getRosterByTeam(id),
+    getPlayersByTeam(id),
     getMatchesByTeam(id),
     fetchTeams() // Fetch all teams to resolve names in matches
   ]);
 
-  // Fetch person details for roster
-  const rosterWithPeople = await Promise.all(
-    roster.map(async (member) => {
-      const person = await fetchPersonById(member.personId);
-      return { ...member, person };
-    })
-  );
+  // Adapt players to rosterWithPeople format
+  const rosterWithPeople = players.map((person) => ({
+      id: person.id,
+      personId: person.id,
+      teamId: id,
+      role: person.primaryRole || 'Player',
+      person: person,
+      isCaptain: false,
+      isViceCaptain: false,
+      jerseyNumber: undefined
+  }));
 
   return (
     <div className="container mx-auto py-8 max-w-6xl space-y-8">
@@ -133,10 +137,10 @@ export default async function TeamDetailPage(props: { params: Promise<{ id: stri
         <h2 className="text-2xl font-bold flex items-center gap-2">
           <User className="h-6 w-6 text-primary" />
           Roster 
-          <span className="text-muted-foreground text-lg font-normal">({roster.length})</span>
+          <span className="text-muted-foreground text-lg font-normal">({rosterWithPeople.length})</span>
         </h2>
         
-        {roster.length > 0 ? (
+        {rosterWithPeople.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {rosterWithPeople.map((member) => {
               const person = member.person;

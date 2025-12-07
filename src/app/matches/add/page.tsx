@@ -1,11 +1,13 @@
 import { MatchWizard } from "@/components/matches/MatchWizard";
 import { createMatchAction } from "@/app/actions/matchActions";
-import { fetchTeams, fetchFields } from "@/lib/firestore";
+import { fetchTeams, fetchFields, fetchSchools, fetchDivisions } from "@/lib/firestore";
 
 export default async function AddMatchPage() {
-  const [teams, fields] = await Promise.all([
+  const [teams, fields, schools, divisions] = await Promise.all([
     fetchTeams(),
-    fetchFields()
+    fetchFields(),
+    fetchSchools(),
+    fetchDivisions()
   ]);
 
   return (
@@ -21,6 +23,8 @@ export default async function AddMatchPage() {
         initialState={{}}
         teams={teams as any}
         fields={fields as any}
+        schools={schools as any}
+        divisions={divisions as any}
       />
     </div>
   );

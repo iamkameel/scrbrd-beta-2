@@ -1,16 +1,48 @@
-import React from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
 import { PageHeader } from '../dashboard/PageHeader';
 import { MetricCard } from '../dashboard/MetricCard';
 import FixtureCentreCard from '../dashboard/FixtureCentreCard';
 import { Tractor, CloudRain, CalendarDays, CheckCircle } from "lucide-react";
+import { fetchFields, fetchEquipment } from '@/lib/firestore';
+import { Field, Equipment } from '@/types/firestore';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function GroundskeeperDashboard() {
+  const { user } = useAuth();
+  const [fields, setFields] = useState<Field[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [fieldsData, equipmentData] = await Promise.all([
+          fetchFields(),
+          fetchEquipment()
+        ]);
+        setFields(fieldsData as Field[]);
+        setEquipment(equipmentData as Equipment[]);
+      } catch (error) {
+        console.error("Error loading grounds data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  const operationalMowers = equipment.filter(e => e.type === 'Mower' && e.status === 'Operational').length;
+  const totalMowers = equipment.filter(e => e.type === 'Mower').length;
+  const mainOval = fields.find(f => f.name.includes('Main')) || fields[0];
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <PageHeader 
         title="Grounds Dashboard" 
-        description="Manage field conditions, maintenance schedules, and equipment."
+        description={`Welcome back, ${user?.displayName || 'Groundskeeper'}. Manage field conditions and equipment.`}
       />
 
       {/* Fixture Centre */}
@@ -26,8 +58,8 @@ export default function GroundskeeperDashboard() {
           <MetricCard
             icon={CheckCircle}
             label="Field Status"
-            value="Ready"
-            subtitle="Main Oval prepared"
+            value={mainOval?.status || "Unknown"}
+            subtitle={mainOval ? `${mainOval.name} condition` : "No fields found"}
           />
           <MetricCard
             icon={CloudRain}
@@ -38,7 +70,7 @@ export default function GroundskeeperDashboard() {
           <MetricCard
             icon={Tractor}
             label="Equipment"
-            value="3/4"
+            value={`${operationalMowers}/${totalMowers}`}
             subtitle="Mowers operational"
           />
           <MetricCard

@@ -127,7 +127,7 @@ export function LiveScoreboard({ matchId, allPlayers, homeTeam, awayTeam, matchD
           division={matchData?.division || '1st XI'}
         />
 
-        <div className="mt-6 mb-8 transform scale-110" data-testid="current-score">
+        <div className="mt-6 mb-8 transform md:scale-110" data-testid="current-score">
           <MainScorePill 
             battingTeamShortName={battingTeamShort}
             bowlingTeamShortName={bowlingTeamShort}

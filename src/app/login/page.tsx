@@ -80,12 +80,12 @@ export default function LoginPage() {
         <CardHeader className="text-center space-y-2">
           <div className="mx-auto mb-4">
             <Image 
-              src="/logo.svg" 
+              src="/images/scrbrd-logo.png" 
               alt="SCRBRD Logo" 
               width={200} 
               height={50}
               priority
-              className="mx-auto"
+              className="mx-auto object-contain"
             />
           </div>
           <CardTitle className="text-3xl font-bold">Welcome Back</CardTitle>

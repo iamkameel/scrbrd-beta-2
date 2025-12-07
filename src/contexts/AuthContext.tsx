@@ -61,32 +61,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (user.email === 'kameel@maverickdesign.co.za') {
           const systemArchitectRole = 'System Architect';
           setUserRole(systemArchitectRole);
-          // System Architect has all roles available
-          // We'll handle the "all roles" logic in the UI or by passing a special flag/list
-          // For now, let's pass a list of ALL roles if we can import them, or just let the UI handle it based on the primary role.
-          // Actually, the plan said: "If user.email is System Architect, set availableRoles to all roles."
-          // But importing ALL_ROLES here might be circular or just messy if not careful.
-          // Let's just set it to ['System Architect'] and let the UI handle the "System Architect sees everything" logic as it did before?
-          // The plan said: "Update visibility condition: userRole === 'System Architect' || availableRoles.length > 1"
-          // So if I set availableRoles to just ['System Architect'], the length is 1.
-          // But the UI check `userRole === 'System Architect'` will still pass.
-          // So for SA, availableRoles doesn't strictly matter for *visibility*, but it might matter for *consistency*.
-          // Let's stick to the plan: "If user.email is System Architect, set availableRoles to all roles."
-          // I need to import ALL_ROLES from '@/lib/roles'.
           
-          // Ensure Firestore is in sync
+          // Ensure Firestore is in sync and fetch actual display name
           try {
             const userRef = doc(db, 'users', user.uid);
             const userDoc = await getDoc(userRef);
             
-            if (!userDoc.exists() || userDoc.data().role !== systemArchitectRole) {
+            let actualDisplayName = user.displayName || 'Kameel';
+            
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              // Use the display name from Firestore if available
+              if (userData.displayName && userData.displayName !== 'System Architect') {
+                actualDisplayName = userData.displayName;
+              }
+              
+              // Update Firestore if role is incorrect
+              if (userData.role !== systemArchitectRole) {
+                await setDoc(userRef, {
+                  uid: user.uid,
+                  email: user.email,
+                  displayName: actualDisplayName,
+                  role: systemArchitectRole,
+                  updatedAt: new Date().toISOString()
+                }, { merge: true });
+              }
+            } else {
+              // Create new user document
               await setDoc(userRef, {
                 uid: user.uid,
                 email: user.email,
-                displayName: user.displayName || 'System Architect',
+                displayName: actualDisplayName,
                 role: systemArchitectRole,
+                createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
-              }, { merge: true });
+              });
+            }
+            
+            // Update Firebase Auth profile if needed
+            if (!user.displayName || user.displayName === 'System Architect') {
+              await updateProfile(user, { displayName: actualDisplayName });
             }
           } catch (error) {
             console.error('Error syncing System Architect role:', error);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Match, Team, Innings } from "@/types/firestore";
+import { Match, Team, Innings, Person } from "@/types/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/button";
@@ -14,19 +14,27 @@ import { ScorecardTable } from "@/components/match/ScorecardTable";
 import Link from "next/link";
 import { ChevronLeft, Share2, RefreshCw, Play, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PrintableMatchReport } from "@/components/match/PrintableMatchReport";
 
 interface MatchDetailClientProps {
   match: Match;
   homeTeam?: Team;
   awayTeam?: Team;
+  players?: Person[];
 }
 
-export function MatchDetailClient({ match, homeTeam, awayTeam }: MatchDetailClientProps) {
+export function MatchDetailClient({ match, homeTeam, awayTeam, players = [] }: MatchDetailClientProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'scorecard' | 'analytics' | 'commentary'>('overview');
 
   const hasInningsData = match.inningsData && match.inningsData.firstInnings;
   const homeTeamName = homeTeam?.name || "Home Team";
   const awayTeamName = awayTeam?.name || "Away Team";
+
+  // Helper to get player name
+  const getPlayerName = (id: string) => {
+    const p = players.find(p => p.id === id);
+    return p ? `${p.firstName} ${p.lastName}` : 'Unknown Player';
+  };
 
   // Mock Data for Visuals (replace with real data when available)
   const mockBattingTeam = {
@@ -61,12 +69,59 @@ export function MatchDetailClient({ match, homeTeam, awayTeam }: MatchDetailClie
     { over: "19.1", text: "2 runs, excellent running between the wickets.", type: "run" },
   ];
 
-  // Mock players for scorecard (in real app, fetch from match or teams)
-  const mockPlayers = [
-    { id: '1', firstName: 'Player', lastName: 'One' },
-    { id: '2', firstName: 'Player', lastName: 'Two' },
-    { id: '3', firstName: 'Player', lastName: 'Three' },
+  // Use real players or fallback to mock if empty (for dev)
+  const displayPlayers = players.length > 0 ? players : [
+    { id: '1', firstName: 'Player', lastName: 'One' } as Person,
+    { id: '2', firstName: 'Player', lastName: 'Two' } as Person,
+    { id: '3', firstName: 'Player', lastName: 'Three' } as Person,
   ];
+
+  // Construct match data for report
+  const reportData = {
+    id: match.id,
+    homeTeam: homeTeamName,
+    awayTeam: awayTeamName,
+    venue: match.venue || 'TBA',
+    date: match.dateTime ? new Date(match.dateTime).toLocaleDateString() : 'Date TBA',
+    format: match.matchType || 'T20',
+    result: match.result,
+    totalRuns: (match.inningsData?.firstInnings?.runs || 0) + (match.inningsData?.secondInnings?.runs || 0),
+    totalWickets: (match.inningsData?.firstInnings?.wickets || 0) + (match.inningsData?.secondInnings?.wickets || 0),
+    batsmen: [
+      ...(match.inningsData?.firstInnings?.batsmen || []).map(b => ({
+        name: getPlayerName(b.playerId),
+        runs: b.runs,
+        balls: b.ballsFaced,
+        fours: b.fours || 0,
+        sixes: b.sixes || 0,
+        strikeRate: b.strikeRate || 0
+      })),
+      ...(match.inningsData?.secondInnings?.batsmen || []).map(b => ({
+        name: getPlayerName(b.playerId),
+        runs: b.runs,
+        balls: b.ballsFaced,
+        fours: b.fours || 0,
+        sixes: b.sixes || 0,
+        strikeRate: b.strikeRate || 0
+      }))
+    ].sort((a, b) => b.runs - a.runs).slice(0, 10), // Top 10 batsmen
+    bowlers: [
+      ...(match.inningsData?.firstInnings?.bowlers || []).map(b => ({
+        name: getPlayerName(b.playerId),
+        overs: b.overs || 0,
+        runs: b.runsConceded,
+        wickets: b.wickets || 0,
+        economy: b.economy || 0
+      })),
+      ...(match.inningsData?.secondInnings?.bowlers || []).map(b => ({
+        name: getPlayerName(b.playerId),
+        overs: b.overs || 0,
+        runs: b.runsConceded,
+        wickets: b.wickets || 0,
+        economy: b.economy || 0
+      }))
+    ].sort((a, b) => b.wickets - a.wickets).slice(0, 10) // Top 10 bowlers
+  };
 
   return (
     <div className="min-h-screen bg-background pb-32 text-foreground font-sans">
@@ -89,6 +144,7 @@ export function MatchDetailClient({ match, homeTeam, awayTeam }: MatchDetailClie
                 <span className="hidden sm:inline">Start Scoring</span>
               </Button>
             </Link>
+            <PrintableMatchReport matchData={reportData} />
             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-white">
               <RefreshCw className="w-4 h-4" />
             </Button>
@@ -205,7 +261,7 @@ export function MatchDetailClient({ match, homeTeam, awayTeam }: MatchDetailClie
                             ? homeTeamName
                             : awayTeamName
                         }
-                        allPlayers={mockPlayers}
+                        allPlayers={displayPlayers}
                       />
                     )}
                     
@@ -218,7 +274,7 @@ export function MatchDetailClient({ match, homeTeam, awayTeam }: MatchDetailClie
                             ? homeTeamName
                             : awayTeamName
                         }
-                        allPlayers={mockPlayers}
+                        allPlayers={displayPlayers}
                       />
                     )}
                   </div>

@@ -16,56 +16,7 @@ export interface RoleContext {
   assignedMatches?: string[];
 }
 
-/**
- * Get all currently live matches
- */
-export function getLiveMatches(filters?: MatchFilter): Match[] {
-  const { store } = require('@/lib/store');
-  let matches = store.matches.filter((m: Match) =>
-    m.status === 'live' || m.state === 'LIVE' || m.isLive
-  );
-
-  return applyFilters(matches, filters);
-}
-
-/**
- * Get recent completed matches
- */
-export function getRecentResults(filters?: MatchFilter, limit = 5): Match[] {
-  const { store } = require('@/lib/store');
-  let matches = store.matches
-    .filter((m: Match) => m.status === 'completed' || m.state === 'COMPLETED')
-    .sort((a: Match, b: Match) => {
-      const dateA = new Date((a.matchDate || a.dateTime || 0) as any).getTime();
-      const dateB = new Date((b.matchDate || b.dateTime || 0) as any).getTime();
-      return dateB - dateA; // Most recent first
-    })
-    .slice(0, limit);
-
-  return applyFilters(matches, filters);
-}
-
-/**
- * Get upcoming scheduled matches
- */
-export function getUpcomingFixtures(filters?: MatchFilter, limit = 5): Match[] {
-  const { store } = require('@/lib/store');
-  const now = new Date().getTime();
-
-  let matches = store.matches
-    .filter((m: Match) => {
-      const matchDate = new Date((m.matchDate || m.dateTime || 0) as any).getTime();
-      return (m.status === 'scheduled' || m.state === 'SCHEDULED') && matchDate >= now;
-    })
-    .sort((a: Match, b: Match) => {
-      const dateA = new Date((a.matchDate || a.dateTime || 0) as any).getTime();
-      const dateB = new Date((b.matchDate || b.dateTime || 0) as any).getTime();
-      return dateA - dateB; // Soonest first
-    })
-    .slice(0, limit);
-
-  return applyFilters(matches, filters);
-}
+// Mock data functions removed. Use server actions in src/app/actions/matchActions.ts instead.
 
 /**
  * Apply filters to match list

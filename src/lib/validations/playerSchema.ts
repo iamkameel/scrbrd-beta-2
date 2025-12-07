@@ -129,6 +129,8 @@ export const playerSchema = z.object({
   phoneNumber: z.string().optional().or(z.literal('')),
 
   schoolId: z.string().min(1, 'School is required'),
+  assignedSchools: z.array(z.string()).optional(),
+  teamIds: z.array(z.string()).optional(),
   jerseyNumber: z.string().optional(),
   status: z.string().default('active'),
   role: z.string().default('Player'),

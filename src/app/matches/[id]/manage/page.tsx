@@ -6,12 +6,12 @@ import { where } from 'firebase/firestore';
 
 interface PageProps {
   params: {
-    matchId: string;
+    id: string;
   };
 }
 
 export default async function MatchManagePage({ params }: PageProps) {
-  const { matchId } = params;
+  const { id: matchId } = await params;
 
   // Fetch match data
   const match = await fetchDocument<Match>('matches', matchId);

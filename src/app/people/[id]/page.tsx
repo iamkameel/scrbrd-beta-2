@@ -41,6 +41,10 @@ interface PersonWithStats extends Person {
     bowlingStyle?: string;
   };
   coachProfile?: Person['coachProfile'];
+  umpireProfile?: Person['umpireProfile'];
+  scorerProfile?: Person['scorerProfile'];
+  medicalProfile?: Person['medicalProfile'];
+  groundskeeperProfile?: Person['groundskeeperProfile'];
 }
 
 export default async function PersonDetailPage(props: { 
@@ -95,6 +99,18 @@ export default async function PersonDetailPage(props: {
     ...(isCoach ? [
       { id: 'attributes', label: 'Attributes' },
       { id: 'history', label: 'History' },
+    ] : []),
+    ...(person.role === 'Umpire' ? [
+      { id: 'attributes', label: 'Attributes' },
+    ] : []),
+    ...(person.role === 'Scorer' ? [
+      { id: 'attributes', label: 'Attributes' },
+    ] : []),
+    ...(['Doctor', 'Physiotherapist', 'Trainer', 'First Aid'].includes(person.role || '') ? [
+      { id: 'attributes', label: 'Attributes' },
+    ] : []),
+    ...(person.role === 'Grounds-Keeper' ? [
+      { id: 'attributes', label: 'Attributes' },
     ] : []),
     { id: 'teams', label: 'Teams', badge: relatedTeams.length || undefined },
   ];
@@ -388,6 +404,159 @@ export default async function PersonDetailPage(props: {
                   )}
                 </div>
               )}
+
+              {/* Umpire Overview Details */}
+              {person.role === 'Umpire' && person.umpireProfile && (
+                <div className="space-y-6">
+                  <Card className="p-6">
+                    <h3 className="text-lg font-semibold mb-4">Umpire Profile</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-1">Certification</div>
+                        <div className="font-medium">{person.umpireProfile.certificationLevel || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-1">Association</div>
+                        <div className="font-medium">{person.umpireProfile.homeAssociation || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-1">Years Active</div>
+                        <div className="font-medium">{person.umpireProfile.yearsActive || 0} Years</div>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {person.umpireProfile.umpireTraits && person.umpireProfile.umpireTraits.length > 0 && (
+                     <Card className="p-6">
+                      <h3 className="text-lg font-semibold mb-4">Traits & Style</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {person.umpireProfile.umpireTraits.map((trait, i) => (
+                          <Badge key={i} variant="outline" className="border-primary/20 text-primary">
+                            {trait}
+                          </Badge>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              )}
+
+              {/* Scorer Overview Details */}
+              {person.role === 'Scorer' && person.scorerProfile && (
+                <div className="space-y-6">
+                  <Card className="p-6">
+                    <h3 className="text-lg font-semibold mb-4">Scorer Profile</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-1">Certification</div>
+                        <div className="font-medium">{person.scorerProfile.certificationLevel || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-1">Method</div>
+                        <div className="font-medium">{person.scorerProfile.preferredMethod || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-1">Experience</div>
+                        <div className="font-medium">{person.scorerProfile.experienceYears || 0} Years</div>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {person.scorerProfile.scorerTraits && person.scorerProfile.scorerTraits.length > 0 && (
+                     <Card className="p-6">
+                      <h3 className="text-lg font-semibold mb-4">Traits & Skills</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {person.scorerProfile.scorerTraits.map((trait, i) => (
+                          <Badge key={i} variant="outline" className="border-primary/20 text-primary">
+                            {trait}
+                          </Badge>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              )}
+
+              {/* Medical Overview Details */}
+              {['Doctor', 'Physiotherapist', 'Trainer', 'First Aid'].includes(person.role || '') && person.medicalProfile && (
+                <div className="space-y-6">
+                  <Card className="p-6">
+                    <h3 className="text-lg font-semibold mb-4">Medical Profile</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-1">Qualification</div>
+                        <div className="font-medium">{person.medicalProfile.qualification || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-1">Registration</div>
+                        <div className="font-medium">{person.medicalProfile.registrationNumber || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-1">Experience</div>
+                        <div className="font-medium">{person.medicalProfile.experienceYears || 0} Years</div>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {person.medicalProfile.specializations && person.medicalProfile.specializations.length > 0 && (
+                     <Card className="p-6">
+                      <h3 className="text-lg font-semibold mb-4">Specializations</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {person.medicalProfile.specializations.map((spec, i) => (
+                          <Badge key={i} variant="outline" className="border-primary/20 text-primary">
+                            {spec}
+                          </Badge>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              )}
+
+              {/* Groundskeeper Overview Details */}
+              {person.role === 'Grounds-Keeper' && person.groundskeeperProfile && (
+                <div className="space-y-6">
+                  <Card className="p-6">
+                    <h3 className="text-lg font-semibold mb-4">Groundskeeper Profile</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-1">Experience</div>
+                        <div className="font-medium">{person.groundskeeperProfile.experienceYears || 0} Years</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-1">Matches Prepared</div>
+                        <div className="font-medium">{person.groundskeeperProfile.matchesPrepared || 0}</div>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {person.groundskeeperProfile.machineryLicenses && person.groundskeeperProfile.machineryLicenses.length > 0 && (
+                     <Card className="p-6">
+                      <h3 className="text-lg font-semibold mb-4">Machinery Licenses</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {person.groundskeeperProfile.machineryLicenses.map((license, i) => (
+                          <Badge key={i} variant="outline" className="border-primary/20 text-primary">
+                            {license}
+                          </Badge>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+
+                  {person.groundskeeperProfile.primaryVenues && person.groundskeeperProfile.primaryVenues.length > 0 && (
+                     <Card className="p-6">
+                      <h3 className="text-lg font-semibold mb-4">Primary Venues</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {person.groundskeeperProfile.primaryVenues.map((venue, i) => (
+                          <Badge key={i} variant="secondary">
+                            {venue}
+                          </Badge>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Sidebar */}
@@ -508,6 +677,35 @@ export default async function PersonDetailPage(props: {
             {renderAttributeBlock('Tactical Knowledge', person.coachProfile.tacticalAttributes)}
             {renderAttributeBlock('Man Management', person.coachProfile.manManagementAttributes)}
             {renderAttributeBlock('Professionalism', person.coachProfile.professionalAttributes)}
+          </div>
+        )}
+
+        {activeTab === 'attributes' && person.role === 'Umpire' && person.umpireProfile && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {renderAttributeBlock('Decision Making', person.umpireProfile.decisionAttributes)}
+            {renderAttributeBlock('Match Control', person.umpireProfile.matchControlAttributes)}
+            {renderAttributeBlock('Physical', person.umpireProfile.physicalAttributes)}
+          </div>
+        )}
+
+        {activeTab === 'attributes' && person.role === 'Scorer' && person.scorerProfile && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {renderAttributeBlock('Technical Skills', person.scorerProfile.technicalAttributes)}
+            {renderAttributeBlock('Professionalism', person.scorerProfile.professionalAttributes)}
+          </div>
+        )}
+
+        {activeTab === 'attributes' && ['Doctor', 'Physiotherapist', 'Trainer', 'First Aid'].includes(person.role || '') && person.medicalProfile && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {renderAttributeBlock('Clinical Skills', person.medicalProfile.clinicalAttributes)}
+            {renderAttributeBlock('Rehabilitation', person.medicalProfile.rehabAttributes)}
+          </div>
+        )}
+
+        {activeTab === 'attributes' && person.role === 'Grounds-Keeper' && person.groundskeeperProfile && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {renderAttributeBlock('Pitch Preparation', person.groundskeeperProfile.pitchAttributes)}
+            {renderAttributeBlock('Outfield Management', person.groundskeeperProfile.outfieldAttributes)}
           </div>
         )}
 
