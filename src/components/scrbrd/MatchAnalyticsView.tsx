@@ -2,10 +2,12 @@
 
 import React, { useState } from 'react';
 import { Theme, MatchScorecard } from './types';
+import { MATCH_SCORECARDS } from './scorecardData';
 
 interface MatchAnalyticsViewProps {
   theme: Theme;
-  scorecard: MatchScorecard;
+  scorecard?: MatchScorecard;
+  activeSchoolId?: string;
   onOpenScorer?: () => void;
 }
 
@@ -17,12 +19,38 @@ export default function MatchAnalyticsView({
   const [activeChart, setActiveChart] = useState<'manhattan' | 'worm' | 'pitchmap' | 'commentary'>('manhattan');
   const [selectedPhaseFilter, setSelectedPhaseFilter] = useState<'all' | 'powerplay' | 'middle' | 'death'>('all');
 
+  const safeScorecard: MatchScorecard = scorecard || MATCH_SCORECARDS["m1"] || {
+    id: "m1",
+    title: "1st XI Standard Bank Schools Trophy Match",
+    venue: "Bowden's Field (1st XI Oval)",
+    winProb: {
+      teamA: 55,
+      teamB: 45,
+      teamAName: "Westville 1st XI",
+      teamBName: "Kearsney 1st XI",
+      momentumText: "Solid opening partnership establishes match advantage",
+    },
+    manhattan: [],
+    worm: [],
+    innings1: { teamShort: "WES", total: 178, wickets: 6, overs: 20 },
+    innings2: { teamShort: "KEA", total: 142, wickets: 3, overs: 16.4 },
+    commentary: [],
+  };
+
   // Win probability percentages
-  const winA = scorecard.winProb.teamA;
-  const winB = scorecard.winProb.teamB;
+  const winProb = safeScorecard.winProb || {
+    teamA: 55,
+    teamB: 45,
+    teamAName: safeScorecard.innings1?.teamShort || 'Team A',
+    teamBName: safeScorecard.innings2?.teamShort || 'Team B',
+    momentumText: 'Equally balanced encounter',
+  };
+  const winA = winProb.teamA ?? 50;
+  const winB = winProb.teamB ?? 50;
 
   // Manhattan calculations
-  const maxOverRuns = Math.max(...scorecard.manhattan.map((m) => m.runs), 15);
+  const manhattan = safeScorecard.manhattan || [];
+  const maxOverRuns = manhattan.length > 0 ? Math.max(...manhattan.map((m) => m.runs), 15) : 15;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -45,7 +73,7 @@ export default function MatchAnalyticsView({
               LIVE TELEMETRY & MATCH ANALYTICS
             </span>
             <span style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
-              {scorecard.title}
+              {safeScorecard.title}
             </span>
           </div>
           <h2 style={{ fontFamily: D.head, fontSize: '18px', fontWeight: 800, margin: '4px 0 0 0' }}>
@@ -99,7 +127,7 @@ export default function MatchAnalyticsView({
             LIVE WIN PREDICTOR (WASP / AI PROBABILITY MODEL)
           </div>
           <div style={{ fontFamily: D.mono, fontSize: '12px', color: D.textMuted }}>
-            Venue: {scorecard.venue}
+            Venue: {safeScorecard.venue}
           </div>
         </div>
 
@@ -107,10 +135,10 @@ export default function MatchAnalyticsView({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: D.head, fontSize: '14px', fontWeight: 800 }}>
             <span style={{ color: D.sky }}>
-              {scorecard.winProb.teamAName} {winA}%
+              {winProb.teamAName} {winA}%
             </span>
             <span style={{ color: D.amber }}>
-              {winB}% {scorecard.winProb.teamBName}
+              {winB}% {winProb.teamBName}
             </span>
           </div>
 
@@ -121,7 +149,7 @@ export default function MatchAnalyticsView({
         </div>
 
         <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textSecondary }}>
-          💡 <strong>Key Momentum Factor:</strong> {scorecard.winProb.momentumText}
+          💡 <strong>Key Momentum Factor:</strong> {winProb.momentumText}
         </div>
       </div>
 
@@ -167,7 +195,7 @@ export default function MatchAnalyticsView({
 
           {/* SVG Manhattan Visualizer */}
           <div style={{ width: '100%', height: '240px', position: 'relative', display: 'flex', alignItems: 'flex-end', gap: '8px', paddingBottom: '24px', borderBottom: `1px solid ${D.border}` }}>
-            {scorecard.manhattan.map((item) => {
+            {manhattan.map((item) => {
               const heightPct = Math.max(8, (item.runs / maxOverRuns) * 100);
               const barColor =
                 item.phase === 'powerplay' ? D.sky : item.phase === 'middle' ? D.indigo : D.violet;
@@ -273,12 +301,12 @@ export default function MatchAnalyticsView({
             <div style={{ display: 'flex', gap: '12px', fontFamily: D.mono, fontSize: '11px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <div style={{ width: '12px', height: '3px', background: D.amber }} />
-                <span>{scorecard.innings1.teamShort} (1st Inn)</span>
+                <span>{safeScorecard.innings1?.teamShort || 'Team 1'} (1st Inn)</span>
               </div>
-              {scorecard.innings2 && (
+              {safeScorecard.innings2 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <div style={{ width: '12px', height: '3px', background: D.emerald }} />
-                  <span>{scorecard.innings2.teamShort} (Chase)</span>
+                  <span>{safeScorecard.innings2.teamShort} (Chase)</span>
                 </div>
               )}
             </div>
@@ -302,7 +330,7 @@ export default function MatchAnalyticsView({
               />
 
               {/* Innings 2 line (Live) */}
-              {scorecard.innings2 && (
+              {safeScorecard.innings2 && (
                 <path
                   d="M 40 170 L 100 152 L 160 137 L 220 117 L 280 98 L 340 76 L 400 58 L 420 52"
                   fill="none"
@@ -312,7 +340,7 @@ export default function MatchAnalyticsView({
               )}
 
               {/* Live Head Pulse */}
-              {scorecard.innings2 && (
+              {safeScorecard.innings2 && (
                 <circle cx="420" cy="52" r="5" fill={D.emerald} />
               )}
             </svg>

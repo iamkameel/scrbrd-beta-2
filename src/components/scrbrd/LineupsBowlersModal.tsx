@@ -43,7 +43,7 @@ const DEFAULT_MODAL_THEME: Theme = {
 export interface BatterProfile {
   id: string;
   name: string;
-  role: 'Opener' | 'Top Order' | 'Middle Order' | 'Finisher' | 'Wicket-Keeper' | 'All-Rounder' | 'Bowler';
+  role: 'Opener' | 'Top Order' | 'Middle Order' | 'Finisher' | 'Wicket-Keeper' | 'All-Rounder' | 'Bowler' | string;
   hand: 'R' | 'L';
   battingHand?: 'R' | 'L';
   status: 'batting' | 'out' | 'did_not_bat' | 'retired_hurt';
@@ -52,7 +52,7 @@ export interface BatterProfile {
   fours: number;
   sixes: number;
   dismissal?: string;
-  position: number;
+  position?: number;
 }
 
 export interface BowlerProfile {
@@ -64,8 +64,11 @@ export interface BowlerProfile {
   runs: number;
   wickets: number;
   dots: number;
-  maxQuota: number;
+  maxQuota?: number;
+  maxOvers?: number;
   isCurrentlyBowling?: boolean;
+  isCurrent?: boolean;
+  isLastOver?: boolean;
 }
 
 interface LineupsBowlersModalProps {
@@ -89,6 +92,7 @@ interface LineupsBowlersModalProps {
   onUpdateBattingSquad?: (squad: any[]) => void;
   onUpdateBowlingAttack?: (attack: any[]) => void;
   onReorderBattingLineup?: (reordered: BatterProfile[]) => void;
+  onReorderBowlingAttack?: (reordered: BowlerProfile[]) => void;
   onClose: () => void;
 }
 
@@ -99,7 +103,7 @@ export default function LineupsBowlersModal({
   bowlingTeamName = "Bowling XI",
   battingLineup: rawLineup,
   battingSquad: rawSquad,
-  bowlingAttack = [],
+  bowlingAttack: rawBowlingAttack = [],
   activeStrikerId = "",
   activeNonStrikerId = "",
   activeBowlerId = "",
@@ -113,12 +117,22 @@ export default function LineupsBowlersModal({
   onUpdateBattingSquad,
   onUpdateBowlingAttack,
   onReorderBattingLineup = () => {},
+  onReorderBowlingAttack = () => {},
   onClose,
 }: LineupsBowlersModalProps) {
   const D = customTheme || DEFAULT_MODAL_THEME;
   const battingLineup = rawLineup || rawSquad || [];
+  const bowlingAttack = rawBowlingAttack || [];
   const [activeTab, setActiveTab] = useState<'active_pairs' | 'batting_order' | 'bowling_attack'>('active_pairs');
   const [editingBatterId, setEditingBatterId] = useState<string | null>(null);
+
+  // Drag and drop states for Batting Lineup
+  const [draggedBatterIdx, setDraggedBatterIdx] = useState<number | null>(null);
+  const [dragOverBatterIdx, setDragOverBatterIdx] = useState<number | null>(null);
+
+  // Drag and drop states for Bowling Orders
+  const [draggedBowlerIdx, setDraggedBowlerIdx] = useState<number | null>(null);
+  const [dragOverBowlerIdx, setDragOverBowlerIdx] = useState<number | null>(null);
 
   if (isOpen === false) return null;
 
@@ -134,9 +148,48 @@ export default function LineupsBowlersModal({
     const temp = listCopy[index];
     listCopy[index] = listCopy[targetIdx];
     listCopy[targetIdx] = temp;
-    // update position numbers
     const updated = listCopy.map((b, idx) => ({ ...b, position: idx + 1 }));
     onReorderBattingLineup(updated);
+  };
+
+  const handleBatterDrop = (targetIdx: number) => {
+    if (draggedBatterIdx === null || draggedBatterIdx === targetIdx) {
+      setDraggedBatterIdx(null);
+      setDragOverBatterIdx(null);
+      return;
+    }
+    const listCopy = [...battingLineup];
+    const [draggedItem] = listCopy.splice(draggedBatterIdx, 1);
+    listCopy.splice(targetIdx, 0, draggedItem);
+    const updated = listCopy.map((b, idx) => ({ ...b, position: idx + 1 }));
+    onReorderBattingLineup(updated);
+    setDraggedBatterIdx(null);
+    setDragOverBatterIdx(null);
+  };
+
+  const handleMoveBowler = (index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === bowlingAttack.length - 1) return;
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    const listCopy = [...bowlingAttack];
+    const temp = listCopy[index];
+    listCopy[index] = listCopy[targetIdx];
+    listCopy[targetIdx] = temp;
+    onReorderBowlingAttack(listCopy);
+  };
+
+  const handleBowlerDrop = (targetIdx: number) => {
+    if (draggedBowlerIdx === null || draggedBowlerIdx === targetIdx) {
+      setDraggedBowlerIdx(null);
+      setDragOverBowlerIdx(null);
+      return;
+    }
+    const listCopy = [...bowlingAttack];
+    const [draggedItem] = listCopy.splice(draggedBowlerIdx, 1);
+    listCopy.splice(targetIdx, 0, draggedItem);
+    onReorderBowlingAttack(listCopy);
+    setDraggedBowlerIdx(null);
+    setDragOverBowlerIdx(null);
   };
 
   return (
@@ -562,201 +615,381 @@ export default function LineupsBowlersModal({
           {/* TAB 2: Batting Order Management */}
           {activeTab === 'batting_order' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textMuted }}>
-                Reorder batting positions or adjust player roles and handedness.
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textMuted }}>
+                  💡 Drag & drop rows using the <strong>⋮⋮ handle</strong> or click ▲ / ▼ to arrange batting positions.
+                </div>
+                <span style={{ fontSize: '11px', fontFamily: D.mono, color: D.sky, background: `${D.sky}18`, padding: '2px 8px', borderRadius: D.pill }}>
+                  {battingLineup.length} Batters in Lineup
+                </span>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {battingLineup.map((batter, idx) => (
-                  <div
-                    key={batter.id}
-                    style={{
-                      padding: '10px 14px',
-                      background: batter.id === activeStrikerId || batter.id === activeNonStrikerId ? `${D.sky}15` : D.surf2,
-                      border: `1px solid ${batter.id === activeStrikerId ? D.emerald : batter.id === activeNonStrikerId ? D.sky : D.border}`,
-                      borderRadius: D.md,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '10px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span
-                        style={{
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '50%',
-                          background: D.surf3,
-                          color: D.textPrimary,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontFamily: D.mono,
-                          fontSize: '11px',
-                          fontWeight: 800,
-                        }}
-                      >
-                        {idx + 1}
-                      </span>
-
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 800 }}>
-                            {batter.name}
-                          </span>
-                          <span
-                            style={{
-                              padding: '1px 6px',
-                              borderRadius: D.pill,
-                              background: D.surf3,
-                              fontSize: '9px',
-                              fontFamily: D.mono,
-                              color: D.textMuted,
-                            }}
-                          >
-                            {batter.role}
-                          </span>
-                          <span
-                            style={{
-                              padding: '1px 6px',
-                              borderRadius: D.pill,
-                              background: batter.hand === 'R' ? `${D.sky}25` : `${D.amber}25`,
-                              color: batter.hand === 'R' ? D.sky : D.amber,
-                              fontSize: '9px',
-                              fontFamily: D.mono,
-                              fontWeight: 700,
-                            }}
-                          >
-                            {batter.hand}HB
-                          </span>
-                          {batter.id === activeStrikerId && (
-                            <span style={{ padding: '1px 6px', borderRadius: D.pill, background: D.emerald, color: '#000', fontSize: '9px', fontFamily: D.mono, fontWeight: 800 }}>
-                              STRIKER
-                            </span>
-                          )}
-                          {batter.id === activeNonStrikerId && (
-                            <span style={{ padding: '1px 6px', borderRadius: D.pill, background: D.sky, color: '#000', fontSize: '9px', fontFamily: D.mono, fontWeight: 800 }}>
-                              NON-STRIKER
-                            </span>
-                          )}
-                        </div>
-
-                        <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted, marginTop: '2px' }}>
-                          {batter.runs} ({batter.balls}b, {batter.fours}x4, {batter.sixes}x6) · Status: {batter.status.toUpperCase()}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions: Move Up / Down / Edit Hand */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <button
-                        onClick={() => onUpdateBatter(batter.id, { hand: batter.hand === 'R' ? 'L' : 'R' })}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: D.sm,
-                          background: D.surf1,
-                          border: `1px solid ${D.border}`,
-                          color: D.textSecondary,
-                          fontSize: '10px',
-                          fontFamily: D.mono,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Toggle {batter.hand === 'R' ? 'LHB' : 'RHB'}
-                      </button>
-
-                      <button
-                        onClick={() => handleMoveBatter(idx, 'up')}
-                        disabled={idx === 0}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: D.sm,
-                          background: D.surf1,
-                          border: `1px solid ${D.border}`,
-                          color: idx === 0 ? D.textMuted : D.textPrimary,
-                          cursor: idx === 0 ? 'default' : 'pointer',
-                          fontFamily: D.mono,
-                          fontSize: '11px',
-                        }}
-                      >
-                        ▲
-                      </button>
-
-                      <button
-                        onClick={() => handleMoveBatter(idx, 'down')}
-                        disabled={idx === battingLineup.length - 1}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: D.sm,
-                          background: D.surf1,
-                          border: `1px solid ${D.border}`,
-                          color: idx === battingLineup.length - 1 ? D.textMuted : D.textPrimary,
-                          cursor: idx === battingLineup.length - 1 ? 'default' : 'pointer',
-                          fontFamily: D.mono,
-                          fontSize: '11px',
-                        }}
-                      >
-                        ▼
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: Bowling Attack & Quotas */}
-          {activeTab === 'bowling_attack' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textMuted }}>
-                Monitor overs bowled against quota ({maxOversPerBowler} ov max per bowler) and switch active bowlers.
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {bowlingAttack.map(bowler => {
-                  const isFinished = bowler.overs >= maxOversPerBowler;
-                  const isCurrent = bowler.id === activeBowlerId;
+                {battingLineup.map((batter, idx) => {
+                  const isDragging = draggedBatterIdx === idx;
+                  const isDragOver = dragOverBatterIdx === idx && draggedBatterIdx !== idx;
+                  const isStriker = batter.id === activeStrikerId;
+                  const isNonStriker = batter.id === activeNonStrikerId;
 
                   return (
                     <div
-                      key={bowler.id}
+                      key={batter.id}
+                      draggable
+                      onDragStart={() => setDraggedBatterIdx(idx)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (dragOverBatterIdx !== idx) setDragOverBatterIdx(idx);
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverBatterIdx === idx) setDragOverBatterIdx(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        handleBatterDrop(idx);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedBatterIdx(null);
+                        setDragOverBatterIdx(null);
+                      }}
                       style={{
-                        padding: '12px 16px',
-                        background: isCurrent ? `${D.indigo}20` : D.surf2,
-                        border: `1px solid ${isCurrent ? D.indigo : D.border}`,
+                        padding: '10px 14px',
+                        background: isDragging
+                          ? `${D.sky}25`
+                          : isStriker || isNonStriker
+                          ? `${D.sky}15`
+                          : D.surf2,
+                        border: isDragOver
+                          ? `2px dashed ${D.emerald}`
+                          : `1px solid ${isStriker ? D.emerald : isNonStriker ? D.sky : D.border}`,
                         borderRadius: D.md,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
+                        gap: '10px',
+                        opacity: isDragging ? 0.6 : 1,
+                        cursor: 'grab',
+                        transform: isDragging ? 'scale(0.99)' : 'none',
+                        transition: 'all 0.15s ease',
                       }}
                     >
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontFamily: D.head, fontSize: '14px', fontWeight: 800 }}>
-                            {bowler.name}
-                          </span>
-                          <span style={{ fontFamily: D.mono, fontSize: '10px', color: D.textMuted }}>
-                            ({bowler.bowlingStyle})
-                          </span>
-                          {isCurrent && (
-                            <span style={{ padding: '1px 6px', borderRadius: D.pill, background: D.indigo, color: '#fff', fontSize: '9px', fontFamily: D.mono, fontWeight: 800 }}>
-                              CURRENTLY BOWLING
-                            </span>
-                          )}
-                          {isFinished && (
-                            <span style={{ padding: '1px 6px', borderRadius: D.pill, background: D.surf3, color: D.textMuted, fontSize: '9px', fontFamily: D.mono }}>
-                              QUOTA COMPLETE
-                            </span>
-                          )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {/* Drag Handle */}
+                        <div
+                          title="Drag to reorder"
+                          style={{
+                            cursor: 'grab',
+                            color: D.textMuted,
+                            fontSize: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            userSelect: 'none',
+                            padding: '2px 4px',
+                          }}
+                        >
+                          ⋮⋮
                         </div>
 
-                        <div style={{ fontFamily: D.mono, fontSize: '12px', color: D.textSecondary, marginTop: '3px' }}>
-                          {bowler.overs} ov · {bowler.maidens} m · {bowler.runs} r · {bowler.wickets} w · Econ: {bowler.overs > 0 ? (bowler.runs / bowler.overs).toFixed(2) : '0.00'} · {bowler.dots} dots
+                        <span
+                          style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            background: isStriker ? D.emerald : isNonStriker ? D.sky : D.surf3,
+                            color: isStriker || isNonStriker ? '#000' : D.textPrimary,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontFamily: D.mono,
+                            fontSize: '11px',
+                            fontWeight: 800,
+                          }}
+                        >
+                          {idx + 1}
+                        </span>
+
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 800 }}>
+                              {batter.name}
+                            </span>
+                            <span
+                              style={{
+                                padding: '1px 6px',
+                                borderRadius: D.pill,
+                                background: D.surf3,
+                                fontSize: '9px',
+                                fontFamily: D.mono,
+                                color: D.textMuted,
+                              }}
+                            >
+                              {batter.role}
+                            </span>
+                            <span
+                              style={{
+                                padding: '1px 6px',
+                                borderRadius: D.pill,
+                                background: batter.hand === 'R' ? `${D.sky}25` : `${D.amber}25`,
+                                color: batter.hand === 'R' ? D.sky : D.amber,
+                                fontSize: '9px',
+                                fontFamily: D.mono,
+                                fontWeight: 700,
+                              }}
+                            >
+                              {batter.hand}HB
+                            </span>
+                            {isStriker && (
+                              <span style={{ padding: '1px 6px', borderRadius: D.pill, background: D.emerald, color: '#000', fontSize: '9px', fontFamily: D.mono, fontWeight: 800 }}>
+                                STRIKER
+                              </span>
+                            )}
+                            {isNonStriker && (
+                              <span style={{ padding: '1px 6px', borderRadius: D.pill, background: D.sky, color: '#000', fontSize: '9px', fontFamily: D.mono, fontWeight: 800 }}>
+                                NON-STRIKER
+                              </span>
+                            )}
+                          </div>
+
+                          <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted, marginTop: '2px' }}>
+                            {batter.runs} ({batter.balls}b, {batter.fours}x4, {batter.sixes}x6) · Status: {batter.status.toUpperCase()}
+                          </div>
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {/* Actions: Move Up / Down / Edit Hand */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => onUpdateBatter(batter.id, { hand: batter.hand === 'R' ? 'L' : 'R' })}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: D.sm,
+                            background: D.surf1,
+                            border: `1px solid ${D.border}`,
+                            color: D.textSecondary,
+                            fontSize: '10px',
+                            fontFamily: D.mono,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Toggle {batter.hand === 'R' ? 'LHB' : 'RHB'}
+                        </button>
+
+                        <button
+                          onClick={() => handleMoveBatter(idx, 'up')}
+                          disabled={idx === 0}
+                          title="Move up in batting order"
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: D.sm,
+                            background: D.surf1,
+                            border: `1px solid ${D.border}`,
+                            color: idx === 0 ? D.textMuted : D.textPrimary,
+                            cursor: idx === 0 ? 'default' : 'pointer',
+                            fontFamily: D.mono,
+                            fontSize: '11px',
+                          }}
+                        >
+                          ▲
+                        </button>
+
+                        <button
+                          onClick={() => handleMoveBatter(idx, 'down')}
+                          disabled={idx === battingLineup.length - 1}
+                          title="Move down in batting order"
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: D.sm,
+                            background: D.surf1,
+                            border: `1px solid ${D.border}`,
+                            color: idx === battingLineup.length - 1 ? D.textMuted : D.textPrimary,
+                            cursor: idx === battingLineup.length - 1 ? 'default' : 'pointer',
+                            fontFamily: D.mono,
+                            fontSize: '11px',
+                          }}
+                        >
+                          ▼
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: Bowling Attack & Quotas & Bowling Order */}
+          {activeTab === 'bowling_attack' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textMuted }}>
+                  💡 Drag & drop with <strong>⋮⋮ handle</strong> or click ▲ / ▼ to sequence bowling rotation and changes.
+                </div>
+                <span style={{ fontSize: '11px', fontFamily: D.mono, color: D.indigo, background: `${D.indigo}18`, padding: '2px 8px', borderRadius: D.pill }}>
+                  Quota: {maxOversPerBowler} ov max / bowler
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {bowlingAttack.map((bowler, idx) => {
+                  const isFinished = bowler.overs >= maxOversPerBowler;
+                  const isCurrent = bowler.id === activeBowlerId;
+                  const isDragging = draggedBowlerIdx === idx;
+                  const isDragOver = dragOverBowlerIdx === idx && draggedBowlerIdx !== idx;
+
+                  const orderRole = idx === 0 ? 'Opening Bowler' : idx === 1 ? 'New Ball Partner' : idx === 2 ? '1st Change' : idx === 3 ? '2nd Change' : 'Rotation Bowler';
+
+                  return (
+                    <div
+                      key={bowler.id}
+                      draggable
+                      onDragStart={() => setDraggedBowlerIdx(idx)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (dragOverBowlerIdx !== idx) setDragOverBowlerIdx(idx);
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverBowlerIdx === idx) setDragOverBowlerIdx(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        handleBowlerDrop(idx);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedBowlerIdx(null);
+                        setDragOverBowlerIdx(null);
+                      }}
+                      style={{
+                        padding: '12px 16px',
+                        background: isDragging
+                          ? `${D.indigo}30`
+                          : isCurrent
+                          ? `${D.indigo}20`
+                          : D.surf2,
+                        border: isDragOver
+                          ? `2px dashed ${D.emerald}`
+                          : `1px solid ${isCurrent ? D.indigo : D.border}`,
+                        borderRadius: D.md,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        opacity: isDragging ? 0.6 : 1,
+                        cursor: 'grab',
+                        transform: isDragging ? 'scale(0.99)' : 'none',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {/* Drag Handle */}
+                        <div
+                          title="Drag to reorder bowling order"
+                          style={{
+                            cursor: 'grab',
+                            color: D.textMuted,
+                            fontSize: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            userSelect: 'none',
+                            padding: '2px 4px',
+                          }}
+                        >
+                          ⋮⋮
+                        </div>
+
+                        {/* Bowling Position Badge */}
+                        <span
+                          style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            background: isCurrent ? D.indigo : D.surf3,
+                            color: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontFamily: D.mono,
+                            fontSize: '11px',
+                            fontWeight: 800,
+                          }}
+                        >
+                          {idx + 1}
+                        </span>
+
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontFamily: D.head, fontSize: '14px', fontWeight: 800 }}>
+                              {bowler.name}
+                            </span>
+                            <span style={{ fontFamily: D.mono, fontSize: '10px', color: D.textMuted }}>
+                              ({bowler.bowlingStyle})
+                            </span>
+                            <span
+                              style={{
+                                padding: '1px 6px',
+                                borderRadius: D.pill,
+                                background: D.surf3,
+                                fontSize: '9px',
+                                fontFamily: D.mono,
+                                color: D.sky,
+                              }}
+                            >
+                              {orderRole}
+                            </span>
+                            {isCurrent && (
+                              <span style={{ padding: '1px 6px', borderRadius: D.pill, background: D.indigo, color: '#fff', fontSize: '9px', fontFamily: D.mono, fontWeight: 800 }}>
+                                CURRENTLY BOWLING
+                              </span>
+                            )}
+                            {isFinished && (
+                              <span style={{ padding: '1px 6px', borderRadius: D.pill, background: D.surf3, color: D.textMuted, fontSize: '9px', fontFamily: D.mono }}>
+                                QUOTA COMPLETE
+                              </span>
+                            )}
+                          </div>
+
+                          <div style={{ fontFamily: D.mono, fontSize: '12px', color: D.textSecondary, marginTop: '3px' }}>
+                            {bowler.overs} ov · {bowler.maidens} m · {bowler.runs} r · {bowler.wickets} w · Econ: {bowler.overs > 0 ? (bowler.runs / bowler.overs).toFixed(2) : '0.00'} · {bowler.dots} dots
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
+                        {/* Move Up/Down Buttons */}
+                        <button
+                          onClick={() => handleMoveBowler(idx, 'up')}
+                          disabled={idx === 0}
+                          title="Move up in bowling order"
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: D.sm,
+                            background: D.surf1,
+                            border: `1px solid ${D.border}`,
+                            color: idx === 0 ? D.textMuted : D.textPrimary,
+                            cursor: idx === 0 ? 'default' : 'pointer',
+                            fontFamily: D.mono,
+                            fontSize: '11px',
+                          }}
+                        >
+                          ▲
+                        </button>
+
+                        <button
+                          onClick={() => handleMoveBowler(idx, 'down')}
+                          disabled={idx === bowlingAttack.length - 1}
+                          title="Move down in bowling order"
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: D.sm,
+                            background: D.surf1,
+                            border: `1px solid ${D.border}`,
+                            color: idx === bowlingAttack.length - 1 ? D.textMuted : D.textPrimary,
+                            cursor: idx === bowlingAttack.length - 1 ? 'default' : 'pointer',
+                            fontFamily: D.mono,
+                            fontSize: '11px',
+                          }}
+                        >
+                          ▼
+                        </button>
+
                         {!isCurrent && (
                           <button
                             onClick={() => onSelectBowler(bowler.id)}

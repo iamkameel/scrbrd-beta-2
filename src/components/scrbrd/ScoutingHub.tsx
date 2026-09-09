@@ -1,12 +1,18 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Theme, Player } from './types';
-import { PLAYERS, VERIFIED_SCOUTS } from './data';
+import { Theme, Player, SchoolRegistryItem } from './types';
+import { PLAYERS, VERIFIED_SCOUTS, SCHOOLS_REGISTRY, ROLES, POPIA_POLICIES } from './data';
+import PlayerSearchFilterSelect from './PlayerSearchFilterSelect';
+import HeadToHeadComparisonView from './HeadToHeadComparisonView';
+import { ArrowLeftRight, Zap, Award, TrendingUp, Target, Shield, Sparkles, Swords, Lock, ArrowUpRight } from 'lucide-react';
 
 interface ScoutingHubProps {
   theme: Theme;
   players?: Player[];
+  currentRole?: string;
+  activeSchoolId?: string;
+  onNavigateToSkills?: () => void;
 }
 
 const SCOUTING_REPORTS: Record<string, {
@@ -157,9 +163,35 @@ const PRESET_QUERIES = [
   "Compare James Whitfield vs Ryan Brand metrics",
 ];
 
-export default function ScoutingHub({ theme: D, players }: ScoutingHubProps) {
+const COMPARE_PRESETS = [
+  { label: "⚔️ Top Run Scorers", pA: "p1", pB: "no4", desc: "J. Whitfield (WES) vs R. Brand (NOR)" },
+  { label: "⚡ Pace Spearheads", pA: "p2", pB: "no8", desc: "L. De Villiers (WES) vs C. Henderson (NOR)" },
+  { label: "👑 Captains Clash", pA: "p1", pB: "no4", desc: "Whitfield (WES) vs Brand (NOR)" },
+  { label: "🧤 Premier Keepers", pA: "h3", pB: "no1", desc: "J. van Zyl (HIL) vs R. Barnes (NOR)" },
+  { label: "🌀 Spin Masters", pA: "m7_p", pB: "d10", desc: "T. Griffin (MIC) vs L. Ndlovu (DHS)" },
+  { label: "🛡️ Elite All-Rounders", pA: "k4", pB: "no4", desc: "R. Coetzee (KEA) vs R. Brand (NOR)" },
+];
+
+const FEATURED_PROSPECT_IDS = ["p1", "p2", "p3", "p81", "no4", "k4", "h3", "no8"];
+
+export default function ScoutingHub({
+  theme: D,
+  players,
+  currentRole = 'scout',
+  activeSchoolId = 'WES',
+  onNavigateToSkills,
+}: ScoutingHubProps) {
   const allPlayers = players || PLAYERS;
   const [hubTab, setHubTab] = useState<"mechanics" | "search" | "network" | "compare">("mechanics");
+
+  // RBAC & POPIA evaluation
+  const roleConfig = ROLES[currentRole] || ROLES.scout;
+  const popiaPolicy = POPIA_POLICIES[currentRole] || POPIA_POLICIES.scout;
+
+  const isScoutUser = currentRole === 'scout';
+  const isPlayerUser = currentRole === 'player';
+  const isParentUser = currentRole === 'parent';
+  const isRestrictedRole = ['scorer', 'driver', 'groundskeeper', 'spectator'].includes(currentRole);
 
   // Selected player for Mechanics View
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("p1");
@@ -213,48 +245,134 @@ export default function ScoutingHub({ theme: D, players }: ScoutingHubProps) {
   const compPlayerA = allPlayers.find(p => p.id === comparePlayerAId) || allPlayers[0];
   const compPlayerB = allPlayers.find(p => p.id === comparePlayerBId) || allPlayers[1];
 
+  // RBAC guard for Student Athletes & Parents
+  if (isPlayerUser || isParentUser || isRestrictedRole) {
+    return (
+      <div style={{ padding: '32px 20px', maxWidth: '820px', margin: '0 auto', textAlign: 'center' }}>
+        <div style={{
+          padding: '36px 28px',
+          borderRadius: D.lg,
+          background: D.cardBg,
+          border: `1px solid ${D.borderMed}`,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '16px',
+        }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: `${D.rose}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: D.rose }}>
+            <Lock size={32} />
+          </div>
+          <h2 style={{ fontFamily: D.head, fontSize: '22px', fontWeight: 800, color: D.textPrimary }}>
+            POPIA Section 11 Restricted: External Talent Scouting Network
+          </h2>
+          <p style={{ fontFamily: D.body, fontSize: '14px', color: D.textSecondary, maxWidth: '560px', lineHeight: 1.6 }}>
+            {isPlayerUser
+              ? "As a registered Student Athlete, cross-institution external recruitment and scouting pipelines are governed by POPIA minor data protection regulations. Your technical skill evaluations, coach feedback, and homework drills are located in your personal Skills Matrix & Player Passport."
+              : isParentUser
+              ? "As a Parent/Guardian, external scout registries and opposition talent dossiers are restricted to accredited talent scouts and school head coaches. You can track your linked child's technical development in the Skills tab."
+              : "Scouting Hub access is restricted to verified talent scouts, governing bodies, and 1st XI coaches."}
+          </p>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {onNavigateToSkills && (
+              <button
+                onClick={onNavigateToSkills}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 20px',
+                  borderRadius: D.md,
+                  background: D.emerald,
+                  color: '#ffffff',
+                  border: 'none',
+                  fontFamily: D.head,
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                <span>Go to Skills Matrix & Player Passport</span>
+                <ArrowUpRight size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
       {/* Header & Mode Switcher */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "20px" }}>🎯</span>
-            <h2 style={{ fontFamily: D.head, fontSize: "18px", fontWeight: 800, color: D.textPrimary }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ fontSize: "20px" }}>🔍</span>
+            <h2 style={{ fontFamily: D.head, fontSize: "18px", fontWeight: 800, color: D.textPrimary, margin: 0 }}>
               TALENT DISCOVERY & BIOMECHANICAL SCOUTING SUITE
             </h2>
+            <span style={{
+              padding: '3px 9px',
+              borderRadius: D.pill,
+              background: `${D.rose}22`,
+              color: D.rose,
+              border: `1px solid ${D.rose}44`,
+              fontSize: '11px',
+              fontFamily: D.mono,
+              fontWeight: 700,
+            }}>
+              External Talent Network
+            </span>
           </div>
           <div style={{ fontFamily: D.body, fontSize: "12px", color: D.textMuted, marginTop: "2px" }}>
             Verified Scout Network, Explainable Multi-Criteria Queries & POPIA-Compliant Talent Tiers
           </div>
         </div>
 
-        {/* Hub Tabs */}
-        <div style={{ display: "flex", background: D.surf2, borderRadius: D.pill, padding: "2px", border: `1px solid ${D.border}` }}>
-          {[
-            { id: "mechanics", label: "Biomechanical Dossier" },
-            { id: "search", label: "Explainable Talent Finder" },
-            { id: "compare", label: "Head-to-Head Compare" },
-            { id: "network", label: "Verified Scout Roster" },
-          ].map(t => (
-            <button
-              key={t.id}
-              onClick={() => setHubTab(t.id as any)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: D.pill,
-                background: hubTab === t.id ? D.indigo : "transparent",
-                border: "none",
-                color: hubTab === t.id ? "#fff" : D.textSecondary,
-                fontFamily: D.head,
-                fontSize: "11px",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
+        {/* Hub Tabs & RBAC Pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '4px 10px',
+            borderRadius: D.pill,
+            background: `${roleConfig.color}15`,
+            border: `1px solid ${roleConfig.color}44`,
+            fontSize: '11px',
+            fontFamily: D.mono,
+            color: roleConfig.color,
+          }}>
+            <span>{roleConfig.icon}</span>
+            <span>{isScoutUser ? '🛡️ POPIA Level 1 Cleared' : roleConfig.label}</span>
+          </div>
+
+          <div style={{ display: "flex", background: D.surf2, borderRadius: D.pill, padding: "2px", border: `1px solid ${D.border}` }}>
+            {[
+              { id: "mechanics", label: "Biomechanical Dossier" },
+              { id: "search", label: "Explainable Talent Finder" },
+              { id: "compare", label: "Head-to-Head Compare" },
+              { id: "network", label: "Verified Scout Roster" },
+            ].map(t => (
+              <button
+                key={t.id}
+                onClick={() => setHubTab(t.id as any)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: D.pill,
+                  background: hubTab === t.id ? D.indigo : "transparent",
+                  border: "none",
+                  color: hubTab === t.id ? "#fff" : D.textSecondary,
+                  fontFamily: D.head,
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -316,36 +434,68 @@ export default function ScoutingHub({ theme: D, players }: ScoutingHubProps) {
             )}
           </div>
 
-          {/* Player Selector Bar */}
-          <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" }}>
-            {allPlayers.map(p => {
-              const isSelected = p.id === selectedPlayerId;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => setSelectedPlayerId(p.id)}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: D.pill,
-                    background: isSelected ? D.indigo : D.surf1,
-                    border: `1px solid ${isSelected ? D.indigo : D.border}`,
-                    color: isSelected ? "#fff" : D.textPrimary,
-                    fontFamily: D.head,
-                    fontSize: "11px",
-                    fontWeight: isSelected ? 700 : 500,
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                  }}
-                >
-                  <span>{p.role === "BAT" ? "🏏" : p.role === "BOWL" ? "⚡" : "★"}</span>
-                  <span>{p.name}</span>
-                  <span style={{ fontFamily: D.mono, fontSize: "9px", opacity: 0.8 }}>({p.school})</span>
-                </button>
-              );
-            })}
+          {/* Player Selector Bar with 1000+ Player Search & Filter */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 800, color: D.textPrimary }}>
+                  ACTIVE PROSPECT DOSSIER
+                </span>
+                <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.indigo, background: `${D.indigo}20`, padding: "2px 8px", borderRadius: D.pill, fontWeight: 700 }}>
+                  POPIA LEVEL 1 VERIFIED
+                </span>
+              </div>
+              <div style={{ width: "340px", maxWidth: "100%" }}>
+                <PlayerSearchFilterSelect
+                  theme={D}
+                  players={allPlayers}
+                  selectedPlayerId={selectedPlayerId}
+                  onSelectPlayer={p => setSelectedPlayerId(p.id)}
+                  compact
+                  label="SEARCH & SELECT PROSPECT (1000+)"
+                  placeholder="Search by name, school, role, stance..."
+                  accentColor={D.indigo}
+                />
+              </div>
+            </div>
+
+            {/* Featured Prospects Quick Chips */}
+            <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px", alignItems: "center" }}>
+              <span style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted, whiteSpace: "nowrap" }}>
+                FEATURED SCOUT PICKS:
+              </span>
+              {FEATURED_PROSPECT_IDS.map(id => {
+                const p = allPlayers.find(item => item.id === id);
+                if (!p) return null;
+                const isSelected = p.id === selectedPlayerId;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setSelectedPlayerId(p.id)}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: D.pill,
+                      background: isSelected ? D.indigo : D.surf1,
+                      border: `1px solid ${isSelected ? D.indigo : D.border}`,
+                      color: isSelected ? "#fff" : D.textPrimary,
+                      fontFamily: D.head,
+                      fontSize: "11px",
+                      fontWeight: isSelected ? 700 : 500,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span>{p.role === "BAT" ? "🏏" : p.role === "BOWL" ? "⚡" : p.role === "WK" ? "🧤" : "★"}</span>
+                    <span>{p.name}</span>
+                    <span style={{ fontFamily: D.mono, fontSize: "9px", opacity: 0.8 }}>({p.school})</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Main Scouting Dossier Grid */}
@@ -621,75 +771,17 @@ export default function ScoutingHub({ theme: D, players }: ScoutingHubProps) {
 
       {/* ── TAB 3: HEAD-TO-HEAD COMPARE ───────────────── */}
       {hubTab === "compare" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div style={{ padding: "14px 20px", background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-            <div style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 800 }}>
-              SELECT TWO PLAYERS FOR SIDE-BY-SIDE EVALUATION
-            </div>
-            <div style={{ display: "flex", gap: "10px" }}>
-              <select
-                value={comparePlayerAId}
-                onChange={e => setComparePlayerAId(e.target.value)}
-                style={{ padding: "6px 10px", background: D.surf2, border: `1px solid ${D.border}`, borderRadius: D.sm, color: D.textPrimary, fontSize: "11px" }}
-              >
-                {allPlayers.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.school})</option>
-                ))}
-              </select>
-              <span style={{ fontFamily: D.mono, color: D.amber, alignSelf: "center", fontWeight: 700 }}>VS</span>
-              <select
-                value={comparePlayerBId}
-                onChange={e => setComparePlayerBId(e.target.value)}
-                style={{ padding: "6px 10px", background: D.surf2, border: `1px solid ${D.border}`, borderRadius: D.sm, color: D.textPrimary, fontSize: "11px" }}
-              >
-                {allPlayers.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.school})</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Comparison Cards Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            {[compPlayerA, compPlayerB].map((player, idx) => (
-              <div key={player.id} style={{ padding: "20px", background: D.surf1, borderRadius: D.lg, border: `1px solid ${idx === 0 ? D.indigo : D.sky}44`, display: "flex", flexDirection: "column", gap: "14px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontFamily: D.head, fontSize: "18px", fontWeight: 800, color: D.textPrimary }}>{player.name}</div>
-                    <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted }}>{player.school} · {player.role} · {player.team}</div>
-                  </div>
-                  <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: idx === 0 ? `${D.indigo}25` : `${D.sky}25`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px" }}>
-                    {idx === 0 ? "A" : "B"}
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px" }}>
-                  <div style={{ padding: "10px", background: D.surf2, borderRadius: D.md }}>
-                    <div style={{ fontFamily: D.head, fontSize: "9px", color: D.textMuted }}>BATTING AVERAGE</div>
-                    <div style={{ fontFamily: D.mono, fontSize: "20px", fontWeight: 800, color: D.emerald }}>{player.avg}</div>
-                  </div>
-                  <div style={{ padding: "10px", background: D.surf2, borderRadius: D.md }}>
-                    <div style={{ fontFamily: D.head, fontSize: "9px", color: D.textMuted }}>STRIKE RATE</div>
-                    <div style={{ fontFamily: D.mono, fontSize: "20px", fontWeight: 800, color: D.sky }}>{player.sr}</div>
-                  </div>
-                  <div style={{ padding: "10px", background: D.surf2, borderRadius: D.md }}>
-                    <div style={{ fontFamily: D.head, fontSize: "9px", color: D.textMuted }}>WICKETS TAKEN</div>
-                    <div style={{ fontFamily: D.mono, fontSize: "20px", fontWeight: 800, color: D.amber }}>{player.wkts}</div>
-                  </div>
-                  <div style={{ padding: "10px", background: D.surf2, borderRadius: D.md }}>
-                    <div style={{ fontFamily: D.head, fontSize: "9px", color: D.textMuted }}>CAREER RUNS</div>
-                    <div style={{ fontFamily: D.mono, fontSize: "20px", fontWeight: 800, color: D.indigo }}>{player.careerTotals?.runs || 0}</div>
-                  </div>
-                </div>
-
-                <div style={{ fontFamily: D.body, fontSize: "12px", color: D.textSecondary, lineHeight: 1.5, padding: "10px", background: D.surf2, borderRadius: D.md }}>
-                  {player.bio}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <HeadToHeadComparisonView
+          theme={D}
+          players={allPlayers}
+          currentRole={currentRole}
+          activeSchoolId={activeSchoolId}
+          initialPlayerAId={comparePlayerAId}
+          initialPlayerBId={comparePlayerBId}
+          onNavigateToSkills={onNavigateToSkills}
+        />
       )}
+
 
       {/* ── TAB 4: VERIFIED SCOUT ROSTER ───────────────── */}
       {hubTab === "network" && (

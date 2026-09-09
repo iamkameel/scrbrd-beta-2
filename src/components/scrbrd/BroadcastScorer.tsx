@@ -56,6 +56,11 @@ export interface DeliveryRecord {
     length: "yorker" | "full" | "good_length" | "back_of_length" | "short";
     paceType?: "fast" | "medium" | "off_spin" | "leg_spin";
   };
+  telemetry?: {
+    line: string;
+    length: string;
+    pace?: string;
+  };
   trajectory?: "along_ground" | "aerial" | "lofted" | "defended";
   contactQuality?: "middle" | "edge" | "mishit" | "uncontrolled";
   verificationStatus: "verified" | "phase1_only" | "amended";
@@ -324,14 +329,14 @@ export default function BroadcastScorer({
   // Match Management Settings Modal & State
   const [matchSettingsModalOpen, setMatchSettingsModalOpen] = useState<boolean>(false);
   const [matchSettings, setMatchSettings] = useState<MatchSettingsState>({
-    matchFormat: "T20",
+    format: "T20",
     maxOvers: 20,
     maxOversPerBowler: 4,
     ballType: "White Kookaburra 156g",
-    pitchCondition: "Hard & Bouncy Oval",
+    pitchCondition: "Hard & Bouncy",
     powerplay1Overs: 6,
     powerplay2Overs: 0,
-    matchStatus: "In Progress (2nd Innings)",
+    matchStatus: "In Progress",
     tossWinner: "home",
     tossDecision: "bat",
     dlsRevisedOvers: 18,
@@ -382,8 +387,16 @@ export default function BroadcastScorer({
   // Right column active sub-tab: Commentary feed vs Live Striker Wagon Wheel vs Over Audit vs Pitch Map vs Telemetry vs Quick Log
   const [rightPanelTab, setRightPanelTab] = useState<"wagon" | "pitchmap" | "telemetry" | "commentary" | "audit" | "quicklog">("wagon");
 
-  // Active batter stance
+  // Active batter stance (Auto-predefined from player profile)
   const [activeBatHand, setActiveBatHand] = useState<"R" | "L">(baseStriker.hand);
+
+  // Auto-sync activeBatHand whenever the active striker changes
+  React.useEffect(() => {
+    const curStriker = battingSquad.find(b => b.id === activeStrikerId);
+    if (curStriker && (curStriker.hand || curStriker.battingHand)) {
+      setActiveBatHand((curStriker.hand || curStriker.battingHand) as "R" | "L");
+    }
+  }, [activeStrikerId, battingSquad]);
 
   // Delivery Event Log (Single Source of Truth)
   const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([
@@ -508,16 +521,26 @@ export default function BroadcastScorer({
   const [wagonFilterRuns, setWagonFilterRuns] = useState<number | "all">("all");
 
   // ── 3-PHASE INTERACTIVE SCORING ENGINE STATE ─────
+  // Phase 1: Enrich Delivery Context
   const [scoringPhase, setScoringPhase] = useState<1 | 2 | 3>(1);
+  const [phase1Line, setPhase1Line] = useState<"outside_off" | "off_stump" | "middle" | "leg_stump" | "down_leg">("outside_off");
+  const [phase1Length, setPhase1Length] = useState<"yorker" | "full" | "good_length" | "back_of_length" | "short">("good_length");
+  const [phase1Pace, setPhase1Pace] = useState<"140_fast" | "130_fast_med" | "88_off_spin" | "78_leg_spin" | "slower">("130_fast_med");
   const [phase1Category, setPhase1Category] = useState<"front_foot" | "back_foot" | "defensive" | "innovative" | "edges">("front_foot");
   const [selectedPhase1Shot, setSelectedPhase1Shot] = useState<string>("Cover Drive");
+  const [phase1Contact, setPhase1Contact] = useState<"middled" | "outside_edge" | "inside_edge" | "leading_edge" | "top_edge" | "mishit" | "beaten">("middled");
+  const [phase1Trajectory, setPhase1Trajectory] = useState<"along_ground" | "aerial" | "lofted" | "defended">("along_ground");
+
+  // Phase 2: Enrich Delivery Context, Select Placement on Wagon Wheel
   const [selectedPhase2Landing, setSelectedPhase2Landing] = useState<WagonWheelShot | null>(() => classifyWagonCoordinates(-0.65, -0.65, "R"));
+  const [phase2HoverCoord, setPhase2HoverCoord] = useState<{ x: number; y: number } | null>(null);
+
+  // Phase 3: Recording / Scoring Runs, Extras, Wickets
   const [phase3Runs, setPhase3Runs] = useState<number>(4);
   const [phase3Extra, setPhase3Extra] = useState<"none" | "wd" | "nb" | "b" | "lb" | "pen">("none");
   const [phase3IsWicket, setPhase3IsWicket] = useState<boolean>(false);
   const [phase3WicketType, setPhase3WicketType] = useState<string>("caught");
   const [phase3Fielder, setPhase3Fielder] = useState<string>("Deep Extra Cover");
-  const [phase2HoverCoord, setPhase2HoverCoord] = useState<{ x: number; y: number } | null>(null);
 
   // ── EVENT-SOURCED REDUCER ("DERIVE, DON'T STORE") ─────
   const matchDerivedState = useMemo(() => {
@@ -606,6 +629,16 @@ export default function BroadcastScorer({
       nonStriker: currentNonStrikerState,
       bowler: bowlerState,
       extras: extrasBreakdown,
+      wides: extrasBreakdown.wides,
+      noBalls: extrasBreakdown.noBalls,
+      byes: extrasBreakdown.byes,
+      legByes: extrasBreakdown.legByes,
+      extrasTotal: extrasBreakdown.wides + extrasBreakdown.noBalls + extrasBreakdown.byes + extrasBreakdown.legByes,
+      fallOfWickets: [
+        { wicketNumber: 1, score: 38, over: "4.1", batterName: "L. Campbell", wicket: 1, player: "L. Campbell" },
+        { wicketNumber: 2, score: 84, over: "8.5", batterName: "G. Jenkins", wicket: 2, player: "G. Jenkins" },
+        { wicketNumber: 3, score: 112, over: "12.3", batterName: "T. van Rooyen", wicket: 3, player: "T. van Rooyen" },
+      ],
       queuedCount,
     };
   }, [deliveries, baseStriker, baseNonStriker, dlsTarget]);
@@ -743,29 +776,33 @@ export default function BroadcastScorer({
     const extraVal = extra === "wd" || extra === "nb" ? 1 : extra === "pen" ? 5 : 0;
     const totalAdded = runVal + extraVal;
 
-    // Spatial Wagon Shot
+    // Spatial Wagon Shot from Phase 2
     const finalShot: WagonWheelShot = selectedPhase2Landing
       ? { ...selectedPhase2Landing, shotType: selectedPhase1Shot, batHand: activeBatHand }
       : { ...classifyWagonCoordinates(-0.65, -0.65, activeBatHand), shotType: selectedPhase1Shot, batHand: activeBatHand };
 
     const zoneName = finalShot.fieldingZone || finalShot.sector || "Cover";
+    const paceSpeed = phase1Pace === "140_fast" ? "142 km/h" : phase1Pace === "130_fast_med" ? "131 km/h" : phase1Pace === "88_off_spin" ? "88 km/h" : phase1Pace === "78_leg_spin" ? "78 km/h" : "114 km/h";
+    const lineLabel = phase1Line.replace(/_/g, " ");
+    const lengthLabel = phase1Length.replace(/_/g, " ");
+    const contactLabel = phase1Contact.replace(/_/g, " ");
 
-    // Dynamic AI Broadcast Commentary
+    // Dynamic AI Broadcast Commentary synthesizing Phase 1 + Phase 2 + Phase 3
     let comm = "";
     if (isWkt) {
-      comm = `WICKET! ${matchDerivedState.striker.name} ${wktType || "dismissed"} towards ${zoneName}! Breakthrough for ${matchDerivedState.bowler.name}!`;
+      comm = `WICKET! ${lengthLabel} ball ${lineLabel} (${paceSpeed}). ${matchDerivedState.striker.name} goes for a ${selectedPhase1Shot} (${contactLabel}), ${wktType || "caught"} by ${phase3Fielder || zoneName}! Breakthrough for ${matchDerivedState.bowler.name}!`;
     } else if (runVal === 6) {
-      comm = `SIX! Towering ${selectedPhase1Shot} sailing into the stands at ${zoneName}! Massive hit by ${matchDerivedState.striker.name}.`;
+      comm = `SIX! ${lengthLabel} delivery ${lineLabel} at ${paceSpeed}. ${matchDerivedState.striker.name} launches a colossal ${selectedPhase1Shot} (${contactLabel}), cleared high over ${zoneName} (${finalShot.distanceMeters || 80}m) into the stands!`;
     } else if (runVal === 4) {
-      comm = `FOUR! Glorious ${selectedPhase1Shot} pierced through ${zoneName} to the boundary rope. Pure timing!`;
+      comm = `FOUR! ${lengthLabel} ${lineLabel} (${paceSpeed}). Exquisite ${selectedPhase1Shot} (${contactLabel}) by ${matchDerivedState.striker.name}, piercing through ${zoneName} to the fence!`;
     } else if (extra === "wd") {
-      comm = `Wide signaled by umpire. Strayed down off-side.`;
+      comm = `Wide signaled by umpire. Strayed down leg/off. 1 extra run added.`;
     } else if (extra === "nb") {
-      comm = `NO BALL! Overstepping on bowling crease. Free hit signaled.`;
+      comm = `NO BALL! Overstepping on bowling crease (${paceSpeed}). Free hit signaled.`;
     } else if (runVal === 0) {
-      comm = `Firm ${selectedPhase1Shot} straight to the fielder at ${zoneName}. Dot ball.`;
+      comm = `${lengthLabel} delivery ${lineLabel} (${paceSpeed}). Firm ${selectedPhase1Shot} (${contactLabel}) straight to the fielder at ${zoneName}. Dot ball.`;
     } else {
-      comm = `${selectedPhase1Shot} worked into the gap at ${zoneName} for ${runVal} run${runVal > 1 ? "s" : ""}.`;
+      comm = `${lengthLabel} ${lineLabel} (${paceSpeed}). ${selectedPhase1Shot} (${contactLabel}) worked neatly into ${zoneName} for ${runVal} run${runVal > 1 ? "s" : ""}.`;
     }
 
     const nextTimestamp = `${matchDerivedState.completedOvers}.${matchDerivedState.remainderBalls + (isLegal ? 1 : 0)}`;
@@ -786,9 +823,13 @@ export default function BroadcastScorer({
       wicketType: wktType,
       fielder: isWkt ? (phase3Fielder || `Fielder at ${zoneName}`) : undefined,
       shot: finalShot,
-      pitchDelivery: { line: "outside_off", length: runVal === 6 ? "full" : "good_length", paceType: "fast" },
-      trajectory: runVal === 6 ? "lofted" : runVal === 4 ? "along_ground" : "along_ground",
-      contactQuality: "middle",
+      pitchDelivery: {
+        line: phase1Line,
+        length: phase1Length,
+        paceType: phase1Pace.includes("spin") ? (phase1Pace.includes("off") ? "off_spin" : "leg_spin") : (phase1Pace.includes("140") ? "fast" : "medium"),
+      },
+      trajectory: phase1Trajectory,
+      contactQuality: phase1Contact === "middled" ? "middle" : (phase1Contact === "beaten" ? "uncontrolled" : "edge"),
       verificationStatus: "verified",
       commentary: comm,
       timestamp: nextTimestamp,
@@ -1386,7 +1427,9 @@ export default function BroadcastScorer({
                       <span style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 800, color: D.emerald }}>
                         {matchDerivedState.striker.name} *
                       </span>
-                      <span style={{ fontFamily: D.mono, fontSize: "9px", color: D.textMuted }}>({activeBatHand}HB)</span>
+                      <span style={{ fontFamily: D.mono, fontSize: "9px", padding: "1px 5px", borderRadius: D.pill, background: `${D.sky}20`, color: D.sky, border: `1px solid ${D.sky}40` }} title="Predefined from player master profile">
+                        🔒 {activeBatHand === 'R' ? 'RHB' : 'LHB'} Predefined
+                      </span>
                     </div>
                     <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, marginTop: "2px" }}>
                       {matchDerivedState.striker.fours}x4, {matchDerivedState.striker.sixes}x6 · SR:{" "}
@@ -1470,8 +1513,10 @@ export default function BroadcastScorer({
                   <div style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 800, marginTop: "4px" }}>
                     {matchDerivedState.bowler.name}
                   </div>
-                  <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, marginTop: "2px" }}>
-                    Right-arm fast medium · {matchSettings.maxOversPerBowler} ov quota
+                  <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span>{matchDerivedState.bowler.bowlingStyle || 'Right-arm Fast'}</span>
+                    <span style={{ padding: "0 4px", borderRadius: D.pill, background: `${D.indigo}20`, color: D.indigo, fontSize: "8px" }}>🔒 Predefined</span>
+                    <span>· {matchSettings.maxOversPerBowler} ov quota</span>
                   </div>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "8px", paddingTop: "6px", borderTop: `1px solid ${D.border}` }}>
@@ -1709,9 +1754,9 @@ export default function BroadcastScorer({
                   {/* Stepper Tabs */}
                   <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                     {[
-                      { step: 1 as const, label: "1. Shot Selection", icon: "🏏", isDone: scoringPhase > 1 },
-                      { step: 2 as const, label: "2. Wagon Placement", icon: "📍", isDone: scoringPhase > 2 },
-                      { step: 3 as const, label: "3. Score Outcome", icon: "⚡", isDone: false },
+                      { step: 1 as const, label: "Phase 1: Enrich Delivery Context", icon: "🎯", isDone: scoringPhase > 1 },
+                      { step: 2 as const, label: "Phase 2: Ball Placement (Wagon Wheel)", icon: "📍", isDone: scoringPhase > 2 },
+                      { step: 3 as const, label: "Phase 3: Record Runs, Extras & Wickets", icon: "⚡", isDone: false },
                     ].map(s => {
                       const isActive = scoringPhase === s.step;
                       return (
@@ -1719,23 +1764,24 @@ export default function BroadcastScorer({
                           key={s.step}
                           onClick={() => setScoringPhase(s.step)}
                           style={{
-                            padding: "4px 10px",
+                            padding: "6px 12px",
                             borderRadius: D.pill,
-                            border: isActive ? `1px solid ${D.sky}` : `1px solid ${D.border}`,
+                            border: isActive ? `1.5px solid ${D.sky}` : `1px solid ${D.border}`,
                             background: isActive ? `${D.sky}25` : s.isDone ? `${D.emerald}18` : D.surf2,
                             color: isActive ? D.sky : s.isDone ? D.emerald : D.textMuted,
                             fontFamily: D.head,
-                            fontSize: "10px",
-                            fontWeight: 700,
+                            fontSize: "11px",
+                            fontWeight: 800,
                             cursor: "pointer",
                             display: "flex",
                             alignItems: "center",
-                            gap: "4px",
+                            gap: "5px",
+                            boxShadow: isActive ? `0 0 10px ${D.sky}30` : "none",
                           }}
                         >
                           <span>{s.icon}</span>
                           <span>{s.label}</span>
-                          {s.isDone && <span style={{ fontSize: "9px" }}>✓</span>}
+                          {s.isDone && <span style={{ fontSize: "10px", color: D.emerald }}>✓</span>}
                         </button>
                       );
                     })}
@@ -1743,159 +1789,382 @@ export default function BroadcastScorer({
                 </div>
 
                 {/* ════════════════════════════════════════════════════════════════
-                    PHASE 1: SHOT SELECTION
+                    PHASE 1: ENRICH DELIVERY CONTEXT
                 ════════════════════════════════════════════════════════════════ */}
                 {scoringPhase === 1 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    {/* Striker Context & Stance Mirroring */}
-                    <div style={{ padding: "10px 12px", background: D.surf2, borderRadius: D.md, border: `1px solid ${D.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                    {/* Header with Striker and Batter Hand */}
+                    <div style={{ padding: "10px 14px", background: D.surf2, borderRadius: D.md, border: `1px solid ${D.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "16px" }}>🏏</span>
+                        <span style={{ fontSize: "18px" }}>🎯</span>
                         <div>
-                          <div style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 800, color: D.textPrimary }}>
-                            Phase 1: Select Shot for {matchDerivedState.striker.name}
+                          <div style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 800, color: D.textPrimary }}>
+                            Phase 1: Enrich Delivery Context for {matchDerivedState.striker.name}
                           </div>
                           <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
-                            Current: {matchDerivedState.striker.runs}* ({matchDerivedState.striker.balls}b) · {matchDerivedState.striker.fours}x4, {matchDerivedState.striker.sixes}x6
+                            Bowler: {matchDerivedState.bowler.name} ({matchDerivedState.bowler.oversBowled} ov, {matchDerivedState.bowler.runsConceded}/{matchDerivedState.bowler.wickets}) · Striker: {matchDerivedState.striker.runs}* ({matchDerivedState.striker.balls}b)
                           </div>
                         </div>
                       </div>
 
-                      {/* Batting Hand Toggle Button */}
+                      {/* Stance Switcher */}
                       <button
                         onClick={() => setActiveBatHand(prev => (prev === "R" ? "L" : "R"))}
                         style={{
-                          padding: "4px 10px",
+                          padding: "5px 12px",
                           borderRadius: D.pill,
-                          background: activeBatHand === "R" ? `${D.sky}22` : `${D.amber}22`,
-                          border: `1px solid ${activeBatHand === "R" ? D.sky : D.amber}`,
+                          background: activeBatHand === "R" ? `${D.sky}25` : `${D.amber}25`,
+                          border: `1.5px solid ${activeBatHand === "R" ? D.sky : D.amber}`,
                           color: activeBatHand === "R" ? D.sky : D.amber,
                           fontFamily: D.mono,
-                          fontSize: "10px",
-                          fontWeight: 700,
+                          fontSize: "11px",
+                          fontWeight: 800,
                           cursor: "pointer",
                         }}
-                        title="Click to toggle batter stance between RHS and LHS (Mirrors Wagon Wheel Off/Leg)"
+                        title="Toggle batter stance (mirrors off-side/leg-side on wagon wheel)"
                       >
                         🏏 {activeBatHand === "R" ? "RHS (Right-Handed)" : "LHS (Left-Handed)"} ⇄
                       </button>
                     </div>
 
-                    {/* Shot Category Tabs */}
-                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                      {[
-                        { id: "front_foot" as const, label: "💥 Front Foot Drives", icon: "💥" },
-                        { id: "back_foot" as const, label: "🏏 Back Foot & Cuts", icon: "🏏" },
-                        { id: "defensive" as const, label: "🛡️ Defence & Leaves", icon: "🛡️" },
-                        { id: "innovative" as const, label: "🚀 Modern & Aerial", icon: "🚀" },
-                        { id: "edges" as const, label: "⚡ Edges & Mis-hits", icon: "⚡" },
-                      ].map(cat => (
+                    {/* Telemetry Row: Pitch Delivery (Line, Length, Pace) */}
+                    <div style={{ padding: "12px", background: D.surf1, borderRadius: D.md, border: `1px solid ${D.border}`, display: "flex", flexDirection: "column", gap: "10px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 800, color: D.sky, letterSpacing: "0.04em" }}>
+                          📐 BOWLER DELIVERY TELEMETRY & PITCH MAP
+                        </span>
+                        <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
+                          Click to set Pitch Line & Length
+                        </span>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+                        {/* Delivery Length */}
+                        <div>
+                          <label style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                            DELIVERY LENGTH
+                          </label>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                            {[
+                              { id: "yorker" as const, label: "Yorker (Blockhole)" },
+                              { id: "full" as const, label: "Full / Slot" },
+                              { id: "good_length" as const, label: "Good Length" },
+                              { id: "back_of_length" as const, label: "Back of Length" },
+                              { id: "short" as const, label: "Short / Bouncer" },
+                            ].map(l => (
+                              <button
+                                key={l.id}
+                                onClick={() => setPhase1Length(l.id)}
+                                style={{
+                                  padding: "6px 8px",
+                                  borderRadius: D.sm,
+                                  background: phase1Length === l.id ? `${D.sky}30` : D.surf2,
+                                  border: phase1Length === l.id ? `1.5px solid ${D.sky}` : `1px solid ${D.border}`,
+                                  color: phase1Length === l.id ? D.sky : D.textSecondary,
+                                  fontFamily: D.mono,
+                                  fontSize: "10px",
+                                  fontWeight: 700,
+                                  textAlign: "left",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {l.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Delivery Line */}
+                        <div>
+                          <label style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                            DELIVERY LINE
+                          </label>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                            {[
+                              { id: "outside_off" as const, label: "Outside Off (4th/5th Stump)" },
+                              { id: "off_stump" as const, label: "Off Stump (Channel of Uncertainty)" },
+                              { id: "middle" as const, label: "Middle Stump (At the Body)" },
+                              { id: "leg_stump" as const, label: "Leg Stump" },
+                              { id: "down_leg" as const, label: "Down Leg Side" },
+                            ].map(l => (
+                              <button
+                                key={l.id}
+                                onClick={() => setPhase1Line(l.id)}
+                                style={{
+                                  padding: "6px 8px",
+                                  borderRadius: D.sm,
+                                  background: phase1Line === l.id ? `${D.sky}30` : D.surf2,
+                                  border: phase1Line === l.id ? `1.5px solid ${D.sky}` : `1px solid ${D.border}`,
+                                  color: phase1Line === l.id ? D.sky : D.textSecondary,
+                                  fontFamily: D.mono,
+                                  fontSize: "10px",
+                                  fontWeight: 700,
+                                  textAlign: "left",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {l.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Bowling Pace / Style */}
+                        <div>
+                          <label style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                            PACE & RELEASE SPEED
+                          </label>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                            {[
+                              { id: "140_fast" as const, label: "⚡ Express (142 km/h)" },
+                              { id: "130_fast_med" as const, label: "🚀 Fast-Med (131 km/h)" },
+                              { id: "88_off_spin" as const, label: "🌀 Off-Spin (88 km/h)" },
+                              { id: "78_leg_spin" as const, label: "🌪️ Leg-Spin (78 km/h)" },
+                              { id: "slower" as const, label: "⏱️ Slower Ball (114 km/h)" },
+                            ].map(p => (
+                              <button
+                                key={p.id}
+                                onClick={() => setPhase1Pace(p.id)}
+                                style={{
+                                  padding: "6px 8px",
+                                  borderRadius: D.sm,
+                                  background: phase1Pace === p.id ? `${D.amber}30` : D.surf2,
+                                  border: phase1Pace === p.id ? `1.5px solid ${D.amber}` : `1px solid ${D.border}`,
+                                  color: phase1Pace === p.id ? D.amber : D.textSecondary,
+                                  fontFamily: D.mono,
+                                  fontSize: "10px",
+                                  fontWeight: 700,
+                                  textAlign: "left",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Shot Execution Section: Category & Strokes */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                        <span style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 800, color: D.sky, letterSpacing: "0.04em" }}>
+                          🏏 BATTER STROKE & SHOT SELECTION
+                        </span>
+                        <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
+                          Selected: <strong style={{ color: D.sky }}>{selectedPhase1Shot}</strong>
+                        </span>
+                      </div>
+
+                      {/* Shot Category Tabs */}
+                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
+                        {[
+                          { id: "front_foot" as const, label: "💥 Front Foot Drives" },
+                          { id: "back_foot" as const, label: "🏏 Back Foot & Cuts" },
+                          { id: "defensive" as const, label: "🛡️ Defence & Leaves" },
+                          { id: "innovative" as const, label: "🚀 Modern & Aerial" },
+                          { id: "edges" as const, label: "⚡ Edges & Mis-hits" },
+                        ].map(cat => (
+                          <button
+                            key={cat.id}
+                            onClick={() => setPhase1Category(cat.id)}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: D.pill,
+                              border: phase1Category === cat.id ? `1.5px solid ${D.sky}` : `1px solid ${D.border}`,
+                              background: phase1Category === cat.id ? D.sky : D.surf2,
+                              color: phase1Category === cat.id ? "#fff" : D.textSecondary,
+                              fontFamily: D.head,
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {cat.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Shot Selection Buttons Grid */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(135px, 1fr))", gap: "8px" }}>
+                        {(phase1Category === "front_foot"
+                          ? ["Cover Drive", "Straight Drive", "On Drive", "Off Drive", "Square Drive", "Lofted Drive", "Front Foot Push", "Inside-Out Drive"]
+                          : phase1Category === "back_foot"
+                          ? ["Square Cut", "Late Cut", "Pull Shot", "Hook Shot", "Backfoot Punch", "Leg Glance", "Upper Cut"]
+                          : phase1Category === "defensive"
+                          ? ["Forward Defence", "Backfoot Block", "Leave / Shouldered Arms", "Play & Miss"]
+                          : phase1Category === "innovative"
+                          ? ["Sweep Shot", "Reverse Sweep", "Ramp / Scoop", "Slog Sweep", "Helicopter Shot", "Switch Hit"]
+                          : ["Outside Edge", "Inside Edge", "Top Edge", "Leading Edge"]
+                        ).map(shot => {
+                          const isSelected = selectedPhase1Shot === shot;
+                          return (
+                            <button
+                              key={shot}
+                              onClick={() => setSelectedPhase1Shot(shot)}
+                              className="pressBtn"
+                              style={{
+                                padding: "10px 8px",
+                                borderRadius: D.md,
+                                border: isSelected ? `2px solid ${D.sky}` : `1px solid ${D.border}`,
+                                background: isSelected ? `${D.sky}25` : D.surf2,
+                                color: isSelected ? D.sky : D.textPrimary,
+                                fontFamily: D.head,
+                                fontSize: "11px",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                textAlign: "center",
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              {shot}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Contact Quality & Trajectory Controls */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", padding: "10px 12px", background: D.surf1, borderRadius: D.md, border: `1px solid ${D.border}` }}>
+                      {/* Contact Quality */}
+                      <div>
+                        <label style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                          CONTACT QUALITY
+                        </label>
+                        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                          {[
+                            { id: "middled" as const, label: "✨ Sweet Spot" },
+                            { id: "outside_edge" as const, label: "🔪 Outside Edge" },
+                            { id: "inside_edge" as const, label: "📐 Inside Edge" },
+                            { id: "leading_edge" as const, label: "🛡️ Leading Edge" },
+                            { id: "mishit" as const, label: "⚠️ Mis-hit" },
+                            { id: "beaten" as const, label: "💨 Beaten" },
+                          ].map(cq => (
+                            <button
+                              key={cq.id}
+                              onClick={() => setPhase1Contact(cq.id)}
+                              style={{
+                                padding: "4px 8px",
+                                borderRadius: D.sm,
+                                background: phase1Contact === cq.id ? `${D.emerald}30` : D.surf2,
+                                border: phase1Contact === cq.id ? `1.5px solid ${D.emerald}` : `1px solid ${D.border}`,
+                                color: phase1Contact === cq.id ? D.emerald : D.textSecondary,
+                                fontFamily: D.mono,
+                                fontSize: "10px",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                              }}
+                            >
+                              {cq.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Trajectory */}
+                      <div>
+                        <label style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                          BALL TRAJECTORY
+                        </label>
+                        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                          {[
+                            { id: "along_ground" as const, label: "🌱 Along Ground" },
+                            { id: "aerial" as const, label: "🚀 Aerial Drive" },
+                            { id: "lofted" as const, label: "☁️ Lofted / High" },
+                            { id: "defended" as const, label: "🛑 Defended" },
+                          ].map(tr => (
+                            <button
+                              key={tr.id}
+                              onClick={() => setPhase1Trajectory(tr.id)}
+                              style={{
+                                padding: "4px 8px",
+                                borderRadius: D.sm,
+                                background: phase1Trajectory === tr.id ? `${D.sky}30` : D.surf2,
+                                border: phase1Trajectory === tr.id ? `1.5px solid ${D.sky}` : `1px solid ${D.border}`,
+                                color: phase1Trajectory === tr.id ? D.sky : D.textSecondary,
+                                fontFamily: D.mono,
+                                fontSize: "10px",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                              }}
+                            >
+                              {tr.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Real-time Enriched Context Synthesis Card */}
+                    <div style={{ padding: "10px 14px", background: `${D.sky}12`, borderRadius: D.md, border: `1px solid ${D.sky}40`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ fontSize: "16px" }}>⚡</span>
+                        <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textPrimary }}>
+                          <strong>Enriched Context:</strong> {phase1Length.replace(/_/g, " ")} {phase1Line.replace(/_/g, " ")} ({phase1Pace === "140_fast" ? "142 km/h" : phase1Pace === "130_fast_med" ? "131 km/h" : phase1Pace === "88_off_spin" ? "88 km/h" : phase1Pace === "78_leg_spin" ? "78 km/h" : "114 km/h"}) ➔ <strong style={{ color: D.sky }}>{selectedPhase1Shot}</strong> ({phase1Contact.replace(/_/g, " ")}, {phase1Trajectory.replace(/_/g, " ")})
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <button
-                          key={cat.id}
-                          onClick={() => setPhase1Category(cat.id)}
+                          onClick={() => {
+                            setSelectedPhase1Shot("No Shot / Extra");
+                            setPhase3Runs(0);
+                            setPhase3Extra("wd");
+                            setScoringPhase(3);
+                          }}
                           style={{
                             padding: "6px 12px",
                             borderRadius: D.pill,
-                            border: phase1Category === cat.id ? `1px solid ${D.sky}` : `1px solid ${D.border}`,
-                            background: phase1Category === cat.id ? D.sky : D.surf2,
-                            color: phase1Category === cat.id ? "#fff" : D.textSecondary,
+                            background: "transparent",
+                            border: `1px dashed ${D.amber}`,
+                            color: D.amber,
                             fontFamily: D.head,
                             fontSize: "11px",
                             fontWeight: 700,
                             cursor: "pointer",
                           }}
                         >
-                          {cat.label}
+                          ⚡ Quick Extras / Wide →
                         </button>
-                      ))}
-                    </div>
 
-                    {/* Shot Selection Buttons Grid */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "8px" }}>
-                      {(phase1Category === "front_foot"
-                        ? ["Cover Drive", "Straight Drive", "On Drive", "Off Drive", "Square Drive", "Lofted Drive", "Front Foot Push", "Inside-Out Drive"]
-                        : phase1Category === "back_foot"
-                        ? ["Square Cut", "Late Cut", "Pull Shot", "Hook Shot", "Backfoot Punch", "Leg Glance", "Upper Cut"]
-                        : phase1Category === "defensive"
-                        ? ["Forward Defence", "Backfoot Block", "Leave / Shouldered Arms", "Play & Miss"]
-                        : phase1Category === "innovative"
-                        ? ["Sweep Shot", "Reverse Sweep", "Ramp / Scoop", "Slog Sweep", "Helicopter Shot", "Switch Hit"]
-                        : ["Outside Edge", "Inside Edge", "Top Edge", "Leading Edge"]
-                      ).map(shot => {
-                        const isSelected = selectedPhase1Shot === shot;
-                        return (
-                          <button
-                            key={shot}
-                            onClick={() => {
-                              setSelectedPhase1Shot(shot);
-                              // Auto advance smoothly to Phase 2
-                              setScoringPhase(2);
-                            }}
-                            className="pressBtn"
-                            style={{
-                              padding: "12px 10px",
-                              borderRadius: D.md,
-                              border: isSelected ? `2px solid ${D.sky}` : `1px solid ${D.border}`,
-                              background: isSelected ? `${D.sky}25` : D.surf2,
-                              color: isSelected ? D.sky : D.textPrimary,
-                              fontFamily: D.head,
-                              fontSize: "12px",
-                              fontWeight: 700,
-                              cursor: "pointer",
-                              textAlign: "center",
-                              transition: "all 0.15s ease",
-                            }}
-                          >
-                            {shot}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Bypass Option for Extras / No Shot */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: `1px solid ${D.border}` }}>
-                      <span style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted }}>
-                        Selected Shot: <strong style={{ color: D.sky }}>{selectedPhase1Shot}</strong>
-                      </span>
-                      <button
-                        onClick={() => {
-                          setSelectedPhase1Shot("No Shot / Extra");
-                          setPhase3Runs(0);
-                          setPhase3Extra("wd");
-                          setScoringPhase(3);
-                        }}
-                        style={{
-                          padding: "6px 12px",
-                          borderRadius: D.pill,
-                          background: "transparent",
-                          border: `1px dashed ${D.amber}`,
-                          color: D.amber,
-                          fontFamily: D.head,
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        ⚡ Bypass to Extras / No Shot Played →
-                      </button>
+                        <button
+                          onClick={() => setScoringPhase(2)}
+                          className="pressBtn"
+                          style={{
+                            padding: "8px 18px",
+                            borderRadius: D.pill,
+                            background: D.sky,
+                            color: "#fff",
+                            border: "none",
+                            fontFamily: D.head,
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            boxShadow: `0 2px 8px ${D.sky}40`,
+                          }}
+                        >
+                          Proceed to Phase 2: Ball Placement →
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {/* ════════════════════════════════════════════════════════════════
-                    PHASE 2: WAGON WHEEL PLACEMENT & FIELDING ZONE IDENTIFICATION
+                    PHASE 2: ENRICH DELIVERY CONTEXT, SELECT PLACEMENT OF BALL ON WAGON WHEEL
                 ════════════════════════════════════════════════════════════════ */}
                 {scoringPhase === 2 && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     {/* Top Breadcrumb Header */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: D.surf2, borderRadius: D.md, border: `1px solid ${D.border}` }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted }}>Phase 1:</span>
-                        <span style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 800, color: D.sky }}>
-                          🏏 {selectedPhase1Shot}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: D.surf2, borderRadius: D.md, border: `1px solid ${D.border}`, flexWrap: "wrap", gap: "6px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                        <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>Phase 1 Context:</span>
+                        <span style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 800, color: D.sky }}>
+                          🎯 {phase1Length.replace(/_/g, " ")} {phase1Line.replace(/_/g, " ")} · {selectedPhase1Shot} ({phase1Contact.replace(/_/g, " ")})
                         </span>
-                        <span style={{ fontFamily: D.mono, fontSize: "10px", padding: "2px 6px", borderRadius: D.pill, background: `${activeBatHand === "R" ? D.sky : D.amber}22`, color: activeBatHand === "R" ? D.sky : D.amber }}>
-                          {activeBatHand === "R" ? "RHS Batting Hand" : "LHS Batting Hand (Mirrored)"}
+                        <span style={{ fontFamily: D.mono, fontSize: "9px", padding: "1px 6px", borderRadius: D.pill, background: `${activeBatHand === "R" ? D.sky : D.amber}22`, color: activeBatHand === "R" ? D.sky : D.amber }}>
+                          {activeBatHand === "R" ? "RHS" : "LHS"}
                         </span>
                       </div>
                       <button
@@ -1911,7 +2180,7 @@ export default function BroadcastScorer({
                           textDecoration: "underline",
                         }}
                       >
-                        ← Change Shot
+                        ← Edit Phase 1 Context
                       </button>
                     </div>
 
@@ -2108,16 +2377,16 @@ export default function BroadcastScorer({
                 )}
 
                 {/* ════════════════════════════════════════════════════════════════
-                    PHASE 3: SCORING RUNS, EXTRAS, OR WICKETS
+                    PHASE 3: RECORDING/SCORING RUNS, EXTRAS, WICKET
                 ════════════════════════════════════════════════════════════════ */}
                 {scoringPhase === 3 && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     {/* Full Sequence Summary Breadcrumbs */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: D.surf2, borderRadius: D.md, border: `1px solid ${D.border}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: D.surf2, borderRadius: D.md, border: `1px solid ${D.border}`, flexWrap: "wrap", gap: "6px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                         <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>Phase 1:</span>
                         <span style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 800, color: D.sky }}>
-                          🏏 {selectedPhase1Shot}
+                          🎯 {selectedPhase1Shot} ({phase1Contact.replace(/_/g, " ")})
                         </span>
                         <span style={{ color: D.textMuted }}>➔</span>
                         <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>Phase 2:</span>
@@ -4137,7 +4406,7 @@ export default function BroadcastScorer({
           isOpen={matchSettingsModalOpen}
           onClose={() => setMatchSettingsModalOpen(false)}
           settings={matchSettings}
-          onUpdateSettings={setMatchSettings}
+          onUpdateSettings={(newSettings) => setMatchSettings(prev => ({ ...prev, ...newSettings }))}
           homeTeam={homeTitle}
           awayTeam={awayTitle}
           currentOvers={matchDerivedState.oversStr}
@@ -4158,12 +4427,14 @@ export default function BroadcastScorer({
           onSelectStriker={id => {
             setActiveStrikerId(id);
             const b = battingSquad.find(p => p.id === id);
-            if (b) setActiveBatHand(b.battingHand);
+            if (b && (b.battingHand || b.hand)) setActiveBatHand(b.battingHand || b.hand);
           }}
           onSelectNonStriker={setActiveNonStrikerId}
           onSelectBowler={setActiveBowlerId}
           onUpdateBattingSquad={setBattingSquad}
           onUpdateBowlingAttack={setBowlingAttack}
+          onReorderBattingLineup={setBattingSquad}
+          onReorderBowlingAttack={setBowlingAttack}
           maxOversPerBowler={matchSettings.maxOversPerBowler}
         />
       </div>

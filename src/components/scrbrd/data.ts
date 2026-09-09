@@ -10,7 +10,7 @@ import {
 } from "./types";
 
 // ── LOGO ──────────────────────────────────────────────
-export const SCRBRD_LOGO = "data:image/jpeg;base64,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";
+export const SCRBRD_LOGO = "/scrbrd-logo.svg";
 
 // ── THEME ENGINE ──────────────────────────────────────
 export const DARK_THEME = {
@@ -37,7 +37,9 @@ export const THEME_ACCENTS = {
   gradGold: "linear-gradient(135deg,#f59e0b,#f97316)",
   gradLive: "linear-gradient(135deg,#10b981,#06b6d4)",
   sm: "6px", md: "10px", lg: "14px", xl: "18px", pill: "999px",
-  mono: "'DM Mono',monospace", head: "'Syne',sans-serif", body: "'DM Sans',sans-serif",
+  mono: "var(--font-dm-mono), 'DM Mono', monospace",
+  head: "var(--font-open-sans), 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+  body: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
 };
 
 export const makeTheme = (isDark: boolean): Theme => ({
@@ -58,92 +60,97 @@ export const ROLE_LAYERS = [
 export const ROLES: Record<string, { label: string; layer: string; color: string; icon: string; scope: string; sensitivity: number; nav: string[]; purpose: string }> = {
   superadmin: {
     label: "Super Admin", layer: "platform", color: "#8b5cf6", icon: "⚡", scope: "platform", sensitivity: 4,
-    nav: ["dashboard", "matches", "competitions", "leagues", "squad", "profiles", "analytics", "skills", "scouting", "sponsorship", "training", "injuries", "logistics", "fields", "staff", "calendar", "governance", "rulebook", "pitchdeck", "notifications", "settings"],
+    nav: ["dashboard", "notifications", "matches", "competitions", "leagues", "squad", "profiles", "analytics", "skills", "scouting", "compare", "sponsorship", "training", "injuries", "logistics", "fields", "staff", "calendar", "governance", "rulebook", "pitchdeck", "settings"],
     purpose: "Full platform governance across all school tenants, competitions, and security policies",
   },
   platformsupport: {
     label: "Platform Support", layer: "platform", color: "#a855f7", icon: "🛡️", scope: "platform", sensitivity: 2,
-    nav: ["dashboard", "matches", "squad", "logistics", "fields", "staff", "calendar", "governance", "notifications"],
+    nav: ["dashboard", "notifications", "matches", "squad", "logistics", "fields", "staff", "calendar", "governance"],
     purpose: "Technical operations and customer support with automated PII redaction",
   },
   headmaster: {
     label: "Headmaster / Executive", layer: "school", color: "#4338ca", icon: "🏛️", scope: "school", sensitivity: 3,
-    nav: ["dashboard", "matches", "competitions", "leagues", "squad", "profiles", "sponsorship", "logistics", "fields", "calendar", "notifications"],
+    nav: ["dashboard", "notifications", "matches", "competitions", "leagues", "squad", "profiles", "compare", "sponsorship", "logistics", "fields", "calendar"],
     purpose: "Institutional executive oversight — fixtures, prestige, honors, commercial rights",
   },
   schooladmin: {
     label: "School Admin", layer: "school", color: "#6366f1", icon: "🏫", scope: "school", sensitivity: 3,
-    nav: ["dashboard", "matches", "competitions", "squad", "profiles", "analytics", "sponsorship", "logistics", "fields", "staff", "calendar", "notifications", "settings"],
+    nav: ["dashboard", "notifications", "matches", "competitions", "squad", "profiles", "analytics", "compare", "sponsorship", "logistics", "fields", "staff", "calendar", "settings"],
     purpose: "Main school-level controller — teams, staff, registrations, fixture scheduling",
   },
   financeadmin: {
     label: "Finance Admin", layer: "school", color: "#10b981", icon: "💳", scope: "school", sensitivity: 3,
-    nav: ["dashboard", "sponsorship", "logistics", "calendar", "notifications", "settings"],
+    nav: ["dashboard", "notifications", "sponsorship", "logistics", "calendar", "settings"],
     purpose: "Commercial sponsorship accounting, invoices, and billing reconciliation — zero minor PII",
   },
   sportsmaster: {
     label: "Sportsmaster", layer: "sporting", color: "#f59e0b", icon: "🏅", scope: "school", sensitivity: 2,
-    nav: ["dashboard", "matches", "competitions", "leagues", "squad", "profiles", "analytics", "skills", "calendar", "notifications", "settings"],
+    nav: ["dashboard", "notifications", "matches", "competitions", "leagues", "squad", "profiles", "analytics", "skills", "compare", "calendar", "settings"],
     purpose: "High-level school sports programme oversight across all codes and fixtures",
+  },
+  doc: {
+    label: "Director of Cricket", layer: "sporting", color: "#0d9488", icon: "🏆", scope: "school", sensitivity: 2,
+    nav: ["dashboard", "notifications", "matches", "competitions", "leagues", "squad", "profiles", "analytics", "skills", "scouting", "compare", "training", "injuries", "logistics", "fields", "staff", "calendar", "settings"],
+    purpose: "Institutional Director of Cricket — oversight of all 23 squads (1st-7th XI, U16A-D, U15A-E, U14A-G), coach assignments, and talent pipeline",
   },
   headcoach: {
     label: "1st XI Head Coach", layer: "sporting", color: "#059669", icon: "⭐", scope: "team", sensitivity: 2,
-    nav: ["dashboard", "matches", "squad", "profiles", "analytics", "skills", "scouting", "training", "injuries", "logistics", "fields", "calendar", "notifications"],
+    nav: ["dashboard", "notifications", "matches", "squad", "profiles", "analytics", "skills", "scouting", "compare", "training", "injuries", "logistics", "fields", "calendar"],
     purpose: "Elite 1st XI leadership — selection, match plans, skills matrices, opposition scouting",
   },
   coach: {
-    label: "Squad Coach", layer: "sporting", color: "#10b981", icon: "🎯", scope: "team", sensitivity: 2,
-    nav: ["dashboard", "matches", "squad", "profiles", "analytics", "skills", "training", "injuries", "logistics", "fields", "calendar", "notifications"],
-    purpose: "Age-group coaching — squad development, training drills, match preparation",
+    label: "Squad Head Coach (2nd-7th XI / U14-U16)", layer: "sporting", color: "#10b981", icon: "🎯", scope: "team", sensitivity: 2,
+    nav: ["dashboard", "notifications", "matches", "squad", "profiles", "analytics", "skills", "compare", "training", "injuries", "logistics", "fields", "calendar"],
+    purpose: "Age-group coaching — squad development, training drills, match preparation across junior and open tiers",
   },
   assistant: {
     label: "Coaching Assistant", layer: "sporting", color: "#22d3ee", icon: "🤝", scope: "team", sensitivity: 2,
-    nav: ["dashboard", "matches", "squad", "profiles", "skills", "training", "injuries", "calendar", "notifications"],
+    nav: ["dashboard", "notifications", "matches", "squad", "profiles", "skills", "training", "injuries", "calendar"],
     purpose: "Team sporting support — attendance logging, skill ratings, drill execution",
   },
   analyst: {
     label: "Performance Analyst", layer: "sporting", color: "#0284c7", icon: "📊", scope: "school", sensitivity: 1,
-    nav: ["dashboard", "matches", "profiles", "analytics", "skills", "scouting", "calendar", "notifications"],
+    nav: ["dashboard", "notifications", "matches", "profiles", "analytics", "skills", "scouting", "compare", "calendar"],
     purpose: "Match telemetry, 360° wagon wheels, Hawk-Eye DRS, video and ball-event metrics",
   },
   medical: {
     label: "Medical / Physio", layer: "school", color: "#f43f5e", icon: "⚕️", scope: "school", sensitivity: 4,
-    nav: ["dashboard", "injuries", "squad", "profiles", "training", "calendar", "notifications"],
+    nav: ["dashboard", "notifications", "injuries", "squad", "profiles", "training", "calendar"],
     purpose: "Health and welfare oversight — clinical diagnoses, clearances, rehabilitation pipelines",
   },
   scorer: {
     label: "Official Scorer", layer: "sporting", color: "#f97316", icon: "📋", scope: "fixture", sensitivity: 1,
-    nav: ["dashboard", "matches", "calendar", "notifications"],
+    nav: ["dashboard", "notifications", "matches", "calendar"],
     purpose: "Authoritative ball-by-ball event logging with exclusive scorer token",
   },
   driver: {
     label: "Fleet Driver", layer: "school", color: "#06b6d4", icon: "🚌", scope: "route", sensitivity: 2,
-    nav: ["dashboard", "logistics", "calendar", "notifications"],
+    nav: ["dashboard", "notifications", "logistics", "calendar"],
     purpose: "Student transport logistics — route tracking, departure times, passenger manifests",
   },
   groundskeeper: {
     label: "Groundskeeper / Curator", layer: "school", color: "#14b8a6", icon: "🌿", scope: "venue", sensitivity: 2,
-    nav: ["dashboard", "fields", "calendar", "notifications"],
+    nav: ["dashboard", "notifications", "fields", "calendar"],
     purpose: "Pitch and turfgrass prep — moisture telemetry, compaction rolling, toss advice",
   },
   player: {
     label: "Student Athlete", layer: "participant", color: "#0ea5e9", icon: "🏏", scope: "self", sensitivity: 1,
-    nav: ["dashboard", "matches", "profiles", "analytics", "skills", "training", "injuries", "calendar", "notifications"],
+    nav: ["dashboard", "notifications", "matches", "profiles", "analytics", "skills", "compare", "training", "injuries", "calendar"],
     purpose: "Participant self-management — personal stats, skills trajectory, training logs",
   },
   parent: {
     label: "Parent / Guardian", layer: "participant", color: "#f59e0b", icon: "👪", scope: "linked-child", sensitivity: 2,
-    nav: ["dashboard", "matches", "competitions", "profiles", "logistics", "calendar", "notifications"],
+    nav: ["dashboard", "notifications", "matches", "competitions", "profiles", "logistics", "calendar"],
     purpose: "Support verified linked child — legal consent, bus schedules, live match scoring",
   },
   spectator: {
     label: "Spectator / Alumni", layer: "external", color: "#94a3b8", icon: "👀", scope: "public", sensitivity: 0,
-    nav: ["dashboard", "matches", "competitions", "leagues", "rulebook", "pitchdeck"],
+    nav: ["dashboard", "notifications", "matches", "competitions", "leagues", "rulebook", "pitchdeck"],
     purpose: "Public match centre, live scorecards, tournament standings, alumni updates",
   },
   scout: {
     label: "Verified Scout", layer: "external", color: "#e11d48", icon: "🔍", scope: "authorised", sensitivity: 1,
-    nav: ["dashboard", "scouting", "profiles", "analytics", "skills", "matches"],
+    nav: ["dashboard", "notifications", "scouting", "compare", "profiles", "analytics", "skills", "matches"],
     purpose: "Authorized talent discovery on approved player profiles — zero private PII exposure",
   },
 };
@@ -158,6 +165,7 @@ export const NAV_META: Record<string, { icon: string; label: string }> = {
   analytics: { icon: "📊", label: "Analytics" },
   skills: { icon: "🎯", label: "Skills" },
   scouting: { icon: "🔍", label: "Scouting Hub" },
+  compare: { icon: "⚔️", label: "H2H Compare" },
   sponsorship: { icon: "💰", label: "Commercial Rights" },
   training: { icon: "💪", label: "Training" },
   injuries: { icon: "🏥", label: "Injuries" },
@@ -166,7 +174,8 @@ export const NAV_META: Record<string, { icon: string; label: string }> = {
   fields: { icon: "🌿", label: "Fields" },
   staff: { icon: "🔧", label: "Staff" },
   governance: { icon: "⚖️", label: "POPIA Governance" },
-  notifications: { icon: "🔔", label: "Alerts" },
+  notifications: { icon: "📥", label: "Inbox & Alerts" },
+  inbox: { icon: "📥", label: "Inbox & Alerts" },
   settings: { icon: "⚙️", label: "Settings" },
   management: { icon: "🛠️", label: "Management" },
   rulebook: { icon: "📖", label: "Rulebook" },
@@ -181,6 +190,7 @@ export const POPIA_POLICIES: Record<string, any> = {
   schooladmin: { can: "crud", scope: "school", deny: { injuries: ["clinicalNotes"] }, sensitivityMax: 3, desc: "School tenant administrator" },
   financeadmin: { can: "cru", scope: "school", only: ["finance", "invoices", "sponsorship", "billing"], deny: { profiles: ["born", "houseAtSchool", "height", "weight", "guardian"] }, sensitivityMax: 3, desc: "Commercial & invoice management, zero minor PII access" },
   sportsmaster: { can: "cru", scope: "school", sensitivityMax: 2, desc: "School sports operations and fixture scheduling" },
+  doc: { can: "cru", scope: "school", deny: { injuries: ["clinicalNotes"] }, sensitivityMax: 2, desc: "Director of Cricket with oversight across all 23 squads" },
   headcoach: { can: "cru", scope: "team", deny: { injuries: ["clinicalNotes"] }, sensitivityMax: 2, desc: "1st XI leadership, skills matrices, selection" },
   coach: { can: "cru", scope: "team", deny: { injuries: ["clinicalNotes"] }, sensitivityMax: 2, desc: "Team coaching and training drills" },
   assistant: { can: "ru", scope: "team", sensitivityMax: 2, desc: "Coaching support and training logs" },
@@ -380,19 +390,94 @@ export const SCHOOLS_REGISTRY: SchoolRegistryItem[] = [
   },
 ];
 
+// ── SA TRANSFORMATION & QUOTA DEMOGRAPHIC DETECTION ──────
+function detectSADemographic(name: string): "Black African" | "Generic Black" | "Open" {
+  const n = name.toLowerCase();
+  const blackAfricanSurnames = [
+    "ngcobo", "nxumalo", "mthembu", "khumalo", "dlamini", "sithole", "mposula", "ntini",
+    "cele", "zuma", "ndlovu", "mchunu", "zungu", "buthelezi", "khoza", "sibiya", "mbatha",
+    "mtshali", "mkhize", "vilakazi", "moyo", "shabalala", "biyela", "nkosi", "madonsela", "zulu"
+  ];
+  const genericBlackSurnames = [
+    "solomons", "petersen", "naidoo", "govender", "pillay", "jacobs", "da costa", "chetty",
+    "moodley", "adams", "hendricks", "daniels", "van niekerk", "coetzee", "abrahams", "padayachee",
+    "reddy", "maharaj", "singh", "patel", "isaacs", "arendse", "fortune", "klaasen", "september",
+    "ramlall", "brijlal"
+  ];
+
+  for (const s of blackAfricanSurnames) {
+    if (n.includes(s)) return "Black African";
+  }
+  for (const s of genericBlackSurnames) {
+    if (n.includes(s)) return "Generic Black";
+  }
+  return "Open";
+}
+
 // ── FULL AUTHENTIC PLAYER ROSTERS BY SCHOOL (Complete Playing XI for all 9 schools) ──
 function makeP(
   id: string, name: string, school: string, role: "BAT" | "BOWL" | "ALL" | "WK",
   pos: number, batHand: "R" | "L", bowlArm: "R" | "L", bowlStyle: "F" | "M" | "S",
   age: number, avg: number, sr: number, wkts: number, econ: number,
-  hometown: string, house: string, bio: string, cap?: "c" | "vc"
+  hometown: string, house: string, bio: string, cap?: "c" | "vc",
+  teamOverride?: string, customDemographic?: "Black African" | "Generic Black" | "Open", customBursary?: boolean
 ): Player {
+  const team = teamOverride || (age <= 14 ? "U14A" : age === 15 ? "U15A" : age === 16 ? "U16A" : "1st XI");
+  const ageGroupEligibility: "U14" | "U15" | "U16" | "Open" =
+    age <= 14 ? "U14" : age === 15 ? "U15" : age === 16 ? "U16" : "Open";
+  const academicGrade: "Grade 8" | "Grade 9" | "Grade 10" | "Grade 11" | "Grade 12" =
+    age <= 14 ? "Grade 8" : age === 15 ? "Grade 9" : age === 16 ? "Grade 10" : age === 17 ? "Grade 11" : "Grade 12";
+  const teamClass = team;
+  const classRank = team.includes("1st") || team.endsWith("A") ? 1 : team.includes("2nd") || team.endsWith("B") ? 2 : 3;
+
+  const saDemographic = customDemographic || detectSADemographic(name);
+  const quotaEligible = saDemographic === "Black African" || saDemographic === "Generic Black";
+  const bursaryScholar = customBursary !== undefined
+    ? customBursary
+    : (quotaEligible && (pos % 2 === 0 || hometown.includes("Umlazi") || hometown.includes("KwaMashu") || hometown.includes("Chatsworth") || hometown.includes("Phoenix") || hometown.includes("Berea") || hometown.includes("Pietermaritzburg")));
+  const bursaryTrust = bursaryScholar
+    ? (saDemographic === "Black African" ? "Sunfoil Township Development Trust" : "KZN Cricket Union Transformation Bursary")
+    : undefined;
+  const provincialPathway = age >= 17 ? "Khaya Majola U19 Week" : age === 16 ? "Grant Khomo U16 Week" : age === 15 ? "U15 National Week" : "U14 Regional Talent Development";
+
+  // Multi-squad / pathway affiliations across levels (School Open + Provincial U19 + National U19)
+  const pathwayAffiliations = [
+    {
+      level: "high_school" as const,
+      teamName: `${school} ${team}`,
+      teamClass,
+      ageCategory: ageGroupEligibility,
+      season: "2026",
+      isPlayingUp: (age <= 16 && team.includes("1st XI")),
+      role: role === "WK" ? "Wicketkeeper" : role === "BOWL" ? "Opening Seamer" : "Top Order Bat",
+    },
+    ...(age >= 16 ? [{
+      level: "provincial" as const,
+      teamName: "KZN Coastal U19 Representative Squad",
+      teamClass: "U19 Provincial",
+      ageCategory: "U19_PROVINCIAL",
+      season: "2026",
+      isPlayingUp: age === 16,
+      role: role === "ALL" ? "Allrounder" : "Strike Player",
+    }] : []),
+  ];
+
   return {
-    id, name, team: "1st XI", school, role, batHand, bowlArm, bowlStyle, age, fitness: "fit",
+    id, name, team, school, role, batHand, bowlArm, bowlStyle, age, fitness: "fit",
     avg, sr, wkts, econ, cap, form: [4, 5, 4, 6, 5, 4, 5, 6],
-    born: `200${age === 18 ? 6 : age === 17 ? 7 : 8}-05-12`, hometown, houseAtSchool: house,
+    born: `200${age === 18 ? 6 : age === 17 ? 7 : age === 16 ? 8 : age === 15 ? 9 : 0}-05-12`, hometown, houseAtSchool: house,
     height: "182cm", weight: "76kg", battingPos: pos, bio,
-    careerTotals: { innings: 25 + Math.floor(avg), runs: Math.round(avg * 28), hs: Math.min(138, Math.round(avg * 2.2)), fifties: Math.floor(avg / 6), hundreds: avg > 45 ? 2 : 0, balls: wkts * 24, wktsTotal: wkts * 2, maidens: Math.floor(wkts * 0.6) }
+    careerTotals: { innings: 25 + Math.floor(avg), runs: Math.round(avg * 28), hs: Math.min(138, Math.round(avg * 2.2)), fifties: Math.floor(avg / 6), hundreds: avg > 45 ? 2 : 0, balls: wkts * 24, wktsTotal: wkts * 2, maidens: Math.floor(wkts * 0.6) },
+    academicGrade,
+    ageGroupEligibility,
+    teamClass,
+    classRank,
+    saDemographic,
+    quotaEligible,
+    bursaryScholar,
+    bursaryTrust,
+    provincialPathway,
+    pathwayAffiliations,
   };
 }
 
@@ -513,6 +598,39 @@ export const PLAYERS: Player[] = [
   makeP("no9", "Keegan Crawford", "NOR", "BOWL", 9, "R", "R", "S", 18, 8.0, 64.0, 23, 5.3, "Durban North", "Smuts", "Frontline leg-spinner with quick arm action."),
   makeP("no10", "Tiaan Steyn", "NOR", "BOWL", 10, "L", "L", "F", 17, 5.8, 50.0, 18, 6.0, "La Lucia", "Founders", "Left-arm fast bowler who generates steep carry."),
   makeP("no11", "Siphesihle Mkhize", "NOR", "BOWL", 11, "R", "R", "F", 16, 4.0, 42.0, 15, 6.2, "Durban North", "Knights", "Promising young seamer with immaculate discipline."),
+
+  // ── JUNIOR AGE DIVISIONS (U16, U15, U14) & TRANSFORMATION PATHWAY TALENT ──
+  // Westville Juniors
+  makeP("w_u16_1", "Liam van Schalkwyk", "WES", "BAT", 1, "R", "R", "M", 16, 44.5, 126.0, 4, 6.8, "Westville", "School House", "Prolific U16A top-order stroke-maker and captain.", "c", "U16A"),
+  makeP("w_u16_2", "Siyabonga Mkhize", "WES", "ALL", 4, "R", "R", "F", 16, 36.8, 138.0, 21, 5.2, "KwaMashu", "Outeniqua", "Dynamic seam all-rounder from KwaMashu hub, Sunfoil bursary scholar.", undefined, "U16A", "Black African", true),
+  makeP("w_u16_3", "Kieran Padayachee", "WES", "BOWL", 8, "R", "R", "S", 16, 12.0, 75.0, 23, 4.9, "Westville", "Wandsbeck", "Sharp leg-spinner with exceptional googly and drift.", undefined, "U16A", "Generic Black", false),
+  makeP("w_u15_1", "Bandile Dlamini", "WES", "BAT", 2, "R", "R", "M", 15, 49.2, 134.0, 0, 0.0, "Umlazi", "School House", "U15 provincial run-machine with classical front-foot technique.", undefined, "U15A", "Black African", true),
+  makeP("w_u15_2", "Troy Reynolds", "WES", "BOWL", 9, "R", "R", "F", 15, 8.0, 58.0, 20, 5.1, "Kloof", "Inanda", "Tall U15 fast bowler hitting the deck hard with good bounce.", undefined, "U15A"),
+  makeP("w_u14_1", "Kwazi Buthelezi", "WES", "ALL", 5, "L", "L", "S", 14, 42.0, 120.0, 17, 4.8, "Clermont", "Outeniqua", "Exciting U14 talent from Clermont development clinic. Left-arm orthodox spinner.", undefined, "U14A", "Black African", true),
+  makeP("w_u14_2", "Noah Harris", "WES", "BAT", 1, "R", "R", "M", 14, 38.5, 118.0, 0, 0.0, "Westville", "School House", "Compact opening batsman with strong back-foot defensive play.", "c", "U14A"),
+
+  // Hilton Juniors
+  makeP("h_u16_1", "Kagiso Mposula", "HIL", "BOWL", 8, "R", "R", "F", 16, 11.4, 78.0, 26, 5.1, "Pietermaritzburg", "Churchill House", "Fierce outswing fast bowler, Grant Khomo U16 week candidate.", undefined, "U16A", "Black African", true),
+  makeP("h_u16_2", "Rupert Fenwick", "HIL", "BAT", 3, "R", "R", "M", 16, 41.2, 120.0, 2, 7.0, "Hilton", "Pearce House", "Dependable top-order accumulator for Hilton U16A.", "c", "U16A"),
+  makeP("h_u15_1", "Thando Ntini-Ndlovu", "HIL", "ALL", 6, "R", "R", "M", 15, 38.0, 124.0, 19, 5.0, "Midlands", "Falcon House", "Athletic all-rounder, middle overs control and stroke maker.", undefined, "U15A", "Black African", true),
+  makeP("h_u15_2", "Giles Montgomery", "HIL", "WK", 2, "L", "R", "M", 15, 34.5, 116.0, 0, 0.0, "Hilton", "Ellis House", "U15 wicketkeeper with sharp leg-side takes and steady opener.", undefined, "U15A"),
+  makeP("h_u14_1", "Nkosana Zulu", "HIL", "BAT", 1, "R", "R", "M", 14, 46.5, 125.0, 3, 6.8, "Edendale", "Churchill House", "Township talent scholar, prolific boundary hitter down the ground.", "c", "U14A", "Black African", true),
+  makeP("h_u14_2", "Max Campbell", "HIL", "BOWL", 10, "R", "R", "F", 14, 9.5, 62.0, 18, 4.6, "Nottingham Road", "Pearce House", "Accurate seamer with natural wobble seam on Midlands turf.", undefined, "U14A"),
+
+  // DHS Juniors
+  makeP("d_u16_1", "Sipho Sithole", "DHS", "BOWL", 8, "R", "R", "F", 16, 9.8, 68.0, 27, 4.9, "KwaMashu", "Blackmore", "Express pace bowler, clocking 128 km/h at U16 level. Sunfoil scholar.", undefined, "U16A", "Black African", true),
+  makeP("d_u16_2", "Darren Chetty", "DHS", "BAT", 2, "L", "R", "M", 16, 43.6, 128.0, 0, 0.0, "Berea", "Campbell", "Wristy left-handed stroke-maker and explosive opener.", "vc", "U16A", "Generic Black", false),
+  makeP("d_u15_1", "Ayanda Khumalo", "DHS", "BAT", 3, "R", "R", "M", 15, 52.4, 132.0, 3, 6.5, "Umlazi", "Blackmore", "Top-scoring U15 batsman in KZN schools circuit with four hundreds.", "c", "U15A", "Black African", true),
+  makeP("d_u15_2", "Jaden Moodley", "DHS", "ALL", 5, "R", "R", "S", 15, 37.0, 118.0, 18, 5.1, "Chatsworth", "Swales", "Spin bowling all-rounder with composed temperament.", undefined, "U15A", "Generic Black", true),
+  makeP("d_u14_1", "Lwazi Mbatha", "DHS", "BOWL", 9, "L", "L", "F", 14, 10.2, 60.0, 22, 4.7, "Chesterville", "Blackmore", "Raw left-arm fast bowler with steep angle and sharp bouncer.", undefined, "U14A", "Black African", true),
+  makeP("d_u14_2", "Keagan Naidoo", "DHS", "BAT", 4, "R", "R", "M", 14, 40.8, 115.0, 0, 0.0, "Durban", "Campbell", "Technical middle-order stabilizer and tactician.", undefined, "U14A", "Generic Black", false),
+
+  // Michaelhouse & Maritzburg College Juniors
+  makeP("m_u16_1", "Loyiso Nxumalo", "MIC", "BAT", 1, "L", "R", "M", 16, 45.8, 122.0, 0, 0.0, "Underberg", "West", "Classy left-handed stroke-maker on Meadows, bursary scholar.", "c", "U16A", "Black African", true),
+  makeP("m_u16_2", "Dylan Botha", "MIC", "BOWL", 8, "R", "R", "F", 16, 8.9, 65.0, 21, 4.8, "Balgowan", "Founders", "Accurate medium-fast bowler with tight channels.", undefined, "U16A"),
+  makeP("mc_u16_1", "Sandile Mthembu", "MCB", "ALL", 4, "R", "R", "F", 16, 39.4, 130.0, 20, 5.3, "Sobantu", "Forder", "Aggressive striker and seam bowler for College U16A. Sunfoil scholar.", "vc", "U16A", "Black African", true),
+  makeP("mc_u15_1", "Connor McIntosh", "MCB", "BAT", 3, "R", "R", "M", 15, 42.0, 124.0, 2, 7.2, "Pietermaritzburg", "Clark", "Hard-hitting top-order batsman with rapid boundary tally.", undefined, "U15A"),
+  makeP("mc_u14_1", "Khaya Biyela", "MCB", "BOWL", 8, "R", "R", "F", 14, 8.5, 55.0, 21, 4.5, "Edendale", "Forder", "Young fast-bowling prodigy from Edendale development hub.", undefined, "U14A", "Black African", true),
 ];
 
 // ── AUTHENTIC MATCH FIXTURES & LIVE CIRCUIT ───────────

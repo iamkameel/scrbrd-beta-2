@@ -31,20 +31,26 @@ import { MATCH_SCORECARDS } from "./scorecardData";
 import { POPIA_POLICIES } from "./data";
 import { MatchScorecard } from "./types";
 import ScoutingHub from "./ScoutingHub";
+import SkillsMatrixView from "./SkillsMatrixView";
+import PlayerSearchFilterSelect from "./PlayerSearchFilterSelect";
 import LogisticsView from "./LogisticsView";
 import FieldsView from "./FieldsView";
 import TrainingView from "./TrainingView";
 import InjuriesView from "./InjuriesView";
 import CalendarView from "./CalendarView";
-import NotificationsView from "./NotificationsView";
+import NotificationsView, { isRoleAuthorizedForNotification, NotificationCategory } from "./NotificationsView";
 import CommercialView from "./CommercialView";
 import GovernanceView from "./GovernanceView";
+import MultiSquadCoachView from "./MultiSquadCoachView";
+import { getSchoolSquads } from "./multiSquadData";
+import { ScrbrdLogo } from "./ScrbrdLogo";
 import Image from "next/image";
 
 export default function ScrbrdOS() {
   const [role, setRole] = useState<string>("superadmin");
   const [page, setPage] = useState<string>("dashboard");
   const [activeSchoolId, setActiveSchoolId] = useState<string>("WES");
+  const [selectedSquadId, setSelectedSquadId] = useState<string>("WES_1ST");
   const [isDark, setIsDark] = useState<boolean>(true);
   const [users] = useState(USERS_INITIAL);
   const [scorerOpen, setScorerOpen] = useState<boolean>(false);
@@ -54,6 +60,179 @@ export default function ScrbrdOS() {
   const [scorecardModalOpen, setScorecardModalOpen] = useState<boolean>(false);
   const [activeScorecard, setActiveScorecard] = useState<MatchScorecard | null>(null);
   const [rbacNotice, setRbacNotice] = useState<string | null>(null);
+
+  // Top Navigation Bar Notification & Toast System
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState<boolean>(false);
+  const [toastNotification, setToastNotification] = useState<{
+    id: string;
+    title: string;
+    body: string;
+    category?: string;
+    targetPage?: string;
+    icon?: string;
+  } | null>(null);
+
+  const [navAlerts, setNavAlerts] = useState<Array<{
+    id: string;
+    icon: string;
+    title: string;
+    body: string;
+    time: string;
+    read: boolean;
+    targetPage?: string;
+    category: NotificationCategory;
+    allowedRoles?: string[];
+    deniedRoles?: string[];
+  }>>([
+    // Live Match Telemetry Alert (Blocked for Finance Admin, Drivers, Curators, Medical)
+    {
+      id: "n1",
+      icon: "🏏",
+      title: "Century Partnership",
+      body: "Westville 1st XI: Whitfield (74*) & Campbell (48*) 112-run opening stand.",
+      time: "2m ago",
+      read: false,
+      targetPage: "matches",
+      category: "match",
+      deniedRoles: ["financeadmin", "driver", "groundskeeper", "medical"],
+      allowedRoles: ["superadmin", "headcoach", "coach", "assistant", "analyst", "scorer", "sportsmaster", "doc", "headmaster", "player", "parent", "spectator", "scout"],
+    },
+    // Medical Physio Clearance (Blocked for Finance Admin, Analysts, Drivers, Curators, Scorers)
+    {
+      id: "n2",
+      icon: "⚕️",
+      title: "Physio Clearance",
+      body: "Theo Pretorius cleared for Stage 3 batting drills.",
+      time: "45m ago",
+      read: false,
+      targetPage: "injuries",
+      category: "medical",
+      deniedRoles: ["financeadmin", "analyst", "driver", "groundskeeper", "scorer", "spectator", "scout", "platformsupport"],
+      allowedRoles: ["superadmin", "medical", "doc", "sportsmaster", "headcoach", "coach", "player", "parent"],
+    },
+    // Commercial Sponsorship Alert (Targeted to Finance Admin, Headmaster, School Admin, Super Admin)
+    {
+      id: "n_fin1",
+      icon: "💳",
+      title: "Sponsorship Tranche",
+      body: "Derivco R 145,000 Q3 sponsorship disbursement allocated to Sporting Fund.",
+      time: "15m ago",
+      read: false,
+      targetPage: "sponsorship",
+      category: "finance",
+      allowedRoles: ["superadmin", "financeadmin", "headmaster", "schooladmin"],
+    },
+    // Fleet Transport Invoice Sign-off (Targeted to Finance Admin, Headmaster, Super Admin)
+    {
+      id: "n_fin2",
+      icon: "🧾",
+      title: "Bus Fleet Invoice",
+      body: "Monthly transport & tollgate invoice (R 38,400) submitted for finance audit.",
+      time: "1h ago",
+      read: false,
+      targetPage: "logistics",
+      category: "finance",
+      allowedRoles: ["superadmin", "financeadmin", "headmaster"],
+    },
+    // Fleet Logistics Dispatch
+    {
+      id: "n3",
+      icon: "🚌",
+      title: "Bus En Route",
+      body: "U15A Coach ND 849-211 cleared tollgate towards DHS.",
+      time: "2h ago",
+      read: false,
+      targetPage: "logistics",
+      category: "logistics",
+      deniedRoles: ["scorer", "analyst", "groundskeeper", "spectator", "scout"],
+    },
+    // Curator Pitch Moisture Advisory
+    {
+      id: "n_grd",
+      icon: "🌿",
+      title: "Curator Moisture Alert",
+      body: "Bowden's Field Strip #2 moisture at 16.8% (Bat First recommendation).",
+      time: "3h ago",
+      read: true,
+      targetPage: "fields",
+      category: "grounds",
+      deniedRoles: ["financeadmin", "medical", "driver", "scorer", "player", "parent", "spectator", "scout"],
+    },
+    // Team Sheet Sign-off
+    {
+      id: "n4",
+      icon: "📋",
+      title: "Team Sheet Sign-off",
+      body: "Playing XI team sheets submitted for umpire verification.",
+      time: "3h ago",
+      read: true,
+      targetPage: "matches",
+      category: "match",
+      deniedRoles: ["financeadmin", "driver", "groundskeeper", "medical", "player", "parent", "analyst"],
+    },
+  ]);
+
+  const triggerToast = (title: string, body: string, category: string = "match", targetPage?: string) => {
+    // RBAC Check for incoming toast: if the current role is denied for this category, suppress unsolicited popups
+    const notifCategory = (category as NotificationCategory) || "match";
+    const dummyItem = {
+      id: "test",
+      type: "alert" as const,
+      category: notifCategory,
+      title,
+      sender: "System",
+      senderRole: "Service",
+      body,
+      time: "Just now",
+      read: false,
+    };
+
+    if (role !== "superadmin" && !isRoleAuthorizedForNotification(role, dummyItem)) {
+      // Role is not authorized to receive this toast
+      return;
+    }
+
+    const icons: Record<string, string> = { match: "🏏", medical: "⚕️", logistics: "🚌", grounds: "🌿", approval: "📋", message: "✉️", finance: "💳", governance: "⚖️", academic: "🎓" };
+    const newToast = {
+      id: `toast_${Date.now()}`,
+      title,
+      body,
+      category,
+      targetPage,
+      icon: icons[category] || "🔔",
+    };
+    setToastNotification(newToast);
+
+    // Auto add to navAlerts as unread
+    setNavAlerts(prev => [
+      { id: newToast.id, icon: newToast.icon, title: newToast.title, body: newToast.body, time: "Just now", read: false, targetPage: targetPage || "notifications", category: notifCategory },
+      ...prev.slice(0, 8),
+    ]);
+
+    // Auto dismiss after 6 seconds
+    setTimeout(() => {
+      setToastNotification(curr => (curr?.id === newToast.id ? null : curr));
+    }, 6000);
+  };
+
+  // Strictly filter visible alerts in navigation & topbar dropdown by active role RBAC
+  const authorizedNavAlerts = navAlerts.filter(a =>
+    isRoleAuthorizedForNotification(role, {
+      id: a.id,
+      type: "alert",
+      category: a.category,
+      title: a.title,
+      sender: "System",
+      senderRole: "Service",
+      body: a.body,
+      time: a.time,
+      read: a.read,
+      allowedRoles: a.allowedRoles,
+      deniedRoles: a.deniedRoles,
+    })
+  );
+
+  const unreadAlertsCount = authorizedNavAlerts.filter(a => !a.read).length;
 
   // RBAC permissions helper
   const canAccessScorer = (roleKey: string) => {
@@ -378,19 +557,7 @@ export default function ScrbrdOS() {
         {/* Brand Header */}
         <div style={{ padding: "14px 16px", borderBottom: `1px solid ${D.border}` }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
-            <Image
-              src={SCRBRD_LOGO}
-              alt="SCRBRD"
-              width={112}
-              height={28}
-              unoptimized
-              style={{
-                height: "24px",
-                width: "auto",
-                objectFit: "contain",
-                filter: isDark ? "brightness(1.15)" : "brightness(0.95)",
-              }}
-            />
+            <ScrbrdLogo height={24} isDark={isDark} />
             <span
               style={{
                 fontFamily: D.mono,
@@ -483,7 +650,23 @@ export default function ScrbrdOS() {
                 }}
               >
                 <span style={{ fontSize: "14px" }}>{meta.icon}</span>
-                <span>{meta.label}</span>
+                <span style={{ flex: 1 }}>{meta.label}</span>
+                {(k === "notifications" || k === "inbox") && unreadAlertsCount > 0 && (
+                  <span
+                    style={{
+                      background: D.rose,
+                      color: "#fff",
+                      fontFamily: D.mono,
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      padding: "1px 6px",
+                      borderRadius: D.pill,
+                      lineHeight: "1.2",
+                    }}
+                  >
+                    {unreadAlertsCount}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -545,6 +728,53 @@ export default function ScrbrdOS() {
             ))}
           </div>
 
+          {/* Active Squad Switcher */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>Squad:</span>
+            <select
+              value={selectedSquadId}
+              onChange={e => {
+                setSelectedSquadId(e.target.value);
+                if (page !== "squad" && (role === "headcoach" || role === "coach" || role === "doc")) {
+                  // Keep user focused
+                }
+              }}
+              style={{
+                padding: "5px 10px",
+                borderRadius: D.pill,
+                background: D.surf2,
+                border: `1px solid ${D.border}`,
+                color: D.sky || D.indigo,
+                fontFamily: D.head,
+                fontSize: "11px",
+                fontWeight: 700,
+                cursor: "pointer",
+                outline: "none",
+              }}
+            >
+              <optgroup label="Open Division (1st - 7th XI)">
+                {getSchoolSquads(activeSchoolId).filter(s => s.division === "Open").map(s => (
+                  <option key={s.id} value={s.id}>{s.name} · {s.headCoachName}</option>
+                ))}
+              </optgroup>
+              <optgroup label="U16 Age Division (U16A - U16D)">
+                {getSchoolSquads(activeSchoolId).filter(s => s.division === "U16").map(s => (
+                  <option key={s.id} value={s.id}>{s.name} · {s.headCoachName}</option>
+                ))}
+              </optgroup>
+              <optgroup label="U15 Age Division (U15A - U15E)">
+                {getSchoolSquads(activeSchoolId).filter(s => s.division === "U15").map(s => (
+                  <option key={s.id} value={s.id}>{s.name} · {s.headCoachName}</option>
+                ))}
+              </optgroup>
+              <optgroup label="U14 Age Division (U14A - U14G)">
+                {getSchoolSquads(activeSchoolId).filter(s => s.division === "U14").map(s => (
+                  <option key={s.id} value={s.id}>{s.name} · {s.headCoachName}</option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+
           {/* Role switcher */}
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <span style={{ fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>Role:</span>
@@ -559,6 +789,157 @@ export default function ScrbrdOS() {
             </select>
           </div>
 
+          {/* Top Navbar Notification Icon with Dropdown */}
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setNotifDropdownOpen(prev => !prev)}
+              className="pressBtn"
+              style={{
+                position: "relative",
+                width: "34px",
+                height: "34px",
+                borderRadius: "50%",
+                background: notifDropdownOpen ? `${D.indigo}25` : D.surf2,
+                border: `1px solid ${notifDropdownOpen ? D.indigo : D.border}`,
+                color: D.textPrimary,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+              title="Notifications & Live Alerts"
+            >
+              <span>🔔</span>
+              {unreadAlertsCount > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-2px",
+                    right: "-2px",
+                    padding: "1px 5px",
+                    borderRadius: D.pill,
+                    background: D.rose,
+                    color: "#fff",
+                    fontFamily: D.mono,
+                    fontSize: "9px",
+                    fontWeight: 800,
+                    border: `2px solid ${D.surf0}`,
+                    minWidth: "16px",
+                    textAlign: "center",
+                    lineHeight: "12px",
+                  }}
+                >
+                  {unreadAlertsCount}
+                </span>
+              )}
+            </button>
+
+            {/* Notification Flyout Dropdown */}
+            {notifDropdownOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "42px",
+                  right: 0,
+                  width: "340px",
+                  background: D.surf0,
+                  border: `1px solid ${D.borderMed}`,
+                  borderRadius: D.lg,
+                  boxShadow: "0 12px 35px rgba(0,0,0,0.45)",
+                  zIndex: 1000,
+                  overflow: "hidden",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <div style={{ padding: "12px 14px", borderBottom: `1px solid ${D.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: D.surf1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 800, color: D.textPrimary }}>
+                      Live Alerts & Feed
+                    </span>
+                    <span style={{ fontFamily: D.mono, fontSize: "9px", padding: "1px 5px", borderRadius: D.pill, background: `${D.indigo}25`, color: D.indigo, fontWeight: 700 }}>
+                      {unreadAlertsCount} unread
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setNavAlerts(prev => prev.map(a => ({ ...a, read: true })));
+                    }}
+                    style={{ background: "none", border: "none", color: D.textMuted, fontFamily: D.head, fontSize: "10px", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    Mark all read
+                  </button>
+                </div>
+
+                <div style={{ maxHeight: "280px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+                  {authorizedNavAlerts.length === 0 ? (
+                    <div style={{ padding: "20px 14px", textAlign: "center", color: D.textMuted, fontFamily: D.body, fontSize: "11px" }}>
+                      No active alerts for {ROLES[role]?.label || role}
+                    </div>
+                  ) : (
+                    authorizedNavAlerts.map(item => (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          if (item.targetPage) setPage(item.targetPage);
+                          setNavAlerts(prev => prev.map(a => a.id === item.id ? { ...a, read: true } : a));
+                          setNotifDropdownOpen(false);
+                        }}
+                        style={{
+                          padding: "10px 14px",
+                          borderBottom: `1px solid ${D.border}33`,
+                          background: !item.read ? `${D.indigo}0c` : "transparent",
+                          cursor: "pointer",
+                          display: "flex",
+                          gap: "10px",
+                          alignItems: "flex-start",
+                        }}
+                      >
+                        <div style={{ fontSize: "16px", marginTop: "2px" }}>{item.icon}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 700, color: D.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {item.title}
+                            </span>
+                            <span style={{ fontFamily: D.mono, fontSize: "9px", color: D.textMuted, flexShrink: 0 }}>
+                              {item.time}
+                            </span>
+                          </div>
+                          <div style={{ fontFamily: D.body, fontSize: "10px", color: D.textSecondary, marginTop: "2px", lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                            {item.body}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div style={{ padding: "8px 12px", borderTop: `1px solid ${D.border}`, background: D.surf1, textAlign: "center" }}>
+                  <button
+                    onClick={() => {
+                      setPage("notifications");
+                      setNotifDropdownOpen(false);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "6px 0",
+                      background: "transparent",
+                      border: "none",
+                      color: D.sky || D.indigo,
+                      fontFamily: D.head,
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Open Unified Inbox & Alerts →
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Theme switcher */}
           <button
             onClick={() => setIsDark(prev => !prev)}
@@ -568,6 +949,80 @@ export default function ScrbrdOS() {
             {isDark ? "☀️" : "🌙"}
           </button>
         </header>
+
+        {/* Floating Top Toast Notification Banner */}
+        {toastNotification && (
+          <div
+            style={{
+              position: "fixed",
+              top: "64px",
+              right: "24px",
+              zIndex: 9999,
+              maxWidth: "400px",
+              width: "calc(100vw - 48px)",
+              background: D.surf0,
+              border: `1px solid ${D.indigo}66`,
+              borderRadius: D.lg,
+              boxShadow: `0 12px 36px rgba(0,0,0,0.5), 0 0 16px ${D.indigo}30`,
+              padding: "12px 16px",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "12px",
+            }}
+          >
+            <div style={{ fontSize: "22px", flexShrink: 0, marginTop: "2px" }}>
+              {toastNotification.icon || "🔔"}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                <span style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 800, color: D.textPrimary }}>
+                  {toastNotification.title}
+                </span>
+                <span style={{ fontFamily: D.mono, fontSize: "9px", color: D.textMuted }}>
+                  Just now
+                </span>
+              </div>
+              <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textSecondary, marginTop: "2px", lineHeight: 1.4 }}>
+                {toastNotification.body}
+              </div>
+              {toastNotification.targetPage && (
+                <button
+                  onClick={() => {
+                    setPage(toastNotification.targetPage!);
+                    setToastNotification(null);
+                  }}
+                  style={{
+                    marginTop: "6px",
+                    padding: "3px 8px",
+                    borderRadius: D.sm,
+                    background: `${D.indigo}20`,
+                    border: `1px solid ${D.indigo}44`,
+                    color: D.sky || D.indigo,
+                    fontFamily: D.head,
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  View in {NAV_META[toastNotification.targetPage]?.label || "Module"} →
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setToastNotification(null)}
+              style={{
+                background: "none",
+                border: "none",
+                color: D.textMuted,
+                cursor: "pointer",
+                fontSize: "14px",
+                padding: "0 2px",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Saturday Circuit Live Matches Ticker */}
         <div
@@ -1111,66 +1566,45 @@ export default function ScrbrdOS() {
             </div>
           )}
 
-          {/* Squad View */}
+          {/* Squad & Multi-Tier Coaching Management */}
           {page === "squad" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <SectionHeader
-                title={`${activeSchool.name} — Squad Roster`}
-                sub={`Official Registered Players for ${activeSchool.shortName} (${schoolPlayers.length} Active Profiles)`}
-                color={schoolPrimary}
-                actions={
-                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                    {["All", "BAT", "BOWL", "ALL", "WK"].map(roleFilter => (
-                      <button
-                        key={roleFilter}
-                        onClick={() => setSquadRoleFilter(roleFilter)}
-                        style={{
-                          padding: "4px 10px", borderRadius: D.pill, border: `1px solid ${squadRoleFilter === roleFilter ? schoolPrimary : D.border}`,
-                          background: squadRoleFilter === roleFilter ? `${schoolPrimary}22` : "transparent",
-                          color: squadRoleFilter === roleFilter ? D.textPrimary : D.textMuted,
-                          fontFamily: D.head, fontSize: "11px", fontWeight: 700, cursor: "pointer",
-                        }}
-                      >
-                        {roleFilter}
-                      </button>
-                    ))}
-                  </div>
-                }
-              />
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "12px" }}>
-                {schoolPlayers
-                  .filter(p => squadRoleFilter === "All" || p.role === squadRoleFilter)
-                  .map(p => (
-                    <Card key={p.id} sx={{ padding: "16px", cursor: "pointer" }} onClick={() => { setSelectedPlayer(p); setPage("profiles"); }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <Avatar name={p.name} size={44} color={p.role === "BAT" ? D.sky : p.role === "BOWL" ? D.violet : D.emerald} />
-                        <div>
-                          <div style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 700 }}>
-                            {p.name} {p.cap === "c" && <span style={{ color: D.amber }}>©</span>}
-                          </div>
-                          <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted }}>{p.team} · {p.role} · Age {p.age}</div>
-                        </div>
-                      </div>
-                      <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, marginTop: "8px", lineHeight: "1.4" }}>
-                        {p.bio}
-                      </div>
-                      <div style={{ display: "flex", gap: "6px", marginTop: "12px", flexWrap: "wrap", alignItems: "center" }}>
-                        <Badge color={p.fitness === "fit" ? D.emerald : D.rose}>{p.fitness}</Badge>
-                        <Badge color={p.batHand === "R" ? D.sky : D.amber}>{p.batHand === "R" ? "🏏 RHS Bat" : "🏏 LHS Bat"}</Badge>
-                        <Badge color={D.sky}>Avg {p.avg}</Badge>
-                        {p.wkts > 0 && <Badge color={D.violet}>{p.wkts} wkts</Badge>}
-                      </div>
-                    </Card>
-                  ))}
-              </div>
-            </div>
+            <MultiSquadCoachView
+              theme={D}
+              activeSchoolId={activeSchool.id}
+              currentRole={role}
+              selectedSquadId={selectedSquadId}
+              onSelectSquad={(squadId) => setSelectedSquadId(squadId)}
+              onSelectPlayerProfile={(p) => {
+                setSelectedPlayer(p);
+                setPage("profiles");
+              }}
+              onNavigateToSkills={() => setPage("skills")}
+            />
           )}
 
           {/* Profiles View */}
           {page === "profiles" && selectedPlayer && (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <SectionHeader title={`Player Profile: ${selectedPlayer.name}`} sub={`${selectedPlayer.team} · ${selectedPlayer.role} · ${activeSchool.name}`} color={schoolPrimary} />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                <SectionHeader title={`Player Profile: ${selectedPlayer.name}`} sub={`${selectedPlayer.team} · ${selectedPlayer.role} · ${activeSchool.name}`} color={schoolPrimary} />
+                <div style={{ width: "360px", maxWidth: "100%" }}>
+                  <PlayerSearchFilterSelect
+                    theme={D}
+                    players={PLAYERS}
+                    selectedPlayerId={selectedPlayer.id}
+                    onSelectPlayer={p => {
+                      setSelectedPlayer(p);
+                      if (p.school !== activeSchoolId) {
+                        setActiveSchoolId(p.school);
+                      }
+                    }}
+                    label="SWITCH PLAYER PROFILE (1000+)"
+                    placeholder="Search any player across all schools..."
+                    accentColor={schoolPrimary}
+                    compact
+                  />
+                </div>
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
                 <Card sx={{ padding: "20px" }}>
                   <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
@@ -1328,7 +1762,12 @@ export default function ScrbrdOS() {
               </div>
 
               {analyticsSubTab === "analytics" && (
-                <MatchAnalyticsView theme={D} activeSchoolId={activeSchool.id} />
+                <MatchAnalyticsView
+                  theme={D}
+                  activeSchoolId={activeSchool.id}
+                  scorecard={MATCH_SCORECARDS[activeHeroMatch?.id || "m1"] || MATCH_SCORECARDS["m1"]}
+                  onOpenScorer={() => handleLaunchScorer()}
+                />
               )}
 
               {analyticsSubTab === "phases" && (
@@ -1353,8 +1792,32 @@ export default function ScrbrdOS() {
             </div>
           )}
 
-          {/* Skills & AI Scouting Hub */}
-          {(page === "skills" || page === "scouting") && <ScoutingHub theme={D} players={PLAYERS} />}
+          {/* Squad Skills Matrix & Player Development Passport */}
+          {page === "skills" && (
+            <SkillsMatrixView
+              theme={D}
+              players={PLAYERS}
+              currentRole={role}
+              activeSchoolId={activeSchool.id}
+              currentUser={role === "player" ? "James Whitfield" : role === "parent" ? "David Whitfield (Parent)" : "Wayne Scott (Coach)"}
+              onNavigateToScouting={() => setPage("scouting")}
+              onSelectPlayerProfile={(p) => {
+                setSelectedPlayer(p);
+                setPage("profiles");
+              }}
+            />
+          )}
+
+          {/* Talent Discovery & AI Scouting Hub */}
+          {page === "scouting" && (
+            <ScoutingHub
+              theme={D}
+              players={PLAYERS}
+              currentRole={role}
+              activeSchoolId={activeSchool.id}
+              onNavigateToSkills={() => setPage("skills")}
+            />
+          )}
 
           {/* Commercial & Sponsorship Management */}
           {page === "sponsorship" && <CommercialView theme={D} activeSchoolId={activeSchool.id} />}
@@ -1363,10 +1826,10 @@ export default function ScrbrdOS() {
           {page === "governance" && <GovernanceView theme={D} activeSchoolId={activeSchool.id} />}
 
           {/* Training & Drills View */}
-          {page === "training" && <TrainingView theme={D} />}
+          {page === "training" && <TrainingView theme={D} players={PLAYERS} />}
 
           {/* Injuries & Physio Command View */}
-          {page === "injuries" && <InjuriesView theme={D} />}
+          {page === "injuries" && <InjuriesView theme={D} players={PLAYERS} />}
 
           {/* Logistics & Fleet Operations */}
           {page === "logistics" && <LogisticsView theme={D} />}
@@ -1375,10 +1838,17 @@ export default function ScrbrdOS() {
           {page === "fields" && <FieldsView theme={D} />}
 
           {/* Master Strategic Calendar */}
-          {page === "calendar" && <CalendarView theme={D} />}
+          {page === "calendar" && <CalendarView theme={D} onOpenScorer={() => handleLaunchScorer()} />}
 
-          {/* Alerts & Notifications */}
-          {page === "notifications" && <NotificationsView theme={D} />}
+          {/* Unified Inbox & System Alerts */}
+          {(page === "notifications" || page === "inbox") && (
+            <NotificationsView
+              theme={D}
+              currentRole={role}
+              onNavigate={(targetPage) => setPage(targetPage)}
+              onTriggerToast={triggerToast}
+            />
+          )}
 
           {/* Staff & User Management */}
           {page === "staff" && (

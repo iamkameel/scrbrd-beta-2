@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import { Theme, Drill, Player } from './types';
+import { PLAYERS } from './data';
 
 interface TrainingViewProps {
   theme: Theme;
-  players: Player[];
+  players?: Player[];
 }
 
 const DRILL_LIBRARY: Drill[] = [
@@ -71,9 +72,10 @@ const DRILL_LIBRARY: Drill[] = [
   },
 ];
 
-export default function TrainingView({ theme: D, players }: TrainingViewProps) {
+export default function TrainingView({ theme: D, players = PLAYERS }: TrainingViewProps) {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selectedDrill, setSelectedDrill] = useState<Drill>(DRILL_LIBRARY[0]);
+  const safePlayers = players && players.length > 0 ? players : PLAYERS;
   const [attendance, setAttendance] = useState<Record<string, "present" | "rehab" | "absent">>({
     p1: "present",
     p2: "present",
@@ -212,7 +214,7 @@ export default function TrainingView({ theme: D, players }: TrainingViewProps) {
               <div>
                 <div style={{ fontFamily: D.head, fontSize: '10px', color: D.textMuted, marginBottom: '4px' }}>REQUIRED EQUIPMENT:</div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {selectedDrill.equipment.map((eq, i) => (
+                  {(selectedDrill?.equipment || []).map((eq, i) => (
                     <span key={i} style={{ padding: '3px 8px', borderRadius: D.pill, background: D.surf2, fontFamily: D.body, fontSize: '11px', color: D.textPrimary }}>
                       • {eq}
                     </span>
@@ -223,7 +225,7 @@ export default function TrainingView({ theme: D, players }: TrainingViewProps) {
               <div>
                 <div style={{ fontFamily: D.head, fontSize: '10px', color: D.textMuted, marginBottom: '4px' }}>CRITICAL COACHING CUES:</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {selectedDrill.keyCoachingPoints.map((pt, i) => (
+                  {(selectedDrill?.keyCoachingPoints || []).map((pt, i) => (
                     <div key={i} style={{ display: 'flex', gap: '6px', fontFamily: D.body, fontSize: '12px', color: D.textPrimary, lineHeight: 1.4 }}>
                       <span style={{ color: D.emerald, fontWeight: 800 }}>✓</span>
                       <span>{pt}</span>
@@ -252,7 +254,7 @@ export default function TrainingView({ theme: D, players }: TrainingViewProps) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {players.map(p => {
+              {safePlayers.map(p => {
                 const status = attendance[p.id] || "present";
                 const col = status === "present" ? D.emerald : status === "rehab" ? D.amber : D.rose;
                 return (

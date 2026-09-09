@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Theme, ShotBall } from './types';
 
 export interface FieldPosition {
@@ -44,6 +44,31 @@ export interface WagonWheelProps {
   batHand?: 'R' | 'L';
   onShotAdded?: (shot: ShotBall) => void;
   initialShots?: ShotBall[];
+  shots?: ShotBall[];
+  inningsSummary?: string;
+}
+
+function normalizeShot(s: ShotBall, defaultBatter: string): ShotBall {
+  let x = s.x;
+  let y = s.y;
+  let sector = s.sector;
+  if ((x == null || y == null) && s.angle != null) {
+    const rad = (s.angle * Math.PI) / 180;
+    const dist = s.distance ? Math.min(138, (s.distance / 110) * 130) : (s.runs >= 6 ? 130 : s.runs >= 4 ? 110 : 60);
+    x = Math.round(Math.sin(rad) * dist);
+    y = Math.round(-Math.cos(rad) * dist);
+  }
+  if (!sector) {
+    sector = s.stroke || 'Mid-Wicket';
+  }
+  return {
+    ...s,
+    x: x ?? 0,
+    y: y ?? 0,
+    sector: sector || 'Mid-Wicket',
+    batsman: s.batsman || defaultBatter,
+    description: s.description || `${s.runs} runs (${s.stroke || sector || 'Shot'})`,
+  };
 }
 
 // Default realistic professional sample innings (e.g. 74 off 48 balls)
@@ -132,10 +157,21 @@ export default function WagonWheel({
   batHand: initialBatHand = 'R',
   onShotAdded,
   initialShots = SAMPLE_PROFESSIONAL_SHOTS,
+  shots: propShots,
+  inningsSummary,
 }: WagonWheelProps) {
   const D = customTheme || DEFAULT_THEME;
   const [batHand, setBatHand] = useState<'R' | 'L'>(initialBatHand);
-  const [shots, setShots] = useState<ShotBall[]>(initialShots);
+  const [shots, setShots] = useState<ShotBall[]>(() =>
+    (propShots || initialShots).map(s => normalizeShot(s, batsmanName))
+  );
+
+  useEffect(() => {
+    if (propShots && propShots.length > 0) {
+      setShots(propShots.map(s => normalizeShot(s, batsmanName)));
+    }
+  }, [propShots, batsmanName]);
+
   const [filterRuns, setFilterRuns] = useState<number | 'all' | 'boundaries'>('all');
   const [selectedShot, setSelectedShot] = useState<ShotBall | null>(null);
   const [activeTab, setActiveTab] = useState<'wheel' | 'sectors' | 'fielders' | 'zones'>('wheel');
@@ -257,7 +293,8 @@ export default function WagonWheel({
       // Off Side vs Leg Side calculation based on X relative to striker
       // For RHB: X < 0 is OFF, X > 0 is LEG
       // For LHB: X > 0 is OFF, X < 0 is LEG
-      const isOffSide = batHand === 'R' ? s.x < 0 : s.x > 0;
+      const sx = s.x ?? 0;
+      const isOffSide = batHand === 'R' ? sx < 0 : sx > 0;
       if (isOffSide) {
         offRuns += s.runs;
         offBalls++;
@@ -304,15 +341,16 @@ export default function WagonWheel({
     const list = CANONICAL_SECTORS_RHB.map(sec => {
       // Sector names
       const secShots = shots.filter(s => {
-        if (s.sector && s.sector.toLowerCase().includes(sec.shortName.toLowerCase())) return true;
-        if (sec.id === 'cover' && (s.sector.includes('Cover') || s.sector.includes('Covers'))) return true;
-        if (sec.id === 'third_man' && s.sector.includes('Third Man')) return true;
-        if (sec.id === 'point' && s.sector.includes('Point')) return true;
-        if (sec.id === 'long_off' && s.sector.includes('Long Off')) return true;
-        if (sec.id === 'long_on' && s.sector.includes('Long On')) return true;
-        if (sec.id === 'mid_wicket' && (s.sector.includes('Mid-Wicket') || s.sector.includes('Cow Corner'))) return true;
-        if (sec.id === 'square_leg' && s.sector.includes('Square Leg')) return true;
-        if (sec.id === 'fine_leg' && s.sector.includes('Fine Leg')) return true;
+        const secName = s.sector || '';
+        if (secName.toLowerCase().includes(sec.shortName.toLowerCase())) return true;
+        if (sec.id === 'cover' && (secName.includes('Cover') || secName.includes('Covers'))) return true;
+        if (sec.id === 'third_man' && secName.includes('Third Man')) return true;
+        if (sec.id === 'point' && secName.includes('Point')) return true;
+        if (sec.id === 'long_off' && secName.includes('Long Off')) return true;
+        if (sec.id === 'long_on' && secName.includes('Long On')) return true;
+        if (sec.id === 'mid_wicket' && (secName.includes('Mid-Wicket') || secName.includes('Cow Corner'))) return true;
+        if (sec.id === 'square_leg' && secName.includes('Square Leg')) return true;
+        if (sec.id === 'fine_leg' && secName.includes('Fine Leg')) return true;
         return false;
       });
 
@@ -858,8 +896,8 @@ export default function WagonWheel({
             {/* ALL SHOTS MUST ORIGINATE EXACTLY AT STRIKER CREASE (180, 160) */}
             {filteredShots.map((shot, idx) => {
               // Convert shot relative offset (relative to center 180, 180) to destination SVG point
-              const destX = SVG_CENTER_X + shot.x;
-              const destY = SVG_CENTER_Y + shot.y;
+              const destX = SVG_CENTER_X + (shot.x ?? 0);
+              const destY = SVG_CENTER_Y + (shot.y ?? 0);
               const colCfg = SHOT_COLORS[shot.runs] || SHOT_COLORS[1];
               const isSel = selectedShot?.id === shot.id;
 

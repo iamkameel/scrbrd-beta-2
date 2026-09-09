@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import { Theme, Player } from './types';
+import { PLAYERS } from './data';
 
 interface InjuriesViewProps {
   theme: Theme;
-  players: Player[];
+  players?: Player[];
 }
 
 interface InjuryRecord {
@@ -54,12 +55,12 @@ const INITIAL_INJURIES: InjuryRecord[] = [
   },
 ];
 
-export default function InjuriesView({ theme: D, players }: InjuriesViewProps) {
+export default function InjuriesView({ theme: D, players = PLAYERS }: InjuriesViewProps) {
   const [injuries, setInjuries] = useState<InjuryRecord[]>(INITIAL_INJURIES);
   const [selectedInjId, setSelectedInjId] = useState<string>("inj1");
 
   const activeInjury = injuries.find(i => i.id === selectedInjId) || injuries[0];
-  const activePlayer = players.find(p => p.id === activeInjury?.playerId) || players[0];
+  const activePlayer = (players || []).find(p => p.id === activeInjury?.playerId) || players[0];
 
   const handleClearPlayer = (id: string) => {
     setInjuries(prev => prev.map(i => {
@@ -255,7 +256,7 @@ export default function InjuriesView({ theme: D, players }: InjuriesViewProps) {
               <div>
                 <div style={{ fontFamily: D.head, fontSize: '10px', color: D.rose, fontWeight: 700, marginBottom: '4px' }}>ACTIVE ON-FIELD RESTRICTIONS</div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {activeInjury.restrictions.map((r, i) => (
+                  {(activeInjury?.restrictions || []).map((r, i) => (
                     <span key={i} style={{ padding: '4px 10px', borderRadius: D.pill, background: `${D.rose}20`, border: `1px solid ${D.rose}44`, fontFamily: D.body, fontSize: '11px', color: D.rose, fontWeight: 600 }}>
                       ⚠️ {r}
                     </span>

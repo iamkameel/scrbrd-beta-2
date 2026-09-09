@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 486 96" width="100%" height="100%">
+  <defs>
+    <!-- Tile Gradients -->
+    <linearGradient id="tileTopGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2c2d30" />
+      <stop offset="25%" stop-color="#222326" />
+      <stop offset="95%" stop-color="#18191b" />
+      <stop offset="100%" stop-color="#121314" />
+    </linearGradient>
+    <linearGradient id="tileBottomGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#141517" />
+      <stop offset="15%" stop-color="#1c1d20" />
+      <stop offset="85%" stop-color="#232427" />
+      <stop offset="100%" stop-color="#191a1c" />
+    </linearGradient>
+    
+    <!-- Bevel & Shadow Filters -->
+    <filter id="tileShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#000000" flood-opacity="0.65" />
+    </filter>
+    
+    <!-- Letter Shading -->
+    <linearGradient id="letterGradTop" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="95%" stop-color="#e2e8f0" />
+      <stop offset="100%" stop-color="#cbd5e1" />
+    </linearGradient>
+    <linearGradient id="letterGradBottom" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#cbd5e1" />
+      <stop offset="10%" stop-color="#e2e8f0" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+    
+    <!-- Clip Paths for Split-Flap Top and Bottom -->
+    <clipPath id="topFlapClip">
+      <rect x="0" y="0" width="72" height="46.5" rx="5" />
+    </clipPath>
+    <clipPath id="bottomFlapClip">
+      <rect x="0" y="49.5" width="72" height="46.5" rx="5" />
+    </clipPath>
+
+    <!-- Master Single Tile Symbol -->
+    <g id="tileBase">
+      <!-- Outer Tile Shadow / Base -->
+      <rect x="0" y="2" width="72" height="92" rx="6" fill="#0c0d0e" stroke="#050607" stroke-width="1.5" />
+      
+      <!-- Top Half Flap -->
+      <path d="M 0,8 A 6,6 0 0,1 6,2 L 66,2 A 6,6 0 0,1 72,8 L 72,46.5 L 0,46.5 Z" fill="url(#tileTopGrad)" />
+      <!-- Top Lip Highlight -->
+      <line x1="6" y1="3.5" x2="66" y2="3.5" stroke="#4b4d52" stroke-width="1" stroke-linecap="round" />
+      
+      <!-- Bottom Half Flap -->
+      <path d="M 0,49.5 L 72,49.5 L 72,88 A 6,6 0 0,1 66,94 L 6,94 A 6,6 0 0,1 0,88 Z" fill="url(#tileBottomGrad)" />
+      <!-- Bottom Border Highlight -->
+      <line x1="6" y1="93" x2="66" y2="93" stroke="#111213" stroke-width="1" />
+      
+      <!-- Center Split Gap & Shadow -->
+      <rect x="0" y="46.5" width="72" height="3" fill="#070809" />
+      <line x1="0" y1="46.5" x2="72" y2="46.5" stroke="#000000" stroke-width="1.2" />
+      <line x1="0" y1="49.5" x2="72" y2="49.5" stroke="#33353a" stroke-width="0.75" />
+
+      <!-- Left Mechanical Hinge Pin -->
+      <rect x="-2.5" y="41" width="5" height="14" rx="1.5" fill="#151618" stroke="#050506" stroke-width="1" />
+      <line x1="-1.5" y1="48" x2="1.5" y2="48" stroke="#52545a" stroke-width="1" />
+      
+      <!-- Right Mechanical Hinge Pin -->
+      <rect x="69.5" y="41" width="5" height="14" rx="1.5" fill="#151618" stroke="#050506" stroke-width="1" />
+      <line x1="70.5" y1="48" x2="73.5" y2="48" stroke="#52545a" stroke-width="1" />
+    </g>
+  </defs>
+
+  <!-- ==================== TILE 1: S ==================== -->
+  <g transform="translate(6, 0)">
+    <use href="#tileBase" />
+    <!-- Letter S Vector (Scoreboard Stencil Cut) -->
+    <path d="M 54,23 L 54,34 L 30,34 L 30,42 L 54,44 L 54,73 L 18,73 L 18,62 L 42,62 L 42,54 L 18,52 L 18,23 Z"
+          fill="url(#letterGradTop)" />
+    <!-- Center Crease overlay -->
+    <rect x="0" y="46.5" width="72" height="3" fill="#000000" fill-opacity="0.85" />
+    <line x1="0" y1="49.5" x2="72" y2="49.5" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1" />
+  </g>
+
+  <!-- ==================== TILE 2: C ==================== -->
+  <g transform="translate(86, 0)">
+    <use href="#tileBase" />
+    <!-- Letter C Vector -->
+    <path d="M 54,23 L 54,34 L 30,34 L 30,62 L 54,62 L 54,73 L 18,73 L 18,23 Z"
+          fill="url(#letterGradTop)" />
+    <!-- Center Crease overlay -->
+    <rect x="0" y="46.5" width="72" height="3" fill="#000000" fill-opacity="0.85" />
+    <line x1="0" y1="49.5" x2="72" y2="49.5" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1" />
+  </g>
+
+  <!-- ==================== TILE 3: R ==================== -->
+  <g transform="translate(166, 0)">
+    <use href="#tileBase" />
+    <!-- Letter R Vector -->
+    <path d="M 18,23 L 46,23 C 51,23 54,26 54,31 L 54,42 C 54,47 50,49 44,50 L 54,73 L 41,73 L 32,52 L 30,52 L 30,73 L 18,73 Z M 30,33 L 30,43 L 41,43 C 43,43 43,42 43,40 L 43,36 C 43,34 43,33 41,33 Z"
+          fill="url(#letterGradTop)" />
+    <!-- Center Crease overlay -->
+    <rect x="0" y="46.5" width="72" height="3" fill="#000000" fill-opacity="0.85" />
+    <line x1="0" y1="49.5" x2="72" y2="49.5" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1" />
+  </g>
+
+  <!-- ==================== TILE 4: B ==================== -->
+  <g transform="translate(246, 0)">
+    <use href="#tileBase" />
+    <!-- Letter B Vector -->
+    <path d="M 18,23 L 45,23 C 50,23 53,25 53,29 L 53,37 C 53,41 50,43 46,45 C 51,46 54,49 54,53 L 54,67 C 54,71 50,73 45,73 L 18,73 Z M 30,33 L 30,42 L 41,42 C 42,42 43,41 43,39 L 43,36 C 43,34 42,33 41,33 Z M 30,51 L 30,63 L 41,63 C 42,63 43,62 43,60 L 43,54 C 43,52 42,51 41,51 Z"
+          fill="url(#letterGradTop)" />
+    <!-- Center Crease overlay -->
+    <rect x="0" y="46.5" width="72" height="3" fill="#000000" fill-opacity="0.85" />
+    <line x1="0" y1="49.5" x2="72" y2="49.5" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1" />
+  </g>
+
+  <!-- ==================== TILE 5: R ==================== -->
+  <g transform="translate(326, 0)">
+    <use href="#tileBase" />
+    <!-- Letter R Vector -->
+    <path d="M 18,23 L 46,23 C 51,23 54,26 54,31 L 54,42 C 54,47 50,49 44,50 L 54,73 L 41,73 L 32,52 L 30,52 L 30,73 L 18,73 Z M 30,33 L 30,43 L 41,43 C 43,43 43,42 43,40 L 43,36 C 43,34 43,33 41,33 Z"
+          fill="url(#letterGradTop)" />
+    <!-- Center Crease overlay -->
+    <rect x="0" y="46.5" width="72" height="3" fill="#000000" fill-opacity="0.85" />
+    <line x1="0" y1="49.5" x2="72" y2="49.5" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1" />
+  </g>
+
+  <!-- ==================== TILE 6: D ==================== -->
+  <g transform="translate(406, 0)">
+    <use href="#tileBase" />
+    <!-- Letter D Vector -->
+    <path d="M 18,23 L 42,23 C 49,23 54,27 54,35 L 54,61 C 54,69 49,73 42,73 L 18,73 Z M 30,34 L 30,62 L 41,62 C 43,62 43,60 43,56 L 43,40 C 43,36 43,34 41,34 Z"
+          fill="url(#letterGradTop)" />
+    <!-- Center Crease overlay -->
+    <rect x="0" y="46.5" width="72" height="3" fill="#000000" fill-opacity="0.85" />
+    <line x1="0" y1="49.5" x2="72" y2="49.5" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1" />
+  </g>
+</svg>

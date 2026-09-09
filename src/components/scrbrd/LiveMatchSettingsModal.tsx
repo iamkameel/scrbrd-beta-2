@@ -55,7 +55,8 @@ export interface MatchSettingsState {
   dlsTarget: number;
   autoRotateStrike: boolean;
   autoPromptBowlerAtOverEnd: boolean;
-  // Feature Visibility Toggles
+  // Feature Visibility & Telemetry Toggles
+  enableBowlerDeliveryTelemetry?: boolean;
   showProHawkeyeRadar: boolean;
   showPitchHeatmap: boolean;
   showCommentaryFeed: boolean;
@@ -434,6 +435,55 @@ export default function LiveMatchSettingsModal({
                 <div style={{ fontFamily: D.body, fontSize: '11px', color: D.textSecondary, marginTop: '2px' }}>
                   Enable or disable advanced visualizer modules to streamline scoring or match broadcast preferences.
                 </div>
+              </div>
+
+              {/* Master Toggle: Bowler Delivery Telemetry & Pitch Map */}
+              <div
+                style={{
+                  padding: '14px',
+                  background: (settings.enableBowlerDeliveryTelemetry ?? true) ? `${D.emerald}15` : D.surf2,
+                  borderRadius: D.md,
+                  border: `1px solid ${(settings.enableBowlerDeliveryTelemetry ?? true) ? D.emerald : D.border}`,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <div>
+                  <div style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 800, color: (settings.enableBowlerDeliveryTelemetry ?? true) ? D.emerald : D.textPrimary, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🎯 BOWLER DELIVERY TELEMETRY & PITCH MAP</span>
+                    <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: D.pill, background: (settings.enableBowlerDeliveryTelemetry ?? true) ? D.emerald : D.surf3, color: (settings.enableBowlerDeliveryTelemetry ?? true) ? '#000' : D.textMuted, fontFamily: D.mono, fontWeight: 800 }}>
+                      CORE SCORING FEATURE
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: D.body, fontSize: '11px', color: D.textMuted, marginTop: '2px' }}>
+                    Enable bowler pitch length/line capturing, pace variation tracking, and 2D pitch map overlays in live scoring.
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const nextVal = !(settings.enableBowlerDeliveryTelemetry ?? true);
+                    onUpdateSettings({
+                      enableBowlerDeliveryTelemetry: nextVal,
+                      showPitchHeatmap: nextVal,
+                      showProHawkeyeRadar: nextVal,
+                    });
+                  }}
+                  style={{
+                    padding: '6px 16px',
+                    borderRadius: D.pill,
+                    border: 'none',
+                    background: (settings.enableBowlerDeliveryTelemetry ?? true) ? D.emerald : D.surf3,
+                    color: (settings.enableBowlerDeliveryTelemetry ?? true) ? '#000' : D.textMuted,
+                    fontFamily: D.head,
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    minWidth: '80px',
+                  }}
+                >
+                  {(settings.enableBowlerDeliveryTelemetry ?? true) ? '✓ ENABLED' : '✕ DISABLED'}
+                </button>
               </div>
 
               {/* Toggle 1: Hawkeye & Pro Radar */}

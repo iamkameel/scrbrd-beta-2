@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Theme, MatchScorecard, InningsScorecard } from './types';
 import PhaseScoringView from './PhaseScoringView';
+import ScorecardWagonHeatmapView from './ScorecardWagonHeatmapView';
 
 interface ScorecardModalProps {
   theme: Theme;
@@ -20,7 +21,7 @@ export default function ScorecardModal({
   const [activeInnings, setActiveInnings] = useState<1 | 2>(
     scorecard.innings2 ? 2 : 1
   );
-  const [subTab, setSubTab] = useState<'scorecard' | 'phases' | 'partnerships' | 'matchInfo'>('scorecard');
+  const [subTab, setSubTab] = useState<'scorecard' | 'phases' | 'partnerships' | 'wagon_heatmaps' | 'matchInfo'>('scorecard');
 
   const currentInnings: InningsScorecard =
     activeInnings === 1 ? scorecard.innings1 : (scorecard.innings2 || scorecard.innings1);
@@ -233,11 +234,12 @@ export default function ScorecardModal({
           </div>
 
           {/* Subtabs */}
-          <div style={{ display: 'flex', gap: '4px' }}>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             {[
               { id: 'scorecard', label: '📊 Full Scorecard' },
               { id: 'phases', label: '⏱️ Phase Scoring' },
               { id: 'partnerships', label: '🤝 Partnerships' },
+              { id: 'wagon_heatmaps', label: '🎯 Team Wagon Wheel & Heat Maps' },
               { id: 'matchInfo', label: 'ℹ️ Match Info' },
             ].map(tab => (
               <button
@@ -619,6 +621,15 @@ export default function ScorecardModal({
                 </div>
               </div>
             </div>
+          )}
+
+          {/* TAB 4: Team Wagon Wheel & Heat Maps (With Player Statistics & Dossier Drilldown) */}
+          {subTab === 'wagon_heatmaps' && (
+            <ScorecardWagonHeatmapView
+              theme={D}
+              scorecard={scorecard}
+              activeInnings={activeInnings}
+            />
           )}
         </div>
       </div>

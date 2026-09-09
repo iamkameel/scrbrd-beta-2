@@ -2,26 +2,14 @@
 
 import React, { useState } from 'react';
 import { Theme } from './types';
+import MatchDetailsModal, { FixtureDetail } from './MatchDetailsModal';
 
 interface CalendarViewProps {
   theme: Theme;
-  onOpenScorer: () => void;
+  onOpenScorer?: () => void;
 }
 
-interface FixtureEvent {
-  id: string;
-  date: string;
-  time: string;
-  homeTeam: string;
-  awayTeam: string;
-  venue: string;
-  division: "U19A" | "U15A" | "U13A";
-  competition: "T20 League" | "50-Over Cup" | "Traditional Derby" | "Scrimmage";
-  status: "upcoming" | "live" | "complete";
-  weather: string;
-  bus?: string;
-  scorer: string;
-}
+interface FixtureEvent extends FixtureDetail {}
 
 const FIXTURES: FixtureEvent[] = [
   { id: "f1", date: "2026-03-08", time: "09:30", homeTeam: "Westville U19A", awayTeam: "Kearsney College", venue: "Bowden's Field", division: "U19A", competition: "T20 League", status: "live", weather: "☀️ 26°C Clear", scorer: "Brian Wessels" },
@@ -37,6 +25,7 @@ export default function CalendarView({ theme: D, onOpenScorer }: CalendarViewPro
   const [viewMode, setViewMode] = useState<"agenda" | "month">("agenda");
   const [compFilter, setCompFilter] = useState<string>("all");
   const [divFilter, setDivFilter] = useState<string>("all");
+  const [selectedFixture, setSelectedFixture] = useState<FixtureEvent | null>(null);
 
   const filteredFixtures = FIXTURES.filter(f => {
     if (compFilter !== "all" && f.competition !== compFilter) return false;
@@ -227,6 +216,7 @@ export default function CalendarView({ theme: D, onOpenScorer }: CalendarViewPro
                     </button>
                   ) : (
                     <button
+                      onClick={() => setSelectedFixture(f)}
                       style={{
                         padding: '8px 14px',
                         borderRadius: D.pill,
@@ -276,7 +266,7 @@ export default function CalendarView({ theme: D, onOpenScorer }: CalendarViewPro
                     padding: '8px',
                     borderRadius: D.md,
                     background: isToday ? `${D.indigo}15` : D.surf2,
-                    border: `1px solid ${isToday ? D.indigo : D.border}`,
+                    border: `1px solid ${D.indigo + '55'}`,
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '4px',
@@ -292,7 +282,7 @@ export default function CalendarView({ theme: D, onOpenScorer }: CalendarViewPro
                   {dayEvents.map(ev => (
                     <div
                       key={ev.id}
-                      onClick={() => ev.status === 'live' ? onOpenScorer() : null}
+                      onClick={() => ev.status === 'live' ? onOpenScorer?.() : setSelectedFixture(ev)}
                       style={{
                         padding: '3px 5px',
                         borderRadius: '3px',
@@ -304,9 +294,9 @@ export default function CalendarView({ theme: D, onOpenScorer }: CalendarViewPro
                         overflow: 'hidden',
                         whiteSpace: 'nowrap',
                         textOverflow: 'ellipsis',
-                        cursor: ev.status === 'live' ? 'pointer' : 'default',
+                        cursor: 'pointer',
                       }}
-                      title={`${ev.homeTeam} vs ${ev.awayTeam} (${ev.venue})`}
+                      title={`${ev.homeTeam} vs ${ev.awayTeam} (${ev.venue}) - Click for details`}
                     >
                       {ev.homeTeam.split(" ")[0]} vs {ev.awayTeam.split(" ")[0]}
                     </div>
@@ -316,6 +306,16 @@ export default function CalendarView({ theme: D, onOpenScorer }: CalendarViewPro
             })}
           </div>
         </div>
+      )}
+
+      {/* Match Details Modal */}
+      {selectedFixture && (
+        <MatchDetailsModal
+          theme={D}
+          fixture={selectedFixture}
+          onClose={() => setSelectedFixture(null)}
+          onOpenScorer={onOpenScorer}
+        />
       )}
     </div>
   );
