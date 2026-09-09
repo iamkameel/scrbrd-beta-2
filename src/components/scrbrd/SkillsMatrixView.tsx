@@ -16,6 +16,7 @@ import {
   generateSubjectAccessRequestExport
 } from './skillsAssessmentData';
 import PlayerSearchFilterSelect from './PlayerSearchFilterSelect';
+import PlayerSkillRadarChart from './PlayerSkillRadarChart';
 import {
   Target, Award, TrendingUp, Shield, Zap, Sparkles, CheckCircle2,
   AlertCircle, Dumbbell, UserCheck, BookOpen, Clock, Layers,
@@ -940,6 +941,22 @@ export default function SkillsMatrixView({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Radar Chart Summary Card */}
+          <div style={{
+            padding: '20px',
+            borderRadius: D.lg,
+            background: D.cardBg,
+            border: `1px solid ${D.border}`,
+          }}>
+            <PlayerSkillRadarChart
+              theme={D}
+              player={activePlayer}
+              assessment={latestAssessment || undefined}
+              height={310}
+              showBenchmark={true}
+            />
           </div>
 
           {/* Assessment Form or Derived Read Grid */}

@@ -33,6 +33,7 @@ import { MatchScorecard } from "./types";
 import ScoutingHub from "./ScoutingHub";
 import SkillsMatrixView from "./SkillsMatrixView";
 import PlayerSearchFilterSelect from "./PlayerSearchFilterSelect";
+import PlayerSkillRadarChart from "./PlayerSkillRadarChart";
 import LogisticsView from "./LogisticsView";
 import FieldsView from "./FieldsView";
 import TrainingView from "./TrainingView";
@@ -1681,44 +1682,14 @@ export default function ScrbrdOS() {
                   )}
                 </Card>
 
-                {/* Skill Attributes */}
+                {/* Skill Attributes Radar Chart & Technical Metrics */}
                 <Card sx={{ padding: "20px" }}>
-                  <div style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 700, marginBottom: "12px" }}>TECHNICAL SKILL METRICS</div>
-                  {SKILLS_MATRIX[selectedPlayer.id] ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                      {Object.entries(SKILLS_MATRIX[selectedPlayer.id].batting || {}).map(([skill, val]) => (
-                        <div key={skill}>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontFamily: D.body, fontSize: "11px", marginBottom: "3px" }}>
-                            <span style={{ textTransform: "capitalize" }}>{skill}</span>
-                            <span style={{ fontFamily: D.mono, fontWeight: 700, color: D.sky }}>{Number(val)}</span>
-                          </div>
-                          <div style={{ width: "100%", height: "5px", background: D.surf3, borderRadius: "3px", overflow: "hidden" }}>
-                            <div style={{ width: `${Number(val)}%`, height: "100%", background: D.sky }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                      {[
-                        { name: "Front Foot Defense", val: 86 },
-                        { name: "Cover Drive Execution", val: 91 },
-                        { name: "Pull / Hook Control", val: 82 },
-                        { name: "Running Between Wickets", val: 88 },
-                        { name: "Throwing Accuracy", val: 85 },
-                      ].map(item => (
-                        <div key={item.name}>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontFamily: D.body, fontSize: "11px", marginBottom: "3px" }}>
-                            <span>{item.name}</span>
-                            <span style={{ fontFamily: D.mono, fontWeight: 700, color: D.emerald }}>{item.val}</span>
-                          </div>
-                          <div style={{ width: "100%", height: "5px", background: D.surf3, borderRadius: "3px", overflow: "hidden" }}>
-                            <div style={{ width: `${item.val}%`, height: "100%", background: D.emerald }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <PlayerSkillRadarChart
+                    theme={D}
+                    player={selectedPlayer}
+                    height={300}
+                    showBenchmark={true}
+                  />
                 </Card>
               </div>
             </div>
