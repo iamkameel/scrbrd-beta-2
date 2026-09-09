@@ -154,7 +154,274 @@ const SCOUTING_REPORTS: Record<string, {
     },
     scoutSummary: "High-character leader and complete all-rounder. Ready for Dolphins Academy intake.",
   },
+  no4: {
+    mechanics: {
+      batting: {
+        stance: "Slightly open, aggressive stance with high backlift targeting mid-off & extra cover.",
+        trigger: "Quick back-and-across shuffle onto rear foot, setting up powerful vertical leverage.",
+        headPos: "Still and locked over line of off-stump with upright posture through impact.",
+        pointOfImpact: "Out in front of body; devastating flat-bat pull shot and wristy lofted drive.",
+      },
+      bowling: {
+        runUp: "Rhythmic, energetic 15-step approach generating quick arm speed through crease.",
+        gather: "Upright chest posture with high front knee lift at release point.",
+        kneeBrace: "Solid front knee brace delivering 122–126 km/h seam movement.",
+        releasePoint: "High 11:30 arm slot with late seam movement off coastal pitches.",
+        seam: "Upright seam with natural outswing to left-handers.",
+      },
+    },
+    strengths: [
+      "Elite match-winning captaincy and tactical field placing in derby matches",
+      "Devastating back-foot boundary hitting against fast bowling (SR 134.0)",
+      "Clutch death-overs bowler with pinpoint wide yorkers and slower cutters",
+      "Exceptional athleticism in the field at extra cover and mid-wicket",
+    ],
+    growthAreas: [
+      "Vulnerable to tight, disciplined off-spin away from his body early in innings",
+      "Can over-commit to aggressive strokes when target run rate climbs",
+      "Needs workload management between high bowling overs and top-order batting",
+    ],
+    proComparison: {
+      name: "Jacques Kallis",
+      school: "Wynberg Boys' High",
+      similarityPct: 92,
+      notes: "Mighty all-round presence with authoritative strokeplay, tight seam bowling, and elite match awareness.",
+    },
+    scoutSummary: "Dynamic, explosive all-rounder and tactical captain of Northwood Knights. Heavy run-scorer through the off-side with aggressive death-overs bowling capability.",
+  },
+  k4: {
+    mechanics: {
+      batting: {
+        stance: "Tall, classical upright stance with narrow feet placement and high elbow prep.",
+        trigger: "Subtle back-foot press with minimal head movement, allowing late decision-making.",
+        headPos: "Pristine alignment; chin tucked close to shoulder over point of contact.",
+        pointOfImpact: "Directly under the eyes on front-foot drives; late wristy flick through mid-wicket.",
+      },
+      bowling: {
+        runUp: "Controlled, steady 14-step approach accelerating into the crease.",
+        gather: "Semi-side-on chest angle with smooth rotational transition.",
+        kneeBrace: "Firm, stable front leg block delivering 118–122 km/h tight lines.",
+        releasePoint: "Upright seam position hitting the deck hard on good length.",
+        seam: "Tight seam presentation with subtle off-cutter variation.",
+      },
+    },
+    strengths: [
+      "Impeccable cover drive and straight-bat punch off back foot",
+      "Big-match temperament under intense pressure against top-tier opposition",
+      "Clean, effortless power-hitting over long-on and long-off against spin",
+      "Disciplined bowling spell control with low boundary percentage allowed",
+    ],
+    growthAreas: [
+      "Occasional defensive stiffness against short-pitched bouncers aimed at collarbone",
+      "Can improve sharp single-taking speed early in build-up overs",
+      "Seam bowling can become predictable on flat, dry inland pitches",
+    ],
+    proComparison: {
+      name: "AB de Villiers",
+      school: "Affies (Afrikaanse Hoër Seunskool)",
+      similarityPct: 89,
+      notes: "Elegant stroke-maker with fluid balance, high-range power, and inspirational team leadership.",
+    },
+    scoutSummary: "Classical, high-character captain of Kearsney College 1st XI. Exceptional technical purity against both seam and spin with explosive six-hitting in closing overs.",
+  },
+  h3: {
+    mechanics: {
+      batting: {
+        stance: "Relaxed, low crouch as a left-hander with high backlift pointing toward second slip.",
+        trigger: "Smooth forward press with soft hands, riding the bounce effortlessly.",
+        headPos: "Unshakable head stability; eyes perfectly horizontal through shot execution.",
+        pointOfImpact: "Late contact under eyes; signature square cut and silk-smooth cover drive.",
+      },
+    },
+    strengths: [
+      "Silky left-handed timing and effortless placement through extra cover",
+      "Elite glovework with ultra-fast stumping reaction times against finger spin",
+      "Excellent manipulator of field gaps in middle overs to maintain high strike rotation",
+      "Quiet composure under intense pressure behind the stumps",
+    ],
+    growthAreas: [
+      "Susceptible to sharp inswinging yorkers aimed at toes early in innings",
+      "Can look to expand aerial boundary hitting options in death overs",
+      "Needs to build physical endurance for back-to-back multi-day tournament fixtures",
+    ],
+    proComparison: {
+      name: "Quinton de Kock",
+      school: "King Edward VII (KES)",
+      similarityPct: 91,
+      notes: "Lightning-fast left-handed opening/top-order keeper-batsman with effortless boundary flow and razor-sharp gloves.",
+    },
+    scoutSummary: "Sublime left-handed wicketkeeper-batsman for Hilton College. Silky timing through the off-side with exceptional glovework behind the stumps.",
+  },
+  no8: {
+    mechanics: {
+      batting: {
+        stance: "Power hitter base with high backlift ready for tail-end clearance.",
+        trigger: "Front foot plant targeting long-on and mid-wicket boundaries.",
+        headPos: "Slight head pull away when swinging against fast pace.",
+        pointOfImpact: "Out in front for maximum swing extension.",
+      },
+      bowling: {
+        runUp: "Explosive, long 18-step approach with increasing stride length.",
+        gather: "High side-on leap with strong shoulder coil and back-bend.",
+        kneeBrace: "Rigid front knee brace absorbing heavy impact to deliver 128–132 km/h.",
+        releasePoint: "Tall 12 o'clock release generating steep bounce and sharp outswing.",
+        seam: "Upright seam hitting the deck with late outswing shape.",
+      },
+    },
+    strengths: [
+      "Lethal conventional outswing to right-handers pitched on 5–6m length",
+      "High-velocity strike rate on coastal pitches (27 wickets @ 14.2 avg)",
+      "Intimidating short ball with sharp climbing trajectory to helmet",
+      "Maintains pace and intensity into 3rd and 4th spells under hot conditions",
+    ],
+    growthAreas: [
+      "Requires tighter line control when wind conditions reduce swing assistance",
+      "Lower-order batting technique requires refinement against quality spin",
+      "Follow-through occasionally drifts onto pitch danger area",
+    ],
+    proComparison: {
+      name: "Kagiso Rabada",
+      school: "St Stithians College",
+      similarityPct: 93,
+      notes: "High-octane fast bowler with natural bounce, lethal late outswing, and relentless strike capability.",
+    },
+    scoutSummary: "Premier strike fast bowler for Northwood Knights. Devastating outswing bowler with tall release and explosive bouncer.",
+  },
 };
+
+function getScoutingReportForPlayer(player: Player) {
+  if (SCOUTING_REPORTS[player.id]) {
+    return SCOUTING_REPORTS[player.id];
+  }
+
+  const isLeft = player.batHand === "L";
+  const isBat = player.role === "BAT";
+  const isBowl = player.role === "BOWL";
+  const isAll = player.role === "ALL";
+  const isWK = player.role === "WK";
+
+  const isPacer = player.bowlStyle === "F" || player.bowlStyle === "M";
+  const isSpinner = player.bowlStyle === "S";
+
+  let proComp = {
+    name: "Hashim Amla",
+    school: "DHS (Durban High School)",
+    similarityPct: 87,
+    notes: "Serene wristwork and relentless concentration with effortless timing through mid-wicket.",
+  };
+
+  if (isWK) {
+    proComp = isLeft ? {
+      name: "Quinton de Kock",
+      school: "King Edward VII (KES)",
+      similarityPct: 91,
+      notes: "Lightning-fast left-handed keeper-batsman with explosive counter-attacking boundary power.",
+    } : {
+      name: "Mark Boucher",
+      school: "Selborne College",
+      similarityPct: 88,
+      notes: "Gritty, competitive wicketkeeper-finisher with ultra-reliable reflexes behind the stumps.",
+    };
+  } else if (isPacer && (isBowl || isAll)) {
+    proComp = player.bowlStyle === "F" ? {
+      name: "Kagiso Rabada",
+      school: "St Stithians College",
+      similarityPct: 92,
+      notes: "Pace spearhead hitting heavy lengths with explosive bounce and lethal seam movement.",
+    } : {
+      name: "Vernon Philander",
+      school: "Ravensmead High",
+      similarityPct: 90,
+      notes: "Pinpoint accuracy on off-stump with subtle late movement forcing persistent outside edges.",
+    };
+  } else if (isSpinner) {
+    proComp = player.bowlArm === "L" ? {
+      name: "Paul Adams",
+      school: "Plumstead High",
+      similarityPct: 86,
+      notes: "Unorthodox spin flight with deceptive drift and sharp turn off coastal pitches.",
+    } : {
+      name: "Keshav Maharaj",
+      school: "Northwood School",
+      similarityPct: 93,
+      notes: "Masterful control of trajectory, subtle arm ball variations, and relentless pressure.",
+    };
+  } else if (isBat || isAll) {
+    if (player.sr > 130) {
+      proComp = {
+        name: "David Miller",
+        school: "Maritzburg College",
+        similarityPct: 89,
+        notes: "Devastating white-ball boundary striker with immense forearm extension through the ball.",
+      };
+    } else if (isLeft) {
+      proComp = {
+        name: "JP Duminy",
+        school: "Fairbairn College",
+        similarityPct: 88,
+        notes: "Elegant left-handed strokeplay with fluent drive execution and sharp tactical awareness.",
+      };
+    } else {
+      proComp = {
+        name: "Faf du Plessis",
+        school: "Affies",
+        similarityPct: 89,
+        notes: "Athletic power, disciplined line leaving, and commanding back-foot punch strokes.",
+      };
+    }
+  }
+
+  const battingMechanics = {
+    stance: isLeft 
+      ? "Lhe-side crouched stance with wide base, giving full sight of bowler's release window."
+      : "Balanced, shoulder-width base with soft knee flex and clean backlift alignment.",
+    trigger: isLeft
+      ? "Subtle back-and-across shuffle onto the rear foot to open up off-side scoring arcs."
+      : "Forward press onto front foot with quick weight transfer into line of delivery.",
+    headPos: `Impeccable head stability through contact; nose aligned over ${isLeft ? "off-stump" : "middle-and-off"}.`,
+    pointOfImpact: player.sr > 125
+      ? "Extended contact point well out in front for maximum leverage on lofted drives."
+      : "Soft contact directly under the eyes, favoring pristine placement and strike rotation.",
+  };
+
+  const bowlingMechanics = (isBowl || isAll || player.wkts > 5) ? {
+    runUp: isPacer 
+      ? `Rhythmic ${player.bowlStyle === "F" ? "16" : "14"}-step approach building momentum into the crease.`
+      : "Controlled 7-step approach with high arm gather and balanced deceleration.",
+    gather: isPacer ? "Semi-open chest coil with strong high front-arm extension." : "Upright chest gather with smooth hip-shoulder rotation.",
+    kneeBrace: isPacer 
+      ? `Solid front leg brace absorption generating ${player.bowlStyle === "F" ? "125–130" : "118–124"} km/h.`
+      : "Firm front leg block providing high release angle and spin trajectory.",
+    releasePoint: isPacer ? "High 11:30 arm slot hitting seam on 6-meter good length." : "High 12 o'clock release with strong revolutions over top of ball.",
+    seam: isPacer ? "Upright seam presentation with late shape into right-handers." : "Sharp revolutions imparting drift into pads and turn off pitch.",
+  } : undefined;
+
+  const strengths = [
+    `Strong technical proficiency for ${player.school} (${player.role} role)`,
+    `High match contribution with a ${player.avg} batting avg / ${player.wkts} season wickets`,
+    isLeft ? "Tricky left-handed angles that disrupt bowler lengths" : "Pure stroke alignment through the V against seam bowlers",
+    player.sr > 125 ? "Explosive boundary hitting option under pressure" : "Consistent strike rotation and tactical composure in middle overs",
+  ];
+
+  const growthAreas = [
+    isPacer ? "Requires tighter length discipline under dry inland conditions" : "Needs to sharpen defensive front-foot press against short bouncers",
+    "Strike rotation when deep boundary fielders are stationed on the rope",
+    "Physical conditioning for sustained multi-match tournament weeks",
+  ];
+
+  const scoutSummary = player.bio || `${player.name} is a key ${player.role} prospect from ${player.school}. Displays high tactical maturity and strong technical base for senior school competition.`;
+
+  return {
+    mechanics: {
+      batting: battingMechanics,
+      bowling: bowlingMechanics,
+    },
+    strengths,
+    growthAreas,
+    proComparison: proComp,
+    scoutSummary,
+  };
+}
 
 const PRESET_QUERIES = [
   "Who is the leading wicket-taker in the U19 league?",
@@ -212,7 +479,7 @@ export default function ScoutingHub({
   const [comparePlayerBId, setComparePlayerBId] = useState<string>("p81");
 
   const activePlayer = allPlayers.find(p => p.id === selectedPlayerId) || allPlayers[0];
-  const report = SCOUTING_REPORTS[selectedPlayerId] || SCOUTING_REPORTS.p1;
+  const report = getScoutingReportForPlayer(activePlayer);
 
   // Filtered players for talent search
   const filteredTalent = useMemo(() => {
@@ -237,7 +504,7 @@ export default function ScoutingHub({
       } else if (q.toLowerCase().includes("fast") || q.toLowerCase().includes("outswing")) {
         setQueryResult("🎯 Scout Match: Callum Henderson (Northwood, 188cm, 27 wkts) & Luca De Villiers (Westville, 130 km/h) match elite pace criteria with verified outswing.");
       } else {
-        setQueryResult(`🔍 Analysis for ${activePlayer.name}: 48.2 Batting Avg, 135.4 Strike Rate. Pro Comparison: ${report.proComparison.name} (${report.proComparison.similarityPct}% mechanical similarity). Recommended for provincial academy contract.`);
+        setQueryResult(`🔍 Analysis for ${activePlayer.name}: ${activePlayer.avg} Batting Avg, ${activePlayer.sr} Strike Rate. Pro Comparison: ${report.proComparison.name} (${report.proComparison.similarityPct}% mechanical similarity). Recommended for provincial academy contract.`);
       }
     }, 500);
   };

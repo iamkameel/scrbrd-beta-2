@@ -258,7 +258,8 @@ export default function HeadToHeadComparisonView({
     valA: number,
     valB: number,
     unit = '',
-    lowerIsBetter = false
+    lowerIsBetter = false,
+    key?: string | number
   ) => {
     const diff = valA - valB;
     const aWins = lowerIsBetter ? diff < 0 : diff > 0;
@@ -269,6 +270,7 @@ export default function HeadToHeadComparisonView({
 
     return (
       <div
+        key={key ?? label}
         style={{
           padding: '10px 14px',
           background: D.surf2,
@@ -829,7 +831,9 @@ export default function HeadToHeadComparisonView({
                 padding: '10px 18px',
                 borderRadius: `${D.md} ${D.md} 0 0`,
                 background: isActive ? D.surf1 : 'transparent',
-                border: `1px solid ${isActive ? D.border : 'transparent'}`,
+                borderTop: `1px solid ${isActive ? D.border : 'transparent'}`,
+                borderLeft: `1px solid ${isActive ? D.border : 'transparent'}`,
+                borderRight: `1px solid ${isActive ? D.border : 'transparent'}`,
                 borderBottom: isActive ? `2px solid ${D.indigo}` : '1px solid transparent',
                 color: isActive ? D.textPrimary : D.textMuted,
                 fontFamily: D.head,

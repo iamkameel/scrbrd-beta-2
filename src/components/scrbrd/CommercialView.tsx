@@ -10,10 +10,20 @@ interface CommercialViewProps {
 }
 
 export default function CommercialView({ theme: D, activeSchoolId }: CommercialViewProps) {
-  const [activeTab, setActiveTab] = useState<"portfolio" | "exclusivity" | "inventory_simulator" | "revenue_ledger">("portfolio");
+  const [activeTab, setActiveTab] = useState<"portfolio" | "exclusivity" | "inventory_simulator" | "rate_card" | "contract_vault" | "revenue_ledger">("portfolio");
   const [campaigns, setCampaigns] = useState(SPONSORSHIP_CAMPAIGNS);
   const [scopeFilter, setScopeFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+
+  // Rate Card Calculator State
+  const [fixturePrestige, setFixturePrestige] = useState<number>(2.2); // 2.2x Marquee Derby
+  const [streamQualityTier, setStreamQualityTier] = useState<number>(1.5); // 1080p Multi-Cam
+  const [audienceEst, setAudienceEst] = useState<number>(18500); // Projected impressions
+  const [baseCPM, setBaseCPM] = useState<number>(120); // ZAR per 1000 impressions
+
+  // Calculated Yield
+  const calculatedYieldPerMatch = Math.round((audienceEst / 1000) * baseCPM * fixturePrestige * streamQualityTier);
+  const calculatedSchool80 = Math.round(calculatedYieldPerMatch * 0.8);
 
   // Conflict simulator state
   const [simBrand, setSimBrand] = useState("");
@@ -115,11 +125,13 @@ export default function CommercialView({ theme: D, activeSchoolId }: CommercialV
         </div>
 
         {/* Engine Sub-Tab Navigation */}
-        <div style={{ display: "flex", gap: "6px", background: D.surf2, padding: "4px", borderRadius: D.pill, border: `1px solid ${D.border}` }}>
+        <div style={{ display: "flex", gap: "6px", background: D.surf2, padding: "4px", borderRadius: D.pill, border: `1px solid ${D.border}`, flexWrap: "wrap" }}>
           {[
             { id: "portfolio", label: "📊 Portfolio & Governance" },
             { id: "exclusivity", label: "⚡ Exclusivity Matrix" },
             { id: "inventory_simulator", label: "📺 Overlay Slot Simulator" },
+            { id: "rate_card", label: "💎 Rate Card & Yield Pricing" },
+            { id: "contract_vault", label: "📑 Rights Vault & Section 18A" },
             { id: "revenue_ledger", label: "🏛️ Revenue Ledger (80/20)" },
           ].map(tab => (
             <button
@@ -666,7 +678,199 @@ export default function CommercialView({ theme: D, activeSchoolId }: CommercialV
         </div>
       )}
 
-      {/* ── SUB-TAB 4: REVENUE DISTRIBUTION LEDGER (80/20) ── */}
+      {/* ── SUB-TAB 4: RATE CARD & YIELD PRICING CONFIGURATOR ── */}
+      {activeTab === "rate_card" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+          {/* Rate Card Dynamic Yield Calculator */}
+          <div style={{ padding: "20px", background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+              <div>
+                <div style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 800, color: D.amber }}>
+                  💎 DYNAMIC SPONSORSHIP YIELD & RATE CARD CONFIGURATOR
+                </div>
+                <div style={{ fontFamily: D.body, fontSize: "12px", color: D.textMuted, marginTop: "2px" }}>
+                  Algorithmic CPM rate optimization based on match prestige multipliers, broadcast stream quality, and projected audience impressions.
+                </div>
+              </div>
+              <div style={{ padding: "8px 16px", borderRadius: D.pill, background: `${D.amber}20`, border: `1px solid ${D.amber}44`, color: D.amber, fontFamily: D.mono, fontSize: "12px", fontWeight: 800 }}>
+                EST. YIELD / MATCH: R {calculatedYieldPerMatch.toLocaleString()}
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
+              <div>
+                <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                  FIXTURE PRESTIGE MULTIPLIER
+                </label>
+                <select
+                  value={fixturePrestige}
+                  onChange={e => setFixturePrestige(parseFloat(e.target.value))}
+                  style={{ width: "100%", padding: "8px 12px", background: D.surf2, border: `1px solid ${D.border}`, borderRadius: D.sm, color: D.textPrimary, fontFamily: D.body, fontSize: "12px" }}
+                >
+                  <option value={1.0}>Standard Saturday League (1.0x Base)</option>
+                  <option value={1.4}>Regional Derby e.g. Coastal (1.4x)</option>
+                  <option value={2.2}>Marquee Inter-Provincial Rivalry e.g. WBHS vs Hilton (2.2x)</option>
+                  <option value={3.0}>National Schools Festival / TV Broadcast (3.0x)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                  BROADCAST STREAM QUALITY TIER
+                </label>
+                <select
+                  value={streamQualityTier}
+                  onChange={e => setStreamQualityTier(parseFloat(e.target.value))}
+                  style={{ width: "100%", padding: "8px 12px", background: D.surf2, border: `1px solid ${D.border}`, borderRadius: D.sm, color: D.textPrimary, fontFamily: D.body, fontSize: "12px" }}
+                >
+                  <option value={1.0}>Standard Single-Cam Feed (1.0x)</option>
+                  <option value={1.5}>1080p Multi-Cam + Hawk-Eye DRS (1.5x)</option>
+                  <option value={2.0}>4K Ultra-HD + Live Commentary Box (2.0x)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                  PROJECTED IMPRESSIONS (VIEWERS)
+                </label>
+                <input
+                  type="number"
+                  value={audienceEst}
+                  onChange={e => setAudienceEst(parseInt(e.target.value, 10) || 1000)}
+                  style={{ width: "100%", padding: "8px 12px", background: D.surf2, border: `1px solid ${D.border}`, borderRadius: D.sm, color: D.textPrimary, fontFamily: D.mono, fontSize: "12px" }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                  BASE CPM (ZAR / 1,000 IMPRESSIONS)
+                </label>
+                <input
+                  type="number"
+                  value={baseCPM}
+                  onChange={e => setBaseCPM(parseInt(e.target.value, 10) || 50)}
+                  style={{ width: "100%", padding: "8px 12px", background: D.surf2, border: `1px solid ${D.border}`, borderRadius: D.sm, color: D.textPrimary, fontFamily: D.mono, fontSize: "12px" }}
+                />
+              </div>
+            </div>
+
+            {/* Yield Distribution Breakdown Card */}
+            <div style={{ marginTop: "16px", padding: "14px 18px", background: D.surf2, borderRadius: D.md, border: `1px solid ${D.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+              <div>
+                <div style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 800, color: D.textPrimary }}>
+                  Target Yield Breakdown per Single Broadcast Fixture:
+                </div>
+                <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>
+                  Calculated using SCRBRD Yield Engine v2.4 · 80% directly allocated to host school cricket trust.
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "16px" }}>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontFamily: D.mono, fontSize: "9px", color: D.textMuted }}>SCHOOL SHARE (80%)</div>
+                  <div style={{ fontFamily: D.mono, fontSize: "16px", fontWeight: 800, color: D.emerald }}>R {calculatedSchool80.toLocaleString()}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontFamily: D.mono, fontSize: "9px", color: D.textMuted }}>SCRBRD PLATFORM (20%)</div>
+                  <div style={{ fontFamily: D.mono, fontSize: "16px", fontWeight: 800, color: D.sky }}>R {(calculatedYieldPerMatch - calculatedSchool80).toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Standard Commercial Rate Card Tiers */}
+          <div style={{ background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, padding: "20px" }}>
+            <div style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 800, color: D.textPrimary, marginBottom: "12px" }}>
+              OFFICIAL SPONSORSHIP RATE CARD PACKAGES (ANNUAL & PER-FIXTURE)
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px" }}>
+              {[
+                { name: "Title Circuit Sponsor", rate: "R 250,000 / season", color: D.indigo, features: ["Live Score Bug Overlay across all 23 squads", "Primary Home Page Hero Banner Placement", "Exclusivity in Banking/Telco category", "80% directly funds Bursary & Equipment Trust"] },
+                { name: "Derby Fixture Partner", rate: "R 45,000 / derby", color: D.sky, features: ["Title rights for WBHS vs Hilton / DHS Derbies", "Hawk-Eye DRS replay stinger placement", "Coin Toss & Man of the Match naming rights", "Dedicated VIP Hospitality Pass allocation"] },
+                { name: "Wagon Wheel / Data Partner", rate: "R 85,000 / season", color: D.emerald, features: ["Vector watermark on 360° Wagon Wheels", "StatsGuru Query Engine logo placement", "Analyst Dashboard export co-branding", "Quarterly brand impression analytics report"] },
+                { name: "Grassroots Development Partner", rate: "R 35,000 / season", color: D.amber, features: ["Co-branding on U14A-G & U15A-E squad kits", "Support for SA Transformation Bursary Scholars", "Section 18A Tax Benefit Certificate issued", "Public recognition on School Cricket Board"] },
+              ].map((tier, i) => (
+                <div key={i} style={{ padding: "16px", background: D.surf2, borderRadius: D.md, border: `1px solid ${D.border}`, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "12px" }}>
+                  <div>
+                    <div style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 800, color: tier.color }}>{tier.name}</div>
+                    <div style={{ fontFamily: D.mono, fontSize: "16px", fontWeight: 800, color: D.textPrimary, marginTop: "4px" }}>{tier.rate}</div>
+                    <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                      {tier.features.map((f, j) => (
+                        <div key={j} style={{ fontFamily: D.body, fontSize: "11px", color: D.textSecondary, display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span style={{ color: tier.color }}>✓</span> {f}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <button onClick={() => alert(`Inquiring for package: ${tier.name}`)} style={{ padding: "6px 12px", borderRadius: D.pill, background: tier.color, border: "none", color: "#fff", fontFamily: D.head, fontSize: "10px", fontWeight: 800, cursor: "pointer", width: "100%", marginTop: "8px" }}>
+                    Request Rate Proposal
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SUB-TAB 5: RIGHTS VAULT & SECTION 18A TAX COMPLIANCE ── */}
+      {activeTab === "contract_vault" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+          <div style={{ padding: "18px", background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+            <div>
+              <div style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 800, color: D.indigo }}>
+                📑 DIGITAL RIGHTS VAULT & SECTION 18A TAX CERTIFICATE REPOSITORY
+              </div>
+              <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>
+                Verifiable legal contracts, brand asset compliance kits, and SARS Section 18A tax exemption certificates for corporate sponsors.
+              </div>
+            </div>
+            <button onClick={() => alert("Generating SARS Section 18A Tax Exemption Bundle...")} style={{ padding: "8px 16px", borderRadius: D.pill, background: D.indigo, border: "none", color: "#fff", fontFamily: D.head, fontSize: "11px", fontWeight: 800, cursor: "pointer" }}>
+              📜 Download Tax Exemption Certificates
+            </button>
+          </div>
+
+          <div style={{ background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, padding: "20px" }}>
+            <div style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 800, color: D.textPrimary, marginBottom: "14px" }}>
+              ACTIVE CORPORATE SPONSORSHIP CONTRACTS & AUDIT STATUS
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {[
+                { sponsor: "Hollywoodbets", category: "Sports Betting / Title", value: "R 180,000", section18A: "APPROVED (PBO #93001234)", status: "Executed & Active", assetKit: "SVG / CMYK Verified", signedDate: "2026-01-15" },
+                { sponsor: "FirstNationalBank (FNB)", category: "Banking & Wealth", value: "R 120,000", section18A: "APPROVED (PBO #93005678)", status: "Executed & Active", assetKit: "SVG Verified", signedDate: "2026-02-01" },
+                { sponsor: "Sunfoil Edible Oils", category: "Fast Moving Goods", value: "R 95,000", section18A: "APPROVED (PBO #93009101)", status: "Executed & Active", assetKit: "PNG 300DPI Verified", signedDate: "2026-02-10" },
+                { sponsor: "Puma South Africa", category: "Apparel & Footwear", value: "R 85,000", section18A: "APPROVED (PBO #93001122)", status: "Renewal Pending", assetKit: "Vector Kit Pending", signedDate: "2025-10-01" },
+              ].map((doc, idx) => (
+                <div key={idx} style={{ padding: "14px 18px", background: D.surf2, borderRadius: D.md, border: `1px solid ${D.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 800, color: D.textPrimary }}>{doc.sponsor}</span>
+                      <span style={{ padding: "2px 8px", borderRadius: D.pill, background: `${D.emerald}20`, color: D.emerald, fontFamily: D.mono, fontSize: "10px", fontWeight: 700 }}>
+                        {doc.status}
+                      </span>
+                    </div>
+                    <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, marginTop: "4px" }}>
+                      Category: {doc.category} · Contract Value: <strong style={{ color: D.textPrimary }}>{doc.value}</strong> · Executed: {doc.signedDate}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.emerald }}>{doc.section18A}</div>
+                      <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.sky, marginTop: "2px" }}>Brand Kit: {doc.assetKit}</div>
+                    </div>
+                    <button onClick={() => alert(`Opening contract document for ${doc.sponsor}...`)} style={{ padding: "6px 12px", borderRadius: D.pill, background: D.surf1, border: `1px solid ${D.border}`, color: D.textPrimary, fontFamily: D.head, fontSize: "10px", fontWeight: 700, cursor: "pointer" }}>
+                      View Agreement
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SUB-TAB 6: REVENUE DISTRIBUTION LEDGER (80/20) ── */}
       {activeTab === "revenue_ledger" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
           {/* Governance Explanation */}

@@ -18,6 +18,7 @@ import {
   SKILLS_MATRIX,
   SHOT_DATA_SAMPLE,
   SCHOOL_PITCH_CONDITIONS,
+  getSchoolFieldConditions,
   DERBY_RECORDS,
   pctDays,
 } from "./data";
@@ -43,6 +44,9 @@ import NotificationsView, { isRoleAuthorizedForNotification, NotificationCategor
 import CommercialView from "./CommercialView";
 import GovernanceView from "./GovernanceView";
 import MultiSquadCoachView from "./MultiSquadCoachView";
+import StatsGuruQueryEngineView from "./StatsGuruQueryEngineView";
+import SettingsView from "./SettingsView";
+import UserProfilesView from "./UserProfilesView";
 import { getSchoolSquads } from "./multiSquadData";
 import { ScrbrdLogo } from "./ScrbrdLogo";
 import Image from "next/image";
@@ -53,7 +57,21 @@ export default function ScrbrdOS() {
   const [activeSchoolId, setActiveSchoolId] = useState<string>("WES");
   const [selectedSquadId, setSelectedSquadId] = useState<string>("WES_1ST");
   const [isDark, setIsDark] = useState<boolean>(true);
-  const [users] = useState(USERS_INITIAL);
+  const [users, setUsers] = useState(() => USERS_INITIAL.map(u => ({
+    ...u,
+    roles: [u.role || 'coach'],
+    assignedSquads: u.schoolId === 'WES' ? ['WES_2ND'] : [],
+  })));
+
+  const handleUpdateUser = (updatedUser: any) => {
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    setToastNotification({
+      id: `toast_${Date.now()}`,
+      title: 'User Profile Updated',
+      body: `Successfully updated permissions and squad assignments for ${updatedUser.name}.`,
+      icon: '👤',
+    });
+  };
   const [scorerOpen, setScorerOpen] = useState<boolean>(false);
   const [activeScorerMatch, setActiveScorerMatch] = useState<Match | undefined>(undefined);
   const [selectedPlayer, setSelectedPlayer] = useState<Player>(PLAYERS[0]);
@@ -263,6 +281,9 @@ export default function ScrbrdOS() {
   // Matches view filter
   const [matchScopeFilter, setMatchScopeFilter] = useState<"school" | "all" | "live">("school");
 
+  // Pitch/Field selection for Venue Conditions
+  const [activePitchIndex, setActivePitchIndex] = useState<number>(0);
+
   // Interactive Live Score simulation state per match
   const [liveScores, setLiveScores] = useState<Record<string, { runs: number; wkts: number; balls: number; overStr: string }>>({
     m1: { runs: 142, wkts: 3, balls: 86, overStr: "14.2" },
@@ -296,7 +317,9 @@ export default function ScrbrdOS() {
   );
   const liveMatches = MATCHES.filter(m => m.status === "live");
   const activeHeroMatch = allSchoolMatches.find(m => m.status === "live") || MATCHES.find(m => m.status === "live") || MATCHES[0];
-  const schoolPitch = SCHOOL_PITCH_CONDITIONS[activeSchool.id] || SCHOOL_PITCH_CONDITIONS["WES"];
+  const schoolPitches = getSchoolFieldConditions(activeSchool.id);
+  const currentPitchIdx = activePitchIndex < schoolPitches.length ? activePitchIndex : 0;
+  const schoolPitch = schoolPitches[currentPitchIdx] || schoolPitches[0];
   const schoolInjuries = INJURIES.filter(inj => inj.schoolId === activeSchool.id);
 
   // Derby lookup
@@ -781,7 +804,14 @@ export default function ScrbrdOS() {
             <span style={{ fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>Role:</span>
             <select
               value={role}
-              onChange={e => setRole(e.target.value)}
+              onChange={e => {
+                const newRole = e.target.value;
+                setRole(newRole);
+                const newNav = ROLES[newRole]?.nav || ROLES.superadmin.nav;
+                if (!newNav.includes(page)) {
+                  setPage("dashboard");
+                }
+              }}
               style={{ padding: "5px 10px", borderRadius: D.pill, background: D.surf2, border: `1px solid ${D.border}`, color: D.textPrimary, fontFamily: D.body, fontSize: "11px", cursor: "pointer", outline: "none" }}
             >
               {Object.entries(ROLES).map(([key, r]) => (
@@ -1320,10 +1350,98 @@ export default function ScrbrdOS() {
               {/* Pitch Conditions & Home Ground Curator Telemetry */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "16px" }}>
                 <Card sx={{ padding: "18px" }}>
-                  <SectionHeader title={`Venue Conditions: ${schoolPitch.name}`} color={D.teal} />
+                  <SectionHeader
+                    title={`Venue Conditions: ${schoolPitch.name}`}
+                    sub={`${activeSchool.shortName} · Field ${currentPitchIdx + 1} of ${schoolPitches.length}`}
+                    color={D.teal}
+                    actions={
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <button
+                          disabled={schoolPitches.length <= 1}
+                          onClick={() => setActivePitchIndex(prev => (prev - 1 + schoolPitches.length) % schoolPitches.length)}
+                          title="Previous Field"
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: D.sm,
+                            border: `1px solid ${D.border}`,
+                            background: D.surf2,
+                            color: D.textPrimary,
+                            fontSize: "11px",
+                            fontFamily: D.mono,
+                            fontWeight: 700,
+                            cursor: schoolPitches.length <= 1 ? "not-allowed" : "pointer",
+                            opacity: schoolPitches.length <= 1 ? 0.5 : 1,
+                          }}
+                        >
+                          ←
+                        </button>
+                        <span style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted, padding: "0 2px" }}>
+                          {currentPitchIdx + 1}/{schoolPitches.length}
+                        </span>
+                        <button
+                          disabled={schoolPitches.length <= 1}
+                          onClick={() => setActivePitchIndex(prev => (prev + 1) % schoolPitches.length)}
+                          title="Next Field"
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: D.sm,
+                            border: `1px solid ${D.border}`,
+                            background: D.surf2,
+                            color: D.textPrimary,
+                            fontSize: "11px",
+                            fontFamily: D.mono,
+                            fontWeight: 700,
+                            cursor: schoolPitches.length <= 1 ? "not-allowed" : "pointer",
+                            opacity: schoolPitches.length <= 1 ? 0.5 : 1,
+                          }}
+                        >
+                          →
+                        </button>
+                      </div>
+                    }
+                  />
+
+                  {/* Horizontal Scrollable Field Pill Selector */}
+                  <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "8px", marginTop: "10px", marginBottom: "12px", scrollbarWidth: "thin" }}>
+                    {schoolPitches.map((pitch, idx) => {
+                      const isSelected = idx === currentPitchIdx;
+                      return (
+                        <button
+                          key={pitch.groundId || pitch.name}
+                          onClick={() => setActivePitchIndex(idx)}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: D.pill,
+                            border: isSelected ? `1px solid ${D.teal}` : `1px solid ${D.border}`,
+                            background: isSelected ? `${D.teal}22` : D.surf2,
+                            color: isSelected ? D.teal : D.textSecondary,
+                            fontFamily: D.head,
+                            fontSize: "11px",
+                            fontWeight: isSelected ? 800 : 600,
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            transition: "all 0.15s ease",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <span>{idx === 0 ? "🏟️" : "🏏"}</span>
+                          <span>{pitch.name}</span>
+                          {idx === 0 && (
+                            <span style={{ fontSize: "9px", padding: "1px 5px", borderRadius: D.pill, background: `${D.teal}33`, color: D.teal, fontWeight: 700 }}>
+                              MAIN
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
                   <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontFamily: D.body, fontSize: "12px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: D.body, fontSize: "12px" }}>
                         <span>Pitch Surface:</span>
                         <strong style={{ color: D.textPrimary }}>{schoolPitch.surface}</strong>
                       </div>
@@ -1354,12 +1472,47 @@ export default function ScrbrdOS() {
                       </div>
                     </div>
 
+                    {/* Additional Metadata Badges */}
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                      <div style={{ padding: "4px 8px", background: D.surf2, borderRadius: D.sm, fontFamily: D.mono, fontSize: "10px", color: D.textSecondary }}>
+                        ⚡ Outfield: <strong style={{ color: D.textPrimary }}>{schoolPitch.outfieldSpeed}</strong>
+                      </div>
+                      <div style={{ padding: "4px 8px", background: D.surf2, borderRadius: D.sm, fontFamily: D.mono, fontSize: "10px", color: D.textSecondary }}>
+                        🌧️ Drainage: <strong style={{ color: D.textPrimary }}>{schoolPitch.drainageTimeMin} min</strong>
+                      </div>
+                      <div style={{ padding: "4px 8px", background: D.surf2, borderRadius: D.sm, fontFamily: D.mono, fontSize: "10px", color: D.textSecondary }}>
+                        ☔ Covers: <strong style={{ color: schoolPitch.coversStatus === "on" ? D.rose : D.emerald }}>{schoolPitch.coversStatus === "on" ? "Deployed" : "Off"}</strong>
+                      </div>
+                    </div>
+
                     <div style={{ padding: "10px", background: `${D.teal}12`, borderRadius: D.md, border: `1px solid ${D.teal}33` }}>
                       <div style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.teal, textTransform: "uppercase" }}>Curator Match Morning Assessment</div>
                       <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textSecondary, marginTop: "3px" }}>
                         {schoolPitch.curatorNotes}
                       </div>
                     </div>
+
+                    <button
+                      onClick={() => setPage("fields")}
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: D.md,
+                        background: `${D.teal}18`,
+                        border: `1px solid ${D.teal}44`,
+                        color: D.teal,
+                        fontFamily: D.head,
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                        marginTop: "4px",
+                      }}
+                    >
+                      <span>Manage All School Fields in Curator Suite →</span>
+                    </button>
                   </div>
                 </Card>
 
@@ -1584,115 +1737,22 @@ export default function ScrbrdOS() {
           )}
 
           {/* Profiles View */}
-          {page === "profiles" && selectedPlayer && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-                <SectionHeader title={`Player Profile: ${selectedPlayer.name}`} sub={`${selectedPlayer.team} · ${selectedPlayer.role} · ${activeSchool.name}`} color={schoolPrimary} />
-                <div style={{ width: "360px", maxWidth: "100%" }}>
-                  <PlayerSearchFilterSelect
-                    theme={D}
-                    players={PLAYERS}
-                    selectedPlayerId={selectedPlayer.id}
-                    onSelectPlayer={p => {
-                      setSelectedPlayer(p);
-                      if (p.school !== activeSchoolId) {
-                        setActiveSchoolId(p.school);
-                      }
-                    }}
-                    label="SWITCH PLAYER PROFILE (1000+)"
-                    placeholder="Search any player across all schools..."
-                    accentColor={schoolPrimary}
-                    compact
-                  />
-                </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
-                <Card sx={{ padding: "20px" }}>
-                  <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-                    <Avatar name={selectedPlayer.name} size={64} color={schoolPrimary} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: D.head, fontSize: "18px", fontWeight: 800 }}>
-                        {selectedPlayer.name} {selectedPlayer.cap === "c" && <span style={{ color: D.amber }}>© (Captain)</span>}
-                      </div>
-                      <div style={{ fontFamily: D.body, fontSize: "12px", color: D.textMuted }}>{selectedPlayer.bio}</div>
-                      <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textSecondary, marginTop: "4px" }}>
-                        Born: {selectedPlayer.born} · House: {selectedPlayer.houseAtSchool} · Bowl: {selectedPlayer.bowlArm}A{selectedPlayer.bowlStyle}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Batting Stance Profile Definition (RHS vs LHS) */}
-                  <div style={{ marginTop: "14px", padding: "12px", background: D.surf2, borderRadius: D.md, border: `1px solid ${selectedPlayer.batHand === "R" ? D.sky : D.amber}44`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <div style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted, letterSpacing: "0.05em" }}>
-                        DEFINED BATTING STANCE (3-PHASE SCORING ENGINE)
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" }}>
-                        <span style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 800, color: selectedPlayer.batHand === "R" ? D.sky : D.amber }}>
-                          🏏 {selectedPlayer.batHand === "R" ? "Right-Hand Stance (RHS)" : "Left-Hand Stance (LHS)"}
-                        </span>
-                        <span style={{ fontFamily: D.mono, fontSize: "10px", padding: "2px 6px", borderRadius: D.pill, background: `${selectedPlayer.batHand === "R" ? D.sky : D.amber}22`, color: selectedPlayer.batHand === "R" ? D.sky : D.amber }}>
-                          {selectedPlayer.batHand === "R" ? "Off = Left / Leg = Right" : "Off = Right / Leg = Left (Mirrored)"}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        selectedPlayer.batHand = selectedPlayer.batHand === "R" ? "L" : "R";
-                        setSelectedPlayer({ ...selectedPlayer });
-                      }}
-                      style={{
-                        padding: "6px 12px",
-                        borderRadius: D.pill,
-                        background: D.surf3,
-                        border: `1px solid ${D.border}`,
-                        color: D.textPrimary,
-                        fontFamily: D.head,
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                      }}
-                    >
-                      ⇄ Toggle Stance
-                    </button>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "18px" }}>
-                    <div style={{ padding: "10px", background: D.surf2, borderRadius: D.md, textAlign: "center" }}>
-                      <div style={{ fontFamily: D.mono, fontSize: "20px", fontWeight: 700, color: D.emerald }}>{selectedPlayer.avg}</div>
-                      <div style={{ fontFamily: D.head, fontSize: "9px", color: D.textMuted }}>BATTING AVG</div>
-                    </div>
-                    <div style={{ padding: "10px", background: D.surf2, borderRadius: D.md, textAlign: "center" }}>
-                      <div style={{ fontFamily: D.mono, fontSize: "20px", fontWeight: 700, color: D.sky }}>{selectedPlayer.sr}</div>
-                      <div style={{ fontFamily: D.head, fontSize: "9px", color: D.textMuted }}>STRIKE RATE</div>
-                    </div>
-                    <div style={{ padding: "10px", background: D.surf2, borderRadius: D.md, textAlign: "center" }}>
-                      <div style={{ fontFamily: D.mono, fontSize: "20px", fontWeight: 700, color: D.violet }}>{selectedPlayer.wkts}</div>
-                      <div style={{ fontFamily: D.head, fontSize: "9px", color: D.textMuted }}>TOTAL WICKETS</div>
-                    </div>
-                  </div>
-
-                  {selectedPlayer.careerTotals && (
-                    <div style={{ marginTop: "14px", padding: "10px", background: D.surf2, borderRadius: D.md, display: "flex", justifyContent: "space-between", fontFamily: D.mono, fontSize: "11px" }}>
-                      <span>Innings: <strong>{selectedPlayer.careerTotals.innings}</strong></span>
-                      <span>Runs: <strong>{selectedPlayer.careerTotals.runs}</strong></span>
-                      <span>High Score: <strong>{selectedPlayer.careerTotals.hs}*</strong></span>
-                      <span>50s: <strong>{selectedPlayer.careerTotals.fifties}</strong></span>
-                      <span>100s: <strong>{selectedPlayer.careerTotals.hundreds}</strong></span>
-                    </div>
-                  )}
-                </Card>
-
-                {/* Skill Attributes Radar Chart & Technical Metrics */}
-                <Card sx={{ padding: "20px" }}>
-                  <PlayerSkillRadarChart
-                    theme={D}
-                    player={selectedPlayer}
-                    height={300}
-                    showBenchmark={true}
-                  />
-                </Card>
-              </div>
-            </div>
+          {page === "profiles" && (
+            <UserProfilesView
+              theme={D}
+              users={users}
+              onUpdateUser={handleUpdateUser}
+              currentRole={role}
+              activeSchoolId={activeSchool.id}
+              onTriggerToast={(msg) => {
+                setToastNotification({
+                  id: `toast_${Date.now()}`,
+                  title: 'Profiles Action',
+                  body: msg,
+                  icon: '👤',
+                });
+              }}
+            />
           )}
 
           {/* Analytics View (Match Analytics, Phase Scoring, Wagon Wheel & DRS Telemetry) */}
@@ -1790,6 +1850,14 @@ export default function ScrbrdOS() {
             />
           )}
 
+          {/* StatsGuru Query Engine */}
+          {page === "statsguru" && (
+            <StatsGuruQueryEngineView
+              theme={D}
+              players={PLAYERS}
+            />
+          )}
+
           {/* Commercial & Sponsorship Management */}
           {page === "sponsorship" && <CommercialView theme={D} activeSchoolId={activeSchool.id} />}
 
@@ -1800,7 +1868,7 @@ export default function ScrbrdOS() {
           {page === "training" && <TrainingView theme={D} players={PLAYERS} />}
 
           {/* Injuries & Physio Command View */}
-          {page === "injuries" && <InjuriesView theme={D} players={PLAYERS} />}
+          {page === "injuries" && <InjuriesView theme={D} players={PLAYERS} currentRole={role} />}
 
           {/* Logistics & Fleet Operations */}
           {page === "logistics" && <LogisticsView theme={D} />}
@@ -1850,6 +1918,15 @@ export default function ScrbrdOS() {
                 </div>
               </Card>
             </div>
+          )}
+
+          {/* Settings View */}
+          {page === "settings" && (
+            <SettingsView
+              theme={D}
+              activeSchoolId={activeSchool.id}
+              onTriggerToast={triggerToast}
+            />
           )}
 
           {/* Rulebook & Documentation */}

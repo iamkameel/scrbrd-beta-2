@@ -7,6 +7,7 @@ import { PLAYERS } from './data';
 interface InjuriesViewProps {
   theme: Theme;
   players?: Player[];
+  currentRole?: string;
 }
 
 interface InjuryRecord {
@@ -55,9 +56,30 @@ const INITIAL_INJURIES: InjuryRecord[] = [
   },
 ];
 
-export default function InjuriesView({ theme: D, players = PLAYERS }: InjuriesViewProps) {
+export default function InjuriesView({ theme: D, players = PLAYERS, currentRole }: InjuriesViewProps) {
   const [injuries, setInjuries] = useState<InjuryRecord[]>(INITIAL_INJURIES);
   const [selectedInjId, setSelectedInjId] = useState<string>("inj1");
+
+  const unauthorizedRoles = ["driver", "financeadmin", "groundskeeper", "scorer", "spectator", "platformsupport", "scout"];
+  const isUnauthorized = currentRole && unauthorizedRoles.includes(currentRole);
+
+  if (isUnauthorized) {
+    return (
+      <div style={{ padding: '48px 24px', textAlign: 'center', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', margin: '20px 0' }}>
+        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: `${D.rose}22`, border: `1px solid ${D.rose}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px' }}>
+          🔒
+        </div>
+        <div>
+          <h2 style={{ fontFamily: D.head, fontSize: '20px', fontWeight: 800, color: D.textPrimary, margin: 0 }}>
+            POPIA Medical & Physiotherapy Confidentiality Lockdown
+          </h2>
+          <p style={{ fontFamily: D.body, fontSize: '13px', color: D.textMuted, maxWidth: '540px', margin: '8px auto 0', lineHeight: 1.6 }}>
+            Access restricted. Your active role (<strong style={{ color: D.textPrimary }}>{currentRole}</strong>) does not hold medical clearance permissions. Under POPIA privacy legislation and sports medicine confidentiality protocols, injury dossiers and clinical rehabilitation records are strictly confidential and restricted to Medical Staff, Executive Leadership, and Authorized Team Coaching Personnel.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const activeInjury = injuries.find(i => i.id === selectedInjId) || injuries[0];
   const activePlayer = (players || []).find(p => p.id === activeInjury?.playerId) || players[0];

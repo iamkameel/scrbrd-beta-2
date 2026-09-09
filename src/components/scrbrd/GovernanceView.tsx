@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Theme } from './types';
-import { ROLES, ROLE_LAYERS, POPIA_POLICIES, getData, PLAYERS, INJURIES } from './data';
+import { ROLES, ROLE_LAYERS, POPIA_POLICIES, getData } from './data';
 
 interface GovernanceViewProps {
   theme: Theme;
@@ -24,46 +24,12 @@ interface ConsentRecord {
   signatureHash?: string;
 }
 
-interface IDPRecord {
-  id: string;
-  playerId: string;
-  playerName: string;
-  squad: string;
-  coachName: string;
-  horizon: "30_DAYS" | "60_DAYS" | "90_DAYS";
-  category: "Technical" | "Tactical" | "Fitness" | "Mental";
-  title: string;
-  targetMetric: string;
-  currentValue: string;
-  progressPct: number;
-  status: "IN_PROGRESS" | "ACHIEVED" | "ATTENTION_REQUIRED";
-  coachNotes: string;
-  studentFeedback: string;
-  updatedAt: string;
-}
-
-interface SchoolAsset {
-  id: string;
-  category: "Facility / Oval" | "Nets & Lanes" | "Electronic Telemetry" | "Machine & Gear";
-  name: string;
-  location: string;
-  condition: "EXCELLENT" | "GOOD" | "MAINTENANCE_REQUIRED" | "CALIBRATION_DUE";
-  status: "OPERATIONAL" | "RESERVED" | "UNDER_SERVICE";
-  lastInspected: string;
-  inspector: string;
-  details: string;
-}
-
 export default function GovernanceView({ theme: D, activeSchoolId }: GovernanceViewProps) {
-  const [activeTab, setActiveTab] = useState<"rbac_popia" | "parent_popia_consent" | "idp_tracker" | "asset_manager">("rbac_popia");
+  const [activeTab, setActiveTab] = useState<"rbac_popia" | "parent_popia_consent">("rbac_popia");
   const [selectedRole, setSelectedRole] = useState<string>("coach");
 
   const policy = POPIA_POLICIES[selectedRole] || POPIA_POLICIES.spectator;
   const roleMeta = ROLES[selectedRole] || ROLES.coach;
-
-  // Filtered/Redacted sample data according to current role
-  const samplePlayers = (getData("players", selectedRole, activeSchoolId) as any[]) || [];
-  const sampleInjuries = (getData("injuries", selectedRole, activeSchoolId) as any[]) || [];
 
   // 1. Parent POPIA Consent State
   const [consentList, setConsentList] = useState<ConsentRecord[]>([
@@ -75,23 +41,6 @@ export default function GovernanceView({ theme: D, activeSchoolId }: GovernanceV
   ]);
 
   const [consentFilter, setConsentFilter] = useState<string>("ALL");
-
-  // 2. IDP Records State
-  const [idpList, setIdpList] = useState<IDPRecord[]>([
-    { id: "idp1", playerId: "w1", playerName: "Samuel Whitfield", squad: "1st XI", coachName: "Brian Wessels", horizon: "30_DAYS", category: "Technical", title: "Short Ball Defense & Pull Shot Control", targetMetric: "Reduce Dismissals vs Fast Short Balls to < 10%", currentValue: "14% Dismissal Rate", progressPct: 75, status: "IN_PROGRESS", coachNotes: "Middling the ball cleanly off high backlift. Working on swivel foot movement in nets.", studentFeedback: "Feeling much more comfortable against 130km/h short deliveries in side-arm drills.", updatedAt: "2026-03-05" },
-    { id: "idp2", playerId: "w2", playerName: "C. Solomons", squad: "1st XI", coachName: "Brian Wessels", horizon: "60_DAYS", category: "Tactical", title: "Middle Overs Strike Rotation vs Leg Spin", targetMetric: "Dot Ball % in Overs 7-15 < 35%", currentValue: "32% Dot Ball Rate", progressPct: 90, status: "ACHIEVED", coachNotes: "Excellent sweep and wrist flick off pads. Strike rate maintained at 128.5 in middle overs.", studentFeedback: "Target achieved in past 3 league fixtures.", updatedAt: "2026-03-07" },
-    { id: "idp3", playerId: "w3", playerName: "Liam Campbell", squad: "1st XI", coachName: "Craig Hendricks", horizon: "30_DAYS", category: "Fitness", title: "Yo-Yo Intermittent Recovery Test Level 19.2", targetMetric: "Level 19.2 (National U19 Benchmark)", currentValue: "Level 18.6", progressPct: 60, status: "ATTENTION_REQUIRED", coachNotes: "Needs 2 additional interval shuttle sessions weekly with fitness trainer.", studentFeedback: "Working on leg stamina after minor quad tightness last month.", updatedAt: "2026-03-01" },
-    { id: "idp4", playerId: "w4", playerName: "D. Ngcobo", squad: "1st XI", coachName: "Brian Wessels", horizon: "90_DAYS", category: "Technical", title: "Outswing Wrist Position & Yorker Precision", targetMetric: "Land 8/10 Death Overs Yorkers in Box", currentValue: "6/10 Yorkers Landed", progressPct: 80, status: "IN_PROGRESS", coachNotes: "Great arm action. Focusing on seam alignment on the release stride.", studentFeedback: "Seam position feels repeatable.", updatedAt: "2026-03-06" },
-  ]);
-
-  // 3. School Asset Roster
-  const [assets, setAssets] = useState<SchoolAsset[]>([
-    { id: "a1", category: "Facility / Oval", name: "Bowden's Field Main Oval", location: "North Campus, Westville", condition: "EXCELLENT", status: "OPERATIONAL", lastInspected: "2026-03-07", inspector: "J. Curator (Turf Master)", details: "Turf moisture 38%, compaction rating 8.8. Ready for Saturday derby match." },
-    { id: "a2", category: "Facility / Oval", name: "Roy Couzens Oval", location: "South Campus, Westville", condition: "GOOD", status: "OPERATIONAL", lastInspected: "2026-03-06", inspector: "J. Curator", details: "Grass height 4.2mm, clean outfield boundary lines." },
-    { id: "a3", category: "Nets & Lanes", name: "High-Perf Indoor Nets 1-6", location: "Cricket Pavilion", condition: "EXCELLENT", status: "OPERATIONAL", lastInspected: "2026-03-04", inspector: "C. Hendricks", details: "Synthetic turf lanes 1-3 resurfaced; LED lighting calibrated at 850 lux." },
-    { id: "a4", category: "Electronic Telemetry", name: "Hawk-Eye Pocket Speed Radars (x4)", location: "Scoring Booth A", condition: "GOOD", status: "OPERATIONAL", lastInspected: "2026-03-05", inspector: "T. Analyst", details: "Lithium battery banks at 94%. Speed measurement error margin < 0.5 km/h." },
-    { id: "a5", category: "Machine & Gear", name: "Bola Professional 2026 Bowling Machine", location: "Net 1", condition: "CALIBRATION_DUE", status: "RESERVED", lastInspected: "2026-02-28", inspector: "B. Wessels", details: "Wheel alignment check due before Friday afternoon 1st XI practice session." },
-  ]);
 
   const toggleConsent = (id: string, field: "videoConsent" | "telemetryConsent" | "medicalConsent") => {
     setConsentList(prev => prev.map(c => {
@@ -106,19 +55,24 @@ export default function GovernanceView({ theme: D, activeSchoolId }: GovernanceV
     }));
   };
 
+  const filteredConsents = consentList.filter(c => {
+    if (consentFilter === "ALL") return true;
+    return c.status === consentFilter;
+  });
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "18px", maxWidth: "1320px", margin: "0 auto", width: "100%" }}>
       {/* Module Title Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "20px" }}>🛡️</span>
-            <h2 style={{ fontFamily: D.head, fontSize: "18px", fontWeight: 800, color: D.textPrimary }}>
-              INSTITUTIONAL GOVERNANCE & ACCESS CONTROL
+            <h2 style={{ fontFamily: D.head, fontSize: "18px", fontWeight: 800, color: D.textPrimary, margin: 0 }}>
+              INSTITUTIONAL GOVERNANCE & POPIA COMPLIANCE
             </h2>
           </div>
           <div style={{ fontFamily: D.body, fontSize: "12px", color: D.textMuted, marginTop: "2px" }}>
-            POPIA child protection, 17-role RBAC enforcement, parent consent portal, IDPs, and school facility asset management
+            Protection of Personal Information Act (POPIA) child protection, guardian consent portal, and 17-role RBAC enforcement
           </div>
         </div>
 
@@ -127,8 +81,6 @@ export default function GovernanceView({ theme: D, activeSchoolId }: GovernanceV
           {[
             { id: "rbac_popia", label: "🛡️ RBAC & POPIA Matrix" },
             { id: "parent_popia_consent", label: "📜 Parent Consent Portal" },
-            { id: "idp_tracker", label: "🎯 Player IDP Tracker" },
-            { id: "asset_manager", label: "🏟️ Oval & Asset Manager" },
           ].map(tab => (
             <button
               key={tab.id}
@@ -217,142 +169,71 @@ export default function GovernanceView({ theme: D, activeSchoolId }: GovernanceV
               </div>
             </div>
           </div>
-
-          {/* Redaction Table */}
-          <div style={{ background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, overflow: "hidden" }}>
-            <div style={{ padding: "14px 18px", borderBottom: `1px solid ${D.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 800 }}>LIVE FIELD-LEVEL REDACTION PREVIEW</div>
-                <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted }}>
-                  Demonstrating automated field redaction when querying via getData() under current role
-                </div>
-              </div>
-              <span style={{ fontFamily: D.mono, fontSize: "11px", color: D.emerald }}>
-                ✓ Verified POPIA Zero-Trust Choke Point
-              </span>
-            </div>
-
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                <thead>
-                  <tr style={{ borderBottom: `1px solid ${D.border}`, background: D.surf0 }}>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>PLAYER</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>SCHOOL</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>SPORTING STATS</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>BIRTHDATE (PII)</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>HOUSE (PII)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {samplePlayers.slice(0, 4).map((p: any) => (
-                    <tr key={p.id} style={{ borderBottom: `1px solid ${D.border}` }}>
-                      <td style={{ padding: "12px 14px" }}>
-                        <div style={{ fontFamily: D.body, fontSize: "13px", fontWeight: 700, color: D.textPrimary }}>{p.name}</div>
-                        <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>{p.role} · {p.team}</div>
-                      </td>
-                      <td style={{ padding: "12px 14px", fontFamily: D.head, fontSize: "12px", color: D.textSecondary }}>{p.school}</td>
-                      <td style={{ padding: "12px 14px", fontFamily: D.mono, fontSize: "12px", color: D.sky }}>
-                        Avg {p.avg} · SR {p.sr} · {p.wkts} wkts
-                      </td>
-                      <td style={{ padding: "12px 14px" }}>
-                        {p.born ? (
-                          <span style={{ fontFamily: D.mono, fontSize: "12px", color: D.textPrimary }}>{p.born}</span>
-                        ) : (
-                          <span style={{ padding: "2px 6px", borderRadius: D.sm, background: `${D.rose}20`, color: D.rose, fontFamily: D.mono, fontSize: "9px", fontWeight: 700 }}>
-                            [POPIA REDACTED]
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ padding: "12px 14px" }}>
-                        {p.houseAtSchool ? (
-                          <span style={{ fontFamily: D.body, fontSize: "12px", color: D.textPrimary }}>{p.houseAtSchool}</span>
-                        ) : (
-                          <span style={{ padding: "2px 6px", borderRadius: D.sm, background: `${D.rose}20`, color: D.rose, fontFamily: D.mono, fontSize: "9px", fontWeight: 700 }}>
-                            [POPIA REDACTED]
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
         </div>
       )}
 
       {/* ── TAB 2: Parent POPIA Consent Portal ── */}
       {activeTab === "parent_popia_consent" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-          {/* Header & Filter */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", padding: "16px", background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}` }}>
             <div>
               <div style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 800, color: D.textPrimary }}>
-                📜 PARENT & GUARDIAN POPIA DIGITAL CONSENT MANAGEMENT
+                📜 PARENTAL & GUARDIAN POPIA CONSENT PORTAL
               </div>
               <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>
-                Required under South African POPIA Act for minors (under 18) before broadcasting telemetry, video overlays, and media profiles.
+                Mandatory guardian sign-off for minor athletes under Section 35 of the Protection of Personal Information Act.
               </div>
             </div>
 
             <div style={{ display: "flex", gap: "6px" }}>
-              {["ALL", "GRANTED", "PENDING", "REDACTED"].map(st => (
+              {["ALL", "GRANTED", "PENDING", "REDACTED"].map(f => (
                 <button
-                  key={st}
-                  onClick={() => setConsentFilter(st)}
+                  key={f}
+                  onClick={() => setConsentFilter(f)}
                   style={{
-                    padding: "4px 10px",
-                    borderRadius: D.pill,
+                    padding: "5px 10px",
+                    borderRadius: D.sm,
+                    background: consentFilter === f ? D.indigo : D.surf2,
+                    color: consentFilter === f ? "#fff" : D.textSecondary,
                     border: `1px solid ${D.border}`,
-                    background: consentFilter === st ? D.indigo : D.surf2,
-                    color: consentFilter === st ? "#fff" : D.textSecondary,
-                    fontFamily: D.mono,
+                    fontFamily: D.head,
                     fontSize: "10px",
                     fontWeight: 700,
                     cursor: "pointer",
                   }}
                 >
-                  {st}
+                  {f}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Consent Records Table */}
           <div style={{ background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, overflow: "hidden" }}>
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontFamily: D.body, fontSize: "12px" }}>
                 <thead>
-                  <tr style={{ borderBottom: `1px solid ${D.border}`, background: D.surf0 }}>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>STUDENT ATHLETE</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>GUARDIAN / PARENT</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>STATUS</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>VIDEO BROADCAST</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>RADAR TELEMETRY</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>MEDICAL RELEASE</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>DIGITAL AUDIT</th>
+                  <tr style={{ background: D.surf0, borderBottom: `1px solid ${D.border}`, color: D.textMuted, fontFamily: D.mono, fontSize: "10px" }}>
+                    <th style={{ padding: "12px 14px" }}>ATHLETE</th>
+                    <th style={{ padding: "12px 14px" }}>GUARDIAN & CONTACT</th>
+                    <th style={{ padding: "12px 14px" }}>POPIA STATUS</th>
+                    <th style={{ padding: "12px 14px" }}>VIDEO BROADCAST</th>
+                    <th style={{ padding: "12px 14px" }}>TELEMETRY & RADAR</th>
+                    <th style={{ padding: "12px 14px" }}>MEDICAL CLEARANCE</th>
+                    <th style={{ padding: "12px 14px" }}>AUDIT SIGNATURE</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {consentList.filter(c => consentFilter === "ALL" || c.status === consentFilter).map(c => {
+                  {filteredConsents.map(c => {
                     const statusColor = c.status === "GRANTED" ? D.emerald : c.status === "PENDING" ? D.amber : D.rose;
                     return (
                       <tr key={c.id} style={{ borderBottom: `1px solid ${D.border}` }}>
                         <td style={{ padding: "12px 14px" }}>
-                          <div style={{ fontFamily: D.body, fontSize: "13px", fontWeight: 700, color: D.textPrimary }}>
-                            {c.studentName}
-                          </div>
-                          <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
-                            {c.grade} · {c.team}
-                          </div>
+                          <div style={{ fontFamily: D.head, fontWeight: 700, color: D.textPrimary }}>{c.studentName}</div>
+                          <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>{c.grade} · {c.team}</div>
                         </td>
                         <td style={{ padding: "12px 14px" }}>
-                          <div style={{ fontFamily: D.body, fontSize: "12px", color: D.textSecondary }}>
-                            {c.guardianName}
-                          </div>
-                          <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
-                            {c.guardianEmail}
-                          </div>
+                          <div style={{ fontWeight: 600, color: D.textSecondary }}>{c.guardianName}</div>
+                          <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>{c.guardianEmail}</div>
                         </td>
                         <td style={{ padding: "12px 14px" }}>
                           <span style={{ padding: "3px 8px", borderRadius: D.pill, background: `${statusColor}20`, color: statusColor, fontFamily: D.head, fontSize: "10px", fontWeight: 800 }}>
@@ -373,7 +254,7 @@ export default function GovernanceView({ theme: D, activeSchoolId }: GovernanceV
                               cursor: "pointer",
                             }}
                           >
-                            {c.videoConsent ? "✓ Approved" : "✕ Revoked"}
+                            {c.videoConsent ? "✓ Enabled" : "✕ Disabled"}
                           </button>
                         </td>
                         <td style={{ padding: "12px 14px" }}>
@@ -419,211 +300,6 @@ export default function GovernanceView({ theme: D, activeSchoolId }: GovernanceV
                           ) : (
                             <span style={{ color: D.amber }}>Awaiting Signature</span>
                           )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── TAB 3: Player IDP Tracker ── */}
-      {activeTab === "idp_tracker" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", padding: "16px", background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}` }}>
-            <div>
-              <div style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 800, color: D.textPrimary }}>
-                🎯 COACH-TO-PLAYER INDIVIDUAL DEVELOPMENT PLAN (IDP) TRACKER
-              </div>
-              <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>
-                30, 60, and 90-day actionable technical, tactical, physical, and mental milestones logged by squad coaches.
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                const newTitle = prompt("Enter IDP Goal Title:", "Death Overs Power Hitting & Range Hitting");
-                if (!newTitle) return;
-                const newRecord: IDPRecord = {
-                  id: `idp_${Date.now()}`,
-                  playerId: "w1",
-                  playerName: "Samuel Whitfield",
-                  squad: "1st XI",
-                  coachName: "Brian Wessels",
-                  horizon: "30_DAYS",
-                  category: "Technical",
-                  title: newTitle,
-                  targetMetric: "SR > 165 in last 5 overs",
-                  currentValue: "SR 142.0",
-                  progressPct: 35,
-                  status: "IN_PROGRESS",
-                  coachNotes: "Newly assigned milestone.",
-                  studentFeedback: "Ready for range hitting sessions.",
-                  updatedAt: new Date().toISOString().split("T")[0],
-                };
-                setIdpList([newRecord, ...idpList]);
-              }}
-              style={{
-                padding: "8px 16px",
-                borderRadius: D.pill,
-                background: D.indigo,
-                border: "none",
-                color: "#fff",
-                fontFamily: D.head,
-                fontSize: "11px",
-                fontWeight: 800,
-                cursor: "pointer",
-              }}
-            >
-              + Create New IDP Goal
-            </button>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "14px" }}>
-            {idpList.map(idp => {
-              const statusColor = idp.status === "ACHIEVED" ? D.emerald : idp.status === "IN_PROGRESS" ? D.sky : D.rose;
-              return (
-                <div key={idp.id} style={{ padding: "18px", borderRadius: D.lg, background: D.surf1, border: `1px solid ${D.border}`, display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span style={{ padding: "2px 8px", borderRadius: D.pill, background: `${D.indigo}20`, color: D.indigo, fontFamily: D.mono, fontSize: "9px", fontWeight: 800 }}>
-                          {idp.category.toUpperCase()}
-                        </span>
-                        <span style={{ padding: "2px 8px", borderRadius: D.pill, background: D.surf2, color: D.textMuted, fontFamily: D.mono, fontSize: "9px" }}>
-                          {idp.horizon.replace("_", " ")}
-                        </span>
-                      </div>
-                      <div style={{ fontFamily: D.head, fontSize: "15px", fontWeight: 800, color: D.textPrimary, marginTop: "6px" }}>
-                        {idp.title}
-                      </div>
-                    </div>
-
-                    <span style={{ padding: "3px 10px", borderRadius: D.pill, background: `${statusColor}20`, color: statusColor, fontFamily: D.head, fontSize: "10px", fontWeight: 800 }}>
-                      {idp.status.replace("_", " ")}
-                    </span>
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", fontFamily: D.body, padding: "8px 12px", background: D.surf2, borderRadius: D.md }}>
-                    <div>
-                      <span style={{ color: D.textMuted }}>Athlete: </span>
-                      <strong style={{ color: D.textPrimary }}>{idp.playerName} ({idp.squad})</strong>
-                    </div>
-                    <div>
-                      <span style={{ color: D.textMuted }}>Coach: </span>
-                      <strong style={{ color: D.textSecondary }}>{idp.coachName}</strong>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontFamily: D.mono, marginBottom: "4px" }}>
-                      <span style={{ color: D.textMuted }}>Target: {idp.targetMetric}</span>
-                      <span style={{ color: statusColor, fontWeight: 800 }}>{idp.progressPct}%</span>
-                    </div>
-                    <div style={{ height: "8px", borderRadius: D.pill, background: D.surf2, overflow: "hidden" }}>
-                      <div style={{ width: `${idp.progressPct}%`, height: "100%", background: statusColor, transition: "width 0.3s ease" }}></div>
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "11px", fontFamily: D.body }}>
-                    <div style={{ padding: "8px 10px", borderRadius: D.md, background: D.surf2, borderLeft: `3px solid ${D.indigo}` }}>
-                      <span style={{ fontWeight: 700, color: D.indigo }}>Coach Note: </span>
-                      <span style={{ color: D.textSecondary }}>{idp.coachNotes}</span>
-                    </div>
-                    <div style={{ padding: "8px 10px", borderRadius: D.md, background: D.surf2, borderLeft: `3px solid ${D.sky}` }}>
-                      <span style={{ fontWeight: 700, color: D.sky }}>Student Self-Feedback: </span>
-                      <span style={{ color: D.textSecondary }}>{idp.studentFeedback}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── TAB 4: School Oval & Equipment Asset Manager ── */}
-      {activeTab === "asset_manager" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", padding: "16px", background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}` }}>
-            <div>
-              <div style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 800, color: D.textPrimary }}>
-                🏟️ SCHOOL OVAL, TURF PITCH & EQUIPMENT ASSET MANAGER
-              </div>
-              <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>
-                Curator pitch telemetry, turf compaction ratings, bowling machine calibration, and radar hardware inventory.
-              </div>
-            </div>
-
-            <button
-              onClick={() => alert("Asset maintenance log updated.")}
-              style={{
-                padding: "8px 16px",
-                borderRadius: D.pill,
-                background: D.emerald,
-                border: "none",
-                color: "#fff",
-                fontFamily: D.head,
-                fontSize: "11px",
-                fontWeight: 800,
-                cursor: "pointer",
-              }}
-            >
-              + Log Curator Inspection
-            </button>
-          </div>
-
-          <div style={{ background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, overflow: "hidden" }}>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                <thead>
-                  <tr style={{ borderBottom: `1px solid ${D.border}`, background: D.surf0 }}>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>CATEGORY</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>ASSET / FACILITY NAME</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>LOCATION</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>CONDITION</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>STATUS</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>LAST INSPECTED</th>
-                    <th style={{ padding: "10px 14px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>CURATOR TELEMETRY</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {assets.map(ast => {
-                    const condColor = ast.condition === "EXCELLENT" ? D.emerald : ast.condition === "GOOD" ? D.sky : ast.condition === "CALIBRATION_DUE" ? D.amber : D.rose;
-                    return (
-                      <tr key={ast.id} style={{ borderBottom: `1px solid ${D.border}` }}>
-                        <td style={{ padding: "12px 14px", fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
-                          {ast.category}
-                        </td>
-                        <td style={{ padding: "12px 14px" }}>
-                          <div style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 800, color: D.textPrimary }}>
-                            {ast.name}
-                          </div>
-                        </td>
-                        <td style={{ padding: "12px 14px", fontFamily: D.body, fontSize: "12px", color: D.textSecondary }}>
-                          📍 {ast.location}
-                        </td>
-                        <td style={{ padding: "12px 14px" }}>
-                          <span style={{ padding: "3px 8px", borderRadius: D.pill, background: `${condColor}20`, color: condColor, fontFamily: D.head, fontSize: "10px", fontWeight: 800 }}>
-                            {ast.condition.replace("_", " ")}
-                          </span>
-                        </td>
-                        <td style={{ padding: "12px 14px" }}>
-                          <span style={{ padding: "3px 8px", borderRadius: D.pill, background: D.surf2, color: D.textPrimary, fontFamily: D.mono, fontSize: "10px" }}>
-                            {ast.status}
-                          </span>
-                        </td>
-                        <td style={{ padding: "12px 14px", fontFamily: D.mono, fontSize: "11px", color: D.textMuted }}>
-                          <div>{ast.lastInspected}</div>
-                          <div style={{ color: D.textSecondary, fontSize: "9px" }}>By {ast.inspector}</div>
-                        </td>
-                        <td style={{ padding: "12px 14px", fontFamily: D.body, fontSize: "11px", color: D.textMuted, maxWidth: "260px" }}>
-                          {ast.details}
                         </td>
                       </tr>
                     );

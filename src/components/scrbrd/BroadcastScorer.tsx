@@ -8,6 +8,9 @@ import { MATCH_SCORECARDS } from "./scorecardData";
 import { SHOT_DATA_SAMPLE } from "./data";
 import LiveMatchSettingsModal, { MatchSettingsState } from "./LiveMatchSettingsModal";
 import LineupsBowlersModal, { BatterProfile, BowlerProfile } from "./LineupsBowlersModal";
+import FieldPlacementEditorModal from "./FieldPlacementEditorModal";
+import BowlerWorkloadMonitor from "./BowlerWorkloadMonitor";
+import CaptainTacticalCockpit from "./CaptainTacticalCockpit";
 import FullScorecardView from "./FullScorecardView";
 import DeepMatchAnalyticsView from "./DeepMatchAnalyticsView";
 
@@ -383,6 +386,7 @@ export default function BroadcastScorer({
 
   // View Mode: Scorer Cockpit vs Spectator Overlay Preview
   const [viewMode, setViewMode] = useState<"scorer" | "spectator_overlay">("scorer");
+  const [fieldEditorOpen, setFieldEditorOpen] = useState<boolean>(false);
 
   // Right column active sub-tab: Commentary feed vs Live Striker Wagon Wheel vs Over Audit vs Pitch Map vs Telemetry vs Quick Log
   const [rightPanelTab, setRightPanelTab] = useState<"wagon" | "pitchmap" | "telemetry" | "commentary" | "audit" | "quicklog">("wagon");
@@ -1092,6 +1096,28 @@ export default function BroadcastScorer({
               👥 Lineups & Bowlers
             </button>
 
+            {/* FIELD PLACEMENT EDITOR TRIGGER */}
+            <button
+              onClick={() => setFieldEditorOpen(true)}
+              style={{
+                padding: "5px 11px",
+                borderRadius: D.pill,
+                background: `${D.sky}18`,
+                border: `1px solid ${D.sky}55`,
+                color: D.sky,
+                fontFamily: D.head,
+                fontSize: "11px",
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                cursor: "pointer",
+              }}
+              title="Interactive 11-Man Field Placement Editor & Powerplay Circle Validation"
+            >
+              🛡️ Field Editor
+            </button>
+
             {/* Quick Toggle: Bowler Telemetry & Pitch Map */}
             <button
               onClick={() =>
@@ -1386,6 +1412,18 @@ export default function BroadcastScorer({
                 ↩ Undo Last Ball
               </button>
             </div>
+
+            {/* Captain's Tactical Cockpit & Win Predictor */}
+            <CaptainTacticalCockpit
+              theme={D}
+              currentRunRate={Number(matchDerivedState.currentRR)}
+              requiredRunRate={Number(matchDerivedState.requiredRR)}
+              targetRuns={matchDerivedState.target}
+              currentScore={matchDerivedState.totalRuns}
+            />
+
+            {/* CSA Fast Bowler Workload & Spell Fatigue Monitor */}
+            <BowlerWorkloadMonitor theme={D} />
 
             {/* Active Batters & Bowler Telemetry HUD */}
             <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "10px" }}>
@@ -2816,7 +2854,9 @@ export default function BroadcastScorer({
                       style={{
                         padding: "14px 0",
                         borderRadius: D.md,
-                        border: "none",
+                        borderLeft: "none",
+                        borderRight: "none",
+                        borderBottom: "none",
                         background:
                           num === 0
                             ? D.surf2
@@ -4466,6 +4506,13 @@ export default function BroadcastScorer({
           onReorderBattingLineup={setBattingSquad}
           onReorderBowlingAttack={setBowlingAttack}
           maxOversPerBowler={matchSettings.maxOversPerBowler}
+        />
+
+        {/* ── FIELD PLACEMENT EDITOR MODAL ── */}
+        <FieldPlacementEditorModal
+          theme={D}
+          isOpen={fieldEditorOpen}
+          onClose={() => setFieldEditorOpen(false)}
         />
       </div>
     </div>

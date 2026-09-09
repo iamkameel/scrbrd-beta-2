@@ -60,7 +60,7 @@ export const ROLE_LAYERS = [
 export const ROLES: Record<string, { label: string; layer: string; color: string; icon: string; scope: string; sensitivity: number; nav: string[]; purpose: string }> = {
   superadmin: {
     label: "Super Admin", layer: "platform", color: "#8b5cf6", icon: "⚡", scope: "platform", sensitivity: 4,
-    nav: ["dashboard", "notifications", "matches", "competitions", "leagues", "squad", "profiles", "analytics", "skills", "scouting", "compare", "sponsorship", "training", "injuries", "logistics", "fields", "staff", "calendar", "governance", "rulebook", "pitchdeck", "settings"],
+    nav: ["dashboard", "notifications", "matches", "competitions", "leagues", "squad", "profiles", "analytics", "skills", "scouting", "compare", "statsguru", "sponsorship", "training", "injuries", "logistics", "fields", "staff", "calendar", "governance", "rulebook", "pitchdeck", "settings"],
     purpose: "Full platform governance across all school tenants, competitions, and security policies",
   },
   platformsupport: {
@@ -99,7 +99,7 @@ export const ROLES: Record<string, { label: string; layer: string; color: string
     purpose: "Elite 1st XI leadership — selection, match plans, skills matrices, opposition scouting",
   },
   coach: {
-    label: "Squad Head Coach (2nd-7th XI / U14-U16)", layer: "sporting", color: "#10b981", icon: "🎯", scope: "team", sensitivity: 2,
+    label: "Coach", layer: "sporting", color: "#10b981", icon: "🎯", scope: "team", sensitivity: 2,
     nav: ["dashboard", "notifications", "matches", "squad", "profiles", "analytics", "skills", "compare", "training", "injuries", "logistics", "fields", "calendar"],
     purpose: "Age-group coaching — squad development, training drills, match preparation across junior and open tiers",
   },
@@ -180,6 +180,7 @@ export const NAV_META: Record<string, { icon: string; label: string }> = {
   management: { icon: "🛠️", label: "Management" },
   rulebook: { icon: "📖", label: "Rulebook" },
   pitchdeck: { icon: "📐", label: "Pitch Deck" },
+  statsguru: { icon: "📊", label: "StatsGuru Query" },
 };
 
 // ── POPIA POLICIES & RBAC CHOKE POINT ─────────────────
@@ -849,6 +850,145 @@ export const SCHOOL_PITCH_CONDITIONS: Record<string, PitchCondition> = {
     lastMaintained: "2026-03-08 07:15",
   },
 };
+
+export function getSchoolFieldConditions(schoolId: string): PitchCondition[] {
+  const school = SCHOOLS_REGISTRY.find(s => s.id === schoolId || s.shortName === schoolId) || SCHOOLS_REGISTRY[0];
+  const fieldsList = school.fields && school.fields.length > 0
+    ? school.fields
+    : [school.mainOval || "Main Oval"];
+
+  const customDetails: Record<string, Partial<PitchCondition>> = {
+    // Westville
+    "Bowden's Field Oval": {
+      groundId: "g_wes_1",
+      surface: "Bulli Clay & Kikuyu Grass Outfield",
+      moisturePct: 24, grassHeightMm: 4.2, rollerCompaction: "Heavy 2.5T cylinder (3 passes)",
+      bounceRating: 8.5, paceRating: 8.0, outfieldSpeed: "Fast", coversStatus: "off",
+      drainageTimeMin: 25, curatorNotes: "1st XI Main Oval. Good hard deck with consistent true bounce. Offers turn for wrist spin from over 12.",
+    },
+    "Commons Field": {
+      groundId: "g_wes_2",
+      surface: "Turf Bulli Strip with natural camber",
+      moisturePct: 21, grassHeightMm: 5.0, rollerCompaction: "1.8T tandem roller (2 passes)",
+      bounceRating: 7.6, paceRating: 7.4, outfieldSpeed: "Medium-Fast", coversStatus: "off",
+      drainageTimeMin: 35, curatorNotes: "2nd XI / U15A Field. Slight natural slope toward south boundary. Firm surface providing even bounce.",
+    },
+    "Roy Couzens Oval": {
+      groundId: "g_wes_3",
+      surface: "Turf Strip with Kikuyu Outfield",
+      moisturePct: 22, grassHeightMm: 5.5, rollerCompaction: "1.5T roller (2 passes)",
+      bounceRating: 7.2, paceRating: 7.0, outfieldSpeed: "Medium", coversStatus: "off",
+      drainageTimeMin: 40, curatorNotes: "Junior Oval (U14A). Boundary markers set at 55m. Good grass cover protecting young seamers.",
+    },
+    "Lutge Field": {
+      groundId: "g_wes_4",
+      surface: "Synthetic Turf Wicket on Hard Base",
+      moisturePct: 18, grassHeightMm: 6.0, rollerCompaction: "Light roller",
+      bounceRating: 8.0, paceRating: 8.2, outfieldSpeed: "Fast", coversStatus: "off",
+      drainageTimeMin: 20, curatorNotes: "Open practice field / U14B. Synthetic match strip in top condition. Rapid outfield pace.",
+    },
+    // Hilton
+    "Weightman-Smith Oval": {
+      groundId: "g_hil_1",
+      surface: "Couch blend over shale bedrock",
+      moisturePct: 28, grassHeightMm: 5.0, rollerCompaction: "Tandem roller 3.0T",
+      bounceRating: 9.2, paceRating: 9.0, outfieldSpeed: "Fast", coversStatus: "off",
+      drainageTimeMin: 18, curatorNotes: "High altitude Midlands pitch. Excellent carry through to keeper. Early seam movement.",
+    },
+    "Hart-Davis Oval": {
+      groundId: "g_hil_2",
+      surface: "Midlands Couch over clay",
+      moisturePct: 26, grassHeightMm: 5.2, rollerCompaction: "2.2T roller",
+      bounceRating: 8.4, paceRating: 8.2, outfieldSpeed: "Fast", coversStatus: "off",
+      drainageTimeMin: 22, curatorNotes: "2nd XI Field. Firm strip with good bounce. Slightly dry at bowler footmarks.",
+    },
+    "Mansfield Field": {
+      groundId: "g_hil_3",
+      surface: "Turf strip over loamy soil",
+      moisturePct: 27, grassHeightMm: 5.5, rollerCompaction: "2.0T roller",
+      bounceRating: 7.8, paceRating: 7.6, outfieldSpeed: "Medium", coversStatus: "off",
+      drainageTimeMin: 25, curatorNotes: "U15A Field. Good even grass cover. True bounce for spinners and seamers.",
+    },
+    "Ellis Field": {
+      groundId: "g_hil_4",
+      surface: "Turf strip with Kikuyu outfield",
+      moisturePct: 25, grassHeightMm: 5.8, rollerCompaction: "1.8T roller",
+      bounceRating: 7.5, paceRating: 7.2, outfieldSpeed: "Medium", coversStatus: "off",
+      drainageTimeMin: 30, curatorNotes: "U14A Field. Well irrigated with consistent bounce suitable for junior development.",
+    },
+    // Michaelhouse
+    "Roy Gathorne Oval": {
+      groundId: "g_mic_1",
+      surface: "Fine Kikuyu over loamy alluvial soil",
+      moisturePct: 31, grassHeightMm: 5.8, rollerCompaction: "Standard 2T roller",
+      bounceRating: 7.8, paceRating: 7.5, outfieldSpeed: "Medium", coversStatus: "off",
+      drainageTimeMin: 30, curatorNotes: "Balgowan morning mist kept morning moisture high. Ball swinging under cloud cover.",
+    },
+    "Hannah's Field": {
+      groundId: "g_mic_2",
+      surface: "Kikuyu turf on loamy soil",
+      moisturePct: 29, grassHeightMm: 5.5, rollerCompaction: "1.8T roller",
+      bounceRating: 7.4, paceRating: 7.2, outfieldSpeed: "Medium", coversStatus: "off",
+      drainageTimeMin: 35, curatorNotes: "2nd XI Field. Morning dew clearing nicely. Slow pitch offering spin.",
+    },
+    "Meadow's Oval": {
+      groundId: "g_mic_3",
+      surface: "Turf strip",
+      moisturePct: 30, grassHeightMm: 5.6, rollerCompaction: "1.8T roller",
+      bounceRating: 7.2, paceRating: 7.0, outfieldSpeed: "Medium", coversStatus: "off",
+      drainageTimeMin: 32, curatorNotes: "U15A Field. Soft surface early, expected to dry into a smooth deck by noon.",
+    },
+    "Tarpey Field": {
+      groundId: "g_mic_4",
+      surface: "Turf strip with Kikuyu outfield",
+      moisturePct: 28, grassHeightMm: 6.0, rollerCompaction: "1.5T roller",
+      bounceRating: 7.0, paceRating: 6.8, outfieldSpeed: "Medium", coversStatus: "off",
+      drainageTimeMin: 40, curatorNotes: "U14A Field. Lush outfield with consistent low bounce.",
+    },
+  };
+
+  return fieldsList.map((fieldName, idx) => {
+    const detail = customDetails[fieldName];
+    if (detail) {
+      return {
+        groundId: detail.groundId || `g_${school.id.toLowerCase()}_${idx + 1}`,
+        schoolId: school.id,
+        name: fieldName,
+        surface: detail.surface || "Kikuyu grass over clay base",
+        moisturePct: detail.moisturePct ?? (24 - idx * 2),
+        grassHeightMm: detail.grassHeightMm ?? (4.2 + idx * 0.4),
+        rollerCompaction: detail.rollerCompaction || "2.0T roller",
+        bounceRating: detail.bounceRating ?? (8.2 - idx * 0.3),
+        paceRating: detail.paceRating ?? (8.0 - idx * 0.3),
+        outfieldSpeed: detail.outfieldSpeed || (idx === 0 ? "Fast" : "Medium"),
+        coversStatus: detail.coversStatus || "off",
+        drainageTimeMin: detail.drainageTimeMin ?? (25 + idx * 5),
+        curatorNotes: detail.curatorNotes || `${fieldName} in solid match condition. Prepared for ${school.shortName} home fixtures.`,
+        lastMaintained: "2026-03-08 07:15",
+      };
+    }
+
+    const isMain = idx === 0;
+    return {
+      groundId: `g_${school.id.toLowerCase()}_${idx + 1}`,
+      schoolId: school.id,
+      name: fieldName,
+      surface: isMain ? "Kikuyu grass over black clay base" : "Turf strip with Kikuyu outfield",
+      moisturePct: Math.max(16, 25 - idx * 2),
+      grassHeightMm: Number((4.0 + idx * 0.4).toFixed(1)),
+      rollerCompaction: isMain ? "Heavy 2.5T roller (3 passes)" : "2.0T roller (2 passes)",
+      bounceRating: Number(Math.max(6.5, 8.5 - idx * 0.4).toFixed(1)),
+      paceRating: Number(Math.max(6.5, 8.2 - idx * 0.4).toFixed(1)),
+      outfieldSpeed: isMain ? "Fast" : "Medium-Fast",
+      coversStatus: "off",
+      drainageTimeMin: 22 + idx * 4,
+      curatorNotes: isMain
+        ? `Primary 1st XI Wicket at ${school.name}. Rock-hard base with consistent true bounce and fast outfield.`
+        : `${fieldName} at ${school.shortName}. Well-maintained for junior and division league fixtures.`,
+      lastMaintained: "2026-03-08 07:15",
+    };
+  });
+}
 
 export const COMPETITIONS: Competition[] = [
   {

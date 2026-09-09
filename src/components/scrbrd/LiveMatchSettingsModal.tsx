@@ -207,7 +207,9 @@ export default function LiveMatchSettingsModal({
               style={{
                 padding: '12px 14px',
                 background: 'transparent',
-                border: 'none',
+                borderTop: 'none',
+                borderLeft: 'none',
+                borderRight: 'none',
                 borderBottom: activeTab === t.id ? `2px solid ${D.sky}` : '2px solid transparent',
                 color: activeTab === t.id ? D.sky : D.textMuted,
                 fontFamily: D.head,

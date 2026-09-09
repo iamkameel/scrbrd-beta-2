@@ -354,7 +354,7 @@ export interface CoachingStaffMember {
   email: string;
   phone: string;
   assignedSquads: string[]; // squad IDs e.g. ["WES_1ST"], ["WES_2ND"], ["WES_U15A"]
-  primaryRole: "Director of Cricket" | "1st XI Head Coach" | "Squad Head Coach" | "Assistant Coach" | "Specialist Bowling Coach" | "Specialist Batting Coach" | "Strength & Conditioning";
+  primaryRole: "Director of Cricket" | "1st XI Head Coach" | "Coach" | "Assistant Coach" | "Specialist Bowling Coach" | "Specialist Batting Coach" | "Strength & Conditioning";
   csaAccreditation: "CSA Level 3 (High Performance)" | "CSA Level 2 (Advanced)" | "CSA Level 1 (Foundation)" | "Educator Coach";
   yearsExperience: number;
   bio: string;
