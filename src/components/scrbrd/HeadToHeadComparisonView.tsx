@@ -160,6 +160,8 @@ export default function HeadToHeadComparisonView({
   const [playerBId, setPlayerBId] = useState<string>(initialPlayerBId);
 
   // Tab & Filter States
+  const isCoachRole = currentRole === 'coach' || currentRole === 'schooladmin';
+  const [schoolBoundaryOnly, setSchoolBoundaryOnly] = useState<boolean>(isCoachRole);
   const [activeTab, setActiveTab] = useState<TabMode>('skills');
   const [timeScope, setTimeScope] = useState<TimeScope>('season');
   const [compScope, setCompScope] = useState<CompScope>('all');
@@ -167,6 +169,14 @@ export default function HeadToHeadComparisonView({
   const [radarLayer, setRadarLayer] = useState<'both' | 'a' | 'b'>('both');
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+
+  // Compute filtered players based on POPIA intra-school boundary mode
+  const filteredPlayersList = useMemo(() => {
+    if (!schoolBoundaryOnly) return players;
+    const coachSchool = activeSchoolId || 'WBHS';
+    const schoolMatched = players.filter(p => p.school === coachSchool || p.team?.includes(coachSchool));
+    return schoolMatched.length >= 2 ? schoolMatched : players;
+  }, [players, schoolBoundaryOnly, activeSchoolId]);
 
   // Player Objects
   const playerA = useMemo(() => players.find(p => p.id === playerAId) || players[0], [players, playerAId]);
@@ -526,8 +536,29 @@ export default function HeadToHeadComparisonView({
           ))}
         </div>
 
-        {/* Scopes Filter Group */}
+        {/* Scopes Filter Group & POPIA Coach Boundary Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* POPIA School Boundary Toggle */}
+          <button
+            onClick={() => setSchoolBoundaryOnly(prev => !prev)}
+            style={{
+              padding: '4px 10px',
+              borderRadius: D.pill,
+              background: schoolBoundaryOnly ? `${D.emerald}20` : D.surf2,
+              border: `1px solid ${schoolBoundaryOnly ? D.emerald : D.border}`,
+              color: schoolBoundaryOnly ? D.emerald : D.textMuted,
+              fontFamily: D.head,
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+            title="Enforce POPIA talent privacy by locking comparison selection to your active school"
+          >
+            <span>{schoolBoundaryOnly ? '🔒 School Boundary' : '🌐 Circuit Wide'}</span>
+          </button>
           {/* Timeframe Scope */}
           <select
             value={timeScope}
@@ -648,7 +679,7 @@ export default function HeadToHeadComparisonView({
 
           <PlayerSearchFilterSelect
             theme={D}
-            players={players}
+            players={filteredPlayersList}
             selectedPlayerId={playerAId}
             onSelectPlayer={p => setPlayerAId(p.id)}
             excludePlayerId={playerBId}
@@ -726,7 +757,7 @@ export default function HeadToHeadComparisonView({
 
           <PlayerSearchFilterSelect
             theme={D}
-            players={players}
+            players={filteredPlayersList}
             selectedPlayerId={playerBId}
             onSelectPlayer={p => setPlayerBId(p.id)}
             excludePlayerId={playerAId}

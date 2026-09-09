@@ -1092,6 +1092,36 @@ export default function BroadcastScorer({
               👥 Lineups & Bowlers
             </button>
 
+            {/* Quick Toggle: Bowler Telemetry & Pitch Map */}
+            <button
+              onClick={() =>
+                setMatchSettings(prev => ({
+                  ...prev,
+                  showPitchHeatmap: !prev.showPitchHeatmap,
+                }))
+              }
+              style={{
+                padding: "5px 10px",
+                borderRadius: D.pill,
+                background: matchSettings.showPitchHeatmap ? `${D.emerald}25` : D.surf2,
+                border: `1px solid ${matchSettings.showPitchHeatmap ? D.emerald : D.border}`,
+                color: matchSettings.showPitchHeatmap ? D.emerald : D.textMuted,
+                fontFamily: D.head,
+                fontSize: "10px",
+                fontWeight: 800,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+              title="Enable or disable Bowler Delivery Telemetry & Pitch Location Map during live scoring"
+            >
+              <span>⚡ Telemetry & Pitch Map:</span>
+              <strong style={{ color: matchSettings.showPitchHeatmap ? D.emerald : D.amber }}>
+                {matchSettings.showPitchHeatmap ? "ON" : "OFF"}
+              </strong>
+            </button>
+
             {/* Quick Toggle: Hawkeye Radar */}
             <button
               onClick={() =>
