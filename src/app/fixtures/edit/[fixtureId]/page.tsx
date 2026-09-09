@@ -204,7 +204,7 @@ export default function EditFixturePage() {
                         <Input id="ageGroup" name="ageGroup" value={formData.ageGroup || ''} onChange={handleInputChange} disabled={mutation.isPending} />
                     </div>
                      <div>
-                        <Label htmlFor="status">Status</Label> // Corrected 'mutation.isLoading' to 'mutation.isPending'
+                        <Label htmlFor="status">Status</Label>
                         <Input id="status" name="status" value={formData.status || ''} onChange={handleInputChange} disabled={mutation.isPending} />
  </div>
                     {/* Add other fields as needed based on your FirestoreFixture interface */}

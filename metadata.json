@@ -1,0 +1,8 @@
+{
+  "name": "SCRBRD Beta",
+  "description": "KZN Schools cricket intelligence platform featuring broadcast live scoring, 360° wagon wheels, interactive scorecards, phase scoring dynamics, live match telemetry, and POPIA zero-trust RBAC governance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

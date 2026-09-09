@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Matches collection
+    match /matches/{matchId} {
+      allow read: if true;
+      allow create, update: if isSignedIn() && isValidId(matchId);
+      allow delete: if isSignedIn() && isValidId(matchId);
+    }
+
+    // Players collection
+    match /players/{playerId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn() && isValidId(playerId);
+    }
+
+    // Fixtures collection
+    match /fixtures/{fixtureId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn() && isValidId(fixtureId);
+    }
+  }
+}

@@ -46,12 +46,12 @@ export default function TeamsPage() {
   const uniqueAgeGroups = React.useMemo(() => {
     const ageGroups = new Set(detailedTeamsData.map(team => team.ageGroup));
     return ["all", ...Array.from(ageGroups).sort()];
-  }, [detailedTeamsData]);
+  }, []);
 
   const uniqueDivisions = React.useMemo(() => {
     const divisions = new Set(detailedTeamsData.map(team => team.division));
     return ["all", ...Array.from(divisions).sort()];
-  }, [searchTerm, ageGroupFilter, divisionFilter]);
+  }, []);
 
   return (
     <div className="container mx-auto py-8 space-y-6">

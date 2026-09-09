@@ -1,6 +1,8 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
+  serverExternalPackages: ['genkit', '@genkit-ai/googleai', '@genkit-ai/core', '@genkit-ai/next'],
   /* config options here */
   typescript: {
     ignoreBuildErrors: true,

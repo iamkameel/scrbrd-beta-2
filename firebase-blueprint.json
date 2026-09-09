@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "match": {
+      "title": "Match",
+      "description": "A live or completed cricket match session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "homeTeam": { "type": "string", "maxLength": 100 },
+        "awayTeam": { "type": "string", "maxLength": 100 },
+        "matchFormat": { "type": "string", "maxLength": 50 },
+        "venue": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "maxLength": 50 },
+        "currentRuns": { "type": "number" },
+        "currentWickets": { "type": "number" },
+        "overs": { "type": "string", "maxLength": 20 },
+        "target": { "type": "number" },
+        "toss": { "type": "string", "maxLength": 200 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "homeTeam", "awayTeam", "status"]
+    },
+    "player": {
+      "title": "Player",
+      "description": "Cricket player roster profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "school": { "type": "string", "maxLength": 50 },
+        "role": { "type": "string", "maxLength": 50 },
+        "batHand": { "type": "string", "maxLength": 10 },
+        "bowlArm": { "type": "string", "maxLength": 10 },
+        "bowlStyle": { "type": "string", "maxLength": 20 },
+        "age": { "type": "number" },
+        "avg": { "type": "number" },
+        "sr": { "type": "number" }
+      },
+      "required": ["id", "name", "school", "role"]
+    },
+    "fixture": {
+      "title": "Fixture",
+      "description": "Scheduled fixture between two schools",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "homeTeam": { "type": "string", "maxLength": 100 },
+        "awayTeam": { "type": "string", "maxLength": 100 },
+        "date": { "type": "string", "maxLength": 50 },
+        "venue": { "type": "string", "maxLength": 100 },
+        "format": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "homeTeam", "awayTeam", "date", "status"]
+    }
+  },
+  "firestore": {
+    "/matches/{matchId}": {
+      "schema": "match",
+      "description": "Live and completed cricket matches"
+    },
+    "/players/{playerId}": {
+      "schema": "player",
+      "description": "Player database and statistics"
+    },
+    "/fixtures/{fixtureId}": {
+      "schema": "fixture",
+      "description": "School cricket fixtures schedule"
+    }
+  }
+}
