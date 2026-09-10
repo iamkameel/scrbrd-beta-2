@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Theme } from './types';
 import { SPONSORSHIP_CAMPAIGNS, SCHOOLS_REGISTRY } from './data';
+import { SCHOOL_SPONSORS } from './schoolProfileData';
 
 interface CommercialViewProps {
   theme: Theme;
@@ -12,7 +13,40 @@ interface CommercialViewProps {
 
 export default function CommercialView({ theme: D, activeSchoolId, initialTab = "portfolio" }: CommercialViewProps) {
   const [activeTab, setActiveTab] = useState<"portfolio" | "exclusivity" | "inventory_simulator" | "rate_card" | "contract_vault" | "revenue_ledger" | "broadcast">(initialTab);
-  const [campaigns, setCampaigns] = useState(SPONSORSHIP_CAMPAIGNS);
+  
+  const getSchoolCampaigns = (sId: string) => {
+    const list = SCHOOL_SPONSORS[sId] || SCHOOL_SPONSORS.WES;
+    return list.map((s, idx) => ({
+      id: s.id,
+      sponsorName: s.brandName,
+      logoText: s.brandName.split(" ")[0].toUpperCase(),
+      logoBg: idx % 2 === 0 ? "#0f766e" : "#0284c7",
+      brandCategory: s.category,
+      scopeType: "school",
+      scopeId: sId,
+      inventoryType: idx === 0 ? "LIVE_MATCH_SCORE_BUG" : idx === 1 ? "WAGON_WHEEL_SAFE_ZONE" : "SIX_TRACKER_MOMENT",
+      status: "active",
+      startDate: "2026-01-01",
+      endDate: "2026-12-31",
+      contractValueZar: s.tier === "Platinum" ? 180000 : s.tier === "Gold" ? 110000 : 60000,
+      revenueShareSchoolPct: 80,
+      revenueSharePlatformPct: 20,
+      impressions: 45000 + idx * 12000,
+      viewableImpressions: 42000 + idx * 11000,
+      clickThroughs: 1500 + idx * 300,
+      exclusivityProtected: true,
+      section18ATaxReceipt: true,
+      tier: s.tier,
+      ctaText: `Official Partner of ${sId} Cricket (${s.scope})`,
+    }));
+  };
+
+  const [campaigns, setCampaigns] = useState(() => getSchoolCampaigns(activeSchoolId));
+
+  useEffect(() => {
+    setCampaigns(getSchoolCampaigns(activeSchoolId));
+  }, [activeSchoolId]);
+
   const [scopeFilter, setScopeFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
@@ -38,12 +72,20 @@ export default function CommercialView({ theme: D, activeSchoolId, initialTab = 
   const [simScope, setSimScope] = useState("Coastal");
   const [simResult, setSimResult] = useState<{ conflict: boolean; message: string } | null>(null);
 
-  // New campaign modal
+  // New campaign modal - Rich & Dynamic
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [newSponsorName, setNewSponsorName] = useState("");
-  const [newCategory, setNewCategory] = useState("Banking");
-  const [newContractVal, setNewContractVal] = useState("95000");
+  const [newCategory, setNewCategory] = useState("Banking & Wealth");
+  const [newTier, setNewTier] = useState("Platinum");
+  const [newContractVal, setNewContractVal] = useState("120000");
   const [newInventory, setNewInventory] = useState("LIVE_MATCH_SCORE_BUG");
+  const [newSchoolPct, setNewSchoolPct] = useState("80");
+  const [newPlatformPct, setNewPlatformPct] = useState("20");
+  const [newSection18A, setNewSection18A] = useState(true);
+  const [newExclusivity, setNewExclusivity] = useState(true);
+  const [newStartDate, setNewStartDate] = useState("2026-03-01");
+  const [newEndDate, setNewEndDate] = useState("2026-10-31");
+  const [newCtaText, setNewCtaText] = useState("Official Development Partner");
 
   // Live Overlay Inventory Simulator State
   const [simSlot, setSimSlot] = useState<"SCORE_BUG" | "WAGON_WHEEL" | "SIX_TRACKER" | "MOTM_AWARD">("SCORE_BUG");
@@ -89,6 +131,9 @@ export default function CommercialView({ theme: D, activeSchoolId, initialTab = 
 
   const handleCreateCampaign = () => {
     if (!newSponsorName.trim()) return;
+    const schPct = parseInt(newSchoolPct, 10) || 80;
+    const platPct = parseInt(newPlatformPct, 10) || 20;
+    const valZar = parseInt(newContractVal, 10) || 50000;
     const newCamp = {
       id: `camp_${Date.now()}`,
       sponsorName: newSponsorName,
@@ -99,16 +144,18 @@ export default function CommercialView({ theme: D, activeSchoolId, initialTab = 
       scopeId: activeSchoolId,
       inventoryType: newInventory,
       status: "active",
-      startDate: "2026-03-01",
-      endDate: "2026-10-31",
-      contractValueZar: parseInt(newContractVal, 10) || 50000,
-      revenueShareSchoolPct: 80,
-      revenueSharePlatformPct: 20,
-      impressions: 1200,
-      viewableImpressions: 1100,
-      clickThroughs: 48,
-      exclusivityProtected: true,
-      ctaText: `Official Partner of ${activeSchoolId} Cricket`,
+      startDate: newStartDate,
+      endDate: newEndDate,
+      contractValueZar: valZar,
+      revenueShareSchoolPct: schPct,
+      revenueSharePlatformPct: platPct,
+      impressions: 15000,
+      viewableImpressions: 14200,
+      clickThroughs: 520,
+      exclusivityProtected: newExclusivity,
+      section18ATaxReceipt: newSection18A,
+      tier: newTier,
+      ctaText: newCtaText,
     };
     setCampaigns(prev => [newCamp, ...prev]);
     setAddModalOpen(false);
@@ -1340,14 +1387,42 @@ export default function CommercialView({ theme: D, activeSchoolId, initialTab = 
                     fontSize: "12px",
                   }}
                 >
-                  <option value="Banking">Banking & Wealth</option>
+                  <option value="Banking & Wealth">Banking & Wealth</option>
                   <option value="Automotive">Automotive</option>
-                  <option value="Sportswear">Sportswear</option>
+                  <option value="Sportswear & Kit">Sportswear & Kit</option>
                   <option value="Nutrition">Nutrition</option>
                   <option value="Technology">Technology</option>
+                  <option value="Medical & Health">Medical & Health</option>
                 </select>
               </div>
 
+              <div>
+                <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                  SPONSORSHIP TIER
+                </label>
+                <select
+                  value={newTier}
+                  onChange={e => setNewTier(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "8px 10px",
+                    background: D.surf2,
+                    border: `1px solid ${D.border}`,
+                    borderRadius: D.sm,
+                    color: D.textPrimary,
+                    fontFamily: D.body,
+                    fontSize: "12px",
+                  }}
+                >
+                  <option value="Platinum">Platinum (Title Partner)</option>
+                  <option value="Gold">Gold (Official Partner)</option>
+                  <option value="Silver">Silver (Supplier)</option>
+                  <option value="Community">Community Sponsor</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
               <div>
                 <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, display: "block", marginBottom: "4px" }}>
                   CONTRACT VALUE (ZAR)
@@ -1368,18 +1443,92 @@ export default function CommercialView({ theme: D, activeSchoolId, initialTab = 
                   }}
                 />
               </div>
+
+              <div>
+                <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                  INVENTORY PLACEMENT SLOT
+                </label>
+                <select
+                  value={newInventory}
+                  onChange={e => setNewInventory(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "8px 10px",
+                    background: D.surf2,
+                    border: `1px solid ${D.border}`,
+                    borderRadius: D.sm,
+                    color: D.textPrimary,
+                    fontFamily: D.body,
+                    fontSize: "12px",
+                  }}
+                >
+                  <option value="LIVE_MATCH_SCORE_BUG">Live Match Score Bug (Overlay)</option>
+                  <option value="PUBLIC_HOME_HERO">Public Circuit Hero Banner</option>
+                  <option value="WAGON_WHEEL_SAFE_ZONE">Wagon Wheel Safe Zone Watermark</option>
+                  <option value="SIX_TRACKER_MOMENT">Six Distance Tracker Moment</option>
+                  <option value="SCORECARD_FOOTER">Institutional Scorecard Footer</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div>
+                <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                  SCHOOL REVENUE SHARE (%)
+                </label>
+                <input
+                  type="number"
+                  value={newSchoolPct}
+                  onChange={e => {
+                    const val = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 80));
+                    setNewSchoolPct(String(val));
+                    setNewPlatformPct(String(100 - val));
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    background: D.surf2,
+                    border: `1px solid ${D.border}`,
+                    borderRadius: D.sm,
+                    color: D.textPrimary,
+                    fontFamily: D.mono,
+                    fontSize: "12px",
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                  START / END DATES
+                </label>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  <input
+                    type="date"
+                    value={newStartDate}
+                    onChange={e => setNewStartDate(e.target.value)}
+                    style={{ width: "50%", padding: "6px", background: D.surf2, border: `1px solid ${D.border}`, borderRadius: D.sm, color: D.textPrimary, fontSize: "10px" }}
+                  />
+                  <input
+                    type="date"
+                    value={newEndDate}
+                    onChange={e => setNewEndDate(e.target.value)}
+                    style={{ width: "50%", padding: "6px", background: D.surf2, border: `1px solid ${D.border}`, borderRadius: D.sm, color: D.textPrimary, fontSize: "10px" }}
+                  />
+                </div>
+              </div>
             </div>
 
             <div>
               <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, display: "block", marginBottom: "4px" }}>
-                INVENTORY PLACEMENT SLOT
+                CALL TO ACTION (CTA) COPY
               </label>
-              <select
-                value={newInventory}
-                onChange={e => setNewInventory(e.target.value)}
+              <input
+                type="text"
+                value={newCtaText}
+                onChange={e => setNewCtaText(e.target.value)}
+                placeholder="e.g. Exclusive School Staff & Parent Offers"
                 style={{
                   width: "100%",
-                  padding: "8px 10px",
+                  padding: "8px 12px",
                   background: D.surf2,
                   border: `1px solid ${D.border}`,
                   borderRadius: D.sm,
@@ -1387,13 +1536,26 @@ export default function CommercialView({ theme: D, activeSchoolId, initialTab = 
                   fontFamily: D.body,
                   fontSize: "12px",
                 }}
-              >
-                <option value="LIVE_MATCH_SCORE_BUG">Live Match Score Bug (Overlay)</option>
-                <option value="PUBLIC_HOME_HERO">Public Circuit Hero Banner</option>
-                <option value="WAGON_WHEEL_SAFE_ZONE">Wagon Wheel Safe Zone Watermark</option>
-                <option value="SIX_TRACKER_MOMENT">Six Distance Tracker Moment</option>
-                <option value="SCORECARD_FOOTER">Institutional Scorecard Footer</option>
-              </select>
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "16px", alignItems: "center", marginTop: "4px" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontFamily: D.body, fontSize: "11px", color: D.textPrimary, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={newSection18A}
+                  onChange={e => setNewSection18A(e.target.checked)}
+                />
+                Issue SARS Section 18A Tax Receipt
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: "6px", fontFamily: D.body, fontSize: "11px", color: D.textPrimary, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={newExclusivity}
+                  onChange={e => setNewExclusivity(e.target.checked)}
+                />
+                Enforce Category Exclusivity
+              </label>
             </div>
 
             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "8px" }}>

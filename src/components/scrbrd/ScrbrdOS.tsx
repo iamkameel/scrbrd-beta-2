@@ -55,6 +55,7 @@ import MatchesView from "./MatchesView";
 import StaffManagementView from "./StaffManagementView";
 import HeadToHeadComparisonView from "./HeadToHeadComparisonView";
 import RegisterHubView from "./RegisterHubView";
+import { SchoolProfileView } from "./SchoolProfileView";
 import { getSchoolSquads } from "./multiSquadData";
 import { ScrbrdLogo } from "./ScrbrdLogo";
 import Image from "next/image";
@@ -2374,6 +2375,19 @@ export default function ScrbrdOS() {
             />
           )}
 
+          {/* School Profile View */}
+          {(page === "school" || page === "school_profile") && (
+            <SchoolProfileView
+              theme={D}
+              schoolId={activeSchool.id}
+              role={role}
+              onSelectSchool={(sId) => setActiveSchoolId(sId)}
+              onOpenScorecard={(mId) => {}}
+              onOpenPlayerProfile={(pId) => {}}
+              onNavigateToRegister={() => setPage("register")}
+            />
+          )}
+
           {/* Commercial & Sponsorship Management */}
           {page === "sponsorship" && <CommercialView theme={D} activeSchoolId={activeSchool.id} />}
 
@@ -2470,32 +2484,6 @@ export default function ScrbrdOS() {
           {page === "pitchdeck" && <PitchDeckView theme={D} />}
         </main>
       </div>
-
-      {/* ── BROADCAST SCORER OVERLAY ── */}
-      {scorerOpen && (
-        <BroadcastScorer
-          theme={D}
-          onClose={() => setScorerOpen(false)}
-          activeMatch={activeScorerMatch || activeHeroMatch}
-          activeSchool={activeSchool}
-        />
-      )}
-
-      {/* ── FULL SCORECARD MODAL ── */}
-      {scorecardModalOpen && activeScorecard && (
-        <ScorecardModal
-          theme={D}
-          scorecard={activeScorecard}
-          onClose={() => {
-            setScorecardModalOpen(false);
-            setActiveScorecard(null);
-          }}
-          onOpenScorer={() => {
-            setScorecardModalOpen(false);
-            handleLaunchScorer(activeHeroMatch);
-          }}
-        />
-      )}
     </div>
   );
 }
