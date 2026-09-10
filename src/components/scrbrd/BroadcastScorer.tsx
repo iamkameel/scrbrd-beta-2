@@ -13,6 +13,7 @@ import BowlerWorkloadMonitor from "./BowlerWorkloadMonitor";
 import CaptainTacticalCockpit from "./CaptainTacticalCockpit";
 import FullScorecardView from "./FullScorecardView";
 import DeepMatchAnalyticsView from "./DeepMatchAnalyticsView";
+import { deriveInnings, BallEvent, describeDismissal } from "./scoringEngine";
 
 interface BroadcastScorerProps {
   theme: Theme;
@@ -548,63 +549,47 @@ export default function BroadcastScorer({
 
   // ── EVENT-SOURCED REDUCER ("DERIVE, DON'T STORE") ─────
   const matchDerivedState = useMemo(() => {
+    // Map current delivery records into pure BallEvent stream (oldest to newest for fold)
+    const userDeliveries = [...deliveries.slice(2)].reverse(); // exclude baseline init balls
+    const ballEvents: BallEvent[] = userDeliveries.map((d, index) => ({
+      id: d.id,
+      seq: index + 1,
+      isLegalDelivery: d.isLegalDelivery,
+      extraType: d.extraType,
+      runsOffBat: d.runsOffBat,
+      extraRuns: d.extraRuns,
+      totalRuns: d.totalRuns,
+      isWicket: d.isWicket,
+      wicketType: d.wicketType,
+      fielderName: d.fielder,
+      batterName: d.batter,
+      bowlerName: d.bowler,
+      commentary: d.commentary,
+      timestamp: d.timestamp,
+      shot: d.shot,
+      isVoided: false,
+    }));
+
+    // Fold user events over initial batting squad and bowling attack
+    const derived = deriveInnings(
+      ballEvents,
+      [
+        { name: baseStriker.name, pos: 1 },
+        { name: baseNonStriker.name, pos: 2 },
+        { name: "Luke Campbell", pos: 3 },
+        { name: "Tristan van Rooyen", pos: 4 },
+        { name: "Gareth Jenkins", pos: 5 },
+      ],
+      ["T. Ndlovu", "M. Khumalo", "D. Smith"]
+    );
+
     const baseTotalRuns = 142;
     const baseWickets = 3;
-    const baseTotalLegalBalls = 14 * 6 + 2; // 86 balls
+    const baseTotalLegalBalls = 14 * 6 + 2; // 86 balls baseline
 
-    let currentStrikerState = { ...baseStriker };
-    let currentNonStrikerState = { ...baseNonStriker };
-    let bowlerState = { name: "T. Ndlovu", oversBowled: 3.2, runsConceded: 28, wickets: 1, maidens: 0 };
-
-    let addedRuns = 0;
-    let addedWickets = 0;
-    let addedLegalBalls = 0;
-    let extrasBreakdown = { wides: 0, noBalls: 0, byes: 0, legByes: 0 };
-
-    // Track strike rotation through deliveries added beyond initial set
-    const userDeliveries = deliveries.slice(2); // Initial two are already part of base
-    for (let i = userDeliveries.length - 1; i >= 0; i--) {
-      const d = userDeliveries[i];
-      addedRuns += d.totalRuns;
-      if (d.isWicket) addedWickets += 1;
-      if (d.isLegalDelivery) addedLegalBalls += 1;
-
-      if (d.extraType === "wd") extrasBreakdown.wides += d.extraRuns;
-      if (d.extraType === "nb") extrasBreakdown.noBalls += d.extraRuns;
-      if (d.extraType === "b") extrasBreakdown.byes += d.extraRuns;
-      if (d.extraType === "lb") extrasBreakdown.legByes += d.extraRuns;
-
-      // Update batter
-      if (d.runsOffBat > 0 || d.isLegalDelivery) {
-        currentStrikerState.runs += d.runsOffBat;
-        if (d.isLegalDelivery) currentStrikerState.balls += 1;
-        if (d.runsOffBat === 4) currentStrikerState.fours += 1;
-        if (d.runsOffBat === 6) currentStrikerState.sixes += 1;
-      }
-
-      // Bowler figures
-      bowlerState.runsConceded += d.totalRuns;
-      if (d.isWicket) bowlerState.wickets += 1;
-
-      // Strike rotation on odd runs
-      if (d.runsOffBat % 2 === 1 || (d.extraType === "wd" && d.totalRuns % 2 === 1)) {
-        const temp = currentStrikerState;
-        currentStrikerState = currentNonStrikerState;
-        currentNonStrikerState = temp;
-      }
-
-      // Strike rotation at over end
-      const totalLegal = baseTotalLegalBalls + addedLegalBalls;
-      if (totalLegal % 6 === 0 && d.isLegalDelivery) {
-        const temp = currentStrikerState;
-        currentStrikerState = currentNonStrikerState;
-        currentNonStrikerState = temp;
-      }
-    }
-
-    const totalRuns = baseTotalRuns + addedRuns;
-    const totalWickets = baseWickets + addedWickets;
-    const totalBalls = baseTotalLegalBalls + addedLegalBalls;
+    const totalRuns = baseTotalRuns + derived.totalRuns;
+    const totalWickets = baseWickets + derived.totalWickets;
+    const totalBalls = baseTotalLegalBalls + derived.legalBalls;
     const completedOvers = Math.floor(totalBalls / 6);
     const remainderBalls = totalBalls % 6;
     const oversStr = `${completedOvers}.${remainderBalls}`;
@@ -616,6 +601,39 @@ export default function BroadcastScorer({
     const requiredRR = ballsRemaining > 0 ? ((runsRequired / ballsRemaining) * 6).toFixed(2) : "0.00";
 
     const queuedCount = deliveries.filter(d => d.syncStatus === "queued").length;
+
+    // Resolve active striker & non-striker figures from base + derived fold
+    const activeStrikerName = derived.activeStrikerName || baseStriker.name;
+    const activeNonStrikerName = derived.activeNonStrikerName || baseNonStriker.name;
+
+    const strikerStats = derived.batting.find(b => b.name === activeStrikerName);
+    const nonStrikerStats = derived.batting.find(b => b.name === activeNonStrikerName);
+
+    const currentStrikerState = {
+      name: activeStrikerName,
+      runs: (activeStrikerName === baseStriker.name ? baseStriker.runs : activeStrikerName === baseNonStriker.name ? baseNonStriker.runs : 0) + (strikerStats?.runs || 0),
+      balls: (activeStrikerName === baseStriker.name ? baseStriker.balls : activeStrikerName === baseNonStriker.name ? baseNonStriker.balls : 0) + (strikerStats?.balls || 0),
+      fours: (activeStrikerName === baseStriker.name ? baseStriker.fours : activeStrikerName === baseNonStriker.name ? baseNonStriker.fours : 0) + (strikerStats?.fours || 0),
+      sixes: (activeStrikerName === baseStriker.name ? baseStriker.sixes : activeStrikerName === baseNonStriker.name ? baseNonStriker.sixes : 0) + (strikerStats?.sixes || 0),
+      hand: baseStriker.hand,
+    };
+
+    const currentNonStrikerState = {
+      name: activeNonStrikerName,
+      runs: (activeNonStrikerName === baseStriker.name ? baseStriker.runs : activeNonStrikerName === baseNonStriker.name ? baseNonStriker.runs : 0) + (nonStrikerStats?.runs || 0),
+      balls: (activeNonStrikerName === baseStriker.name ? baseStriker.balls : activeNonStrikerName === baseNonStriker.name ? baseNonStriker.balls : 0) + (nonStrikerStats?.balls || 0),
+      fours: (activeNonStrikerName === baseStriker.name ? baseStriker.fours : activeNonStrikerName === baseNonStriker.name ? baseNonStriker.fours : 0) + (nonStrikerStats?.fours || 0),
+      sixes: (activeNonStrikerName === baseStriker.name ? baseStriker.sixes : activeNonStrikerName === baseNonStriker.name ? baseNonStriker.sixes : 0) + (nonStrikerStats?.sixes || 0),
+      hand: baseNonStriker.hand,
+    };
+
+    const bowlerState = {
+      name: derived.activeBowlerName || "T. Ndlovu",
+      oversBowled: `${Math.floor((20 + derived.legalBalls) / 6)}.${(20 + derived.legalBalls) % 6}`,
+      runsConceded: 28 + derived.totalRuns,
+      wickets: 1 + derived.totalWickets,
+      maidens: derived.bowling[0]?.maidens || 0,
+    };
 
     return {
       totalRuns,
@@ -632,18 +650,27 @@ export default function BroadcastScorer({
       striker: currentStrikerState,
       nonStriker: currentNonStrikerState,
       bowler: bowlerState,
-      extras: extrasBreakdown,
-      wides: extrasBreakdown.wides,
-      noBalls: extrasBreakdown.noBalls,
-      byes: extrasBreakdown.byes,
-      legByes: extrasBreakdown.legByes,
-      extrasTotal: extrasBreakdown.wides + extrasBreakdown.noBalls + extrasBreakdown.byes + extrasBreakdown.legByes,
+      extras: derived.extras,
+      wides: derived.extras.wides,
+      noBalls: derived.extras.noBalls,
+      byes: derived.extras.byes,
+      legByes: derived.extras.legByes,
+      extrasTotal: derived.extras.total,
       fallOfWickets: [
         { wicketNumber: 1, score: 38, over: "4.1", batterName: "L. Campbell", wicket: 1, player: "L. Campbell" },
         { wicketNumber: 2, score: 84, over: "8.5", batterName: "G. Jenkins", wicket: 2, player: "G. Jenkins" },
         { wicketNumber: 3, score: 112, over: "12.3", batterName: "T. van Rooyen", wicket: 3, player: "T. van Rooyen" },
+        ...derived.fow.map(f => ({
+          wicketNumber: f.wicketNumber + 3,
+          score: baseTotalRuns + f.score,
+          over: f.over,
+          batterName: f.player,
+          wicket: f.wicketNumber + 3,
+          player: f.player,
+        })),
       ],
       queuedCount,
+      isFreeHitNext: derived.isFreeHitNext,
     };
   }, [deliveries, baseStriker, baseNonStriker, dlsTarget]);
 
@@ -1384,6 +1411,24 @@ export default function BroadcastScorer({
                   <span style={{ fontFamily: D.mono, fontSize: "16px", color: D.textMuted }}>
                     ({matchDerivedState.oversStr} / 20 ov)
                   </span>
+                  {matchDerivedState.isFreeHitNext && (
+                    <span
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: D.pill,
+                        background: `${D.amber}25`,
+                        border: `1px solid ${D.amber}`,
+                        color: D.amber,
+                        fontFamily: D.head,
+                        fontSize: "11px",
+                        fontWeight: 900,
+                        letterSpacing: "0.05em",
+                        animation: "pulse 1.5s ease-in-out infinite",
+                      }}
+                    >
+                      🚨 FREE HIT NEXT!
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.emerald, marginTop: "2px" }}>
                   Run Rate: {matchDerivedState.currentRR} · Target: {matchDerivedState.target} (Req: {matchDerivedState.requiredRR})
