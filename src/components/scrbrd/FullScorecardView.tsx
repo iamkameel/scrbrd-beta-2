@@ -157,7 +157,7 @@ export default function FullScorecardView({
   const safeFOW = activeInningsData.fallOfWickets || [];
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: D.surf0, overflowY: 'auto' }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: D.surf0, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
       {/* Scorecard Header Banner */}
       <div
         style={{

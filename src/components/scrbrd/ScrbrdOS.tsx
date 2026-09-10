@@ -2470,6 +2470,32 @@ export default function ScrbrdOS() {
           {page === "pitchdeck" && <PitchDeckView theme={D} />}
         </main>
       </div>
+
+      {/* ── BROADCAST SCORER OVERLAY ── */}
+      {scorerOpen && (
+        <BroadcastScorer
+          theme={D}
+          onClose={() => setScorerOpen(false)}
+          activeMatch={activeScorerMatch || activeHeroMatch}
+          activeSchool={activeSchool}
+        />
+      )}
+
+      {/* ── FULL SCORECARD MODAL ── */}
+      {scorecardModalOpen && activeScorecard && (
+        <ScorecardModal
+          theme={D}
+          scorecard={activeScorecard}
+          onClose={() => {
+            setScorecardModalOpen(false);
+            setActiveScorecard(null);
+          }}
+          onOpenScorer={() => {
+            setScorecardModalOpen(false);
+            handleLaunchScorer(activeHeroMatch);
+          }}
+        />
+      )}
     </div>
   );
 }

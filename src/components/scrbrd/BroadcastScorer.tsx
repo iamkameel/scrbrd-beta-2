@@ -3556,38 +3556,40 @@ export default function BroadcastScorer({
 
         {/* Active Main Tab 2: Full Match Scorecard */}
         {activeMainTab === "scorecard" && (
-          <FullScorecardView
-            theme={D}
-            homeTeamName={homeTitle}
-            awayTeamName={awayTitle}
-            matchState={matchDerivedState}
-            deliveries={deliveries}
-            battingSquad={battingSquad}
-            bowlingAttack={bowlingAttack}
-            matchSettings={matchSettings}
-            innings1Data={{
-              teamName: homeTitle,
-              runs: matchDerivedState.totalRuns,
-              wickets: matchDerivedState.totalWickets,
-              overs: matchDerivedState.oversStr,
-              batting: battingSquad,
-              bowling: bowlingAttack,
-              extras: {
-                wides: matchDerivedState.wides,
-                noBalls: matchDerivedState.noBalls,
-                byes: matchDerivedState.byes,
-                legByes: matchDerivedState.legByes,
-                penalties: 0,
-                total: matchDerivedState.extrasTotal,
-              },
-              fallOfWickets: matchDerivedState.fallOfWickets || [],
-            }}
-            activeInningsNumber={1}
-            matchFormat="T20"
-            venueName="Main Oval"
-            matchStatus="LIVE"
-            tossText={`${homeTitle} won the toss and elected to bat first`}
-          />
+          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+            <FullScorecardView
+              theme={D}
+              homeTeamName={homeTitle}
+              awayTeamName={awayTitle}
+              matchState={matchDerivedState}
+              deliveries={deliveries}
+              battingSquad={battingSquad}
+              bowlingAttack={bowlingAttack}
+              matchSettings={matchSettings}
+              innings1Data={{
+                teamName: homeTitle,
+                runs: matchDerivedState.totalRuns,
+                wickets: matchDerivedState.totalWickets,
+                overs: matchDerivedState.oversStr,
+                batting: battingSquad,
+                bowling: bowlingAttack,
+                extras: {
+                  wides: matchDerivedState.wides,
+                  noBalls: matchDerivedState.noBalls,
+                  byes: matchDerivedState.byes,
+                  legByes: matchDerivedState.legByes,
+                  penalties: 0,
+                  total: matchDerivedState.extrasTotal,
+                },
+                fallOfWickets: matchDerivedState.fallOfWickets || [],
+              }}
+              activeInningsNumber={1}
+              matchFormat="T20"
+              venueName="Main Oval"
+              matchStatus="LIVE"
+              tossText={`${homeTitle} won the toss and elected to bat first`}
+            />
+          </div>
         )}
 
         {/* Active Main Tab 3: Deep Match Analytics */}

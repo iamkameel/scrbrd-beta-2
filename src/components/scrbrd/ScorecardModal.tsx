@@ -44,6 +44,7 @@ export default function ScorecardModal({
         style={{
           width: '100%',
           maxWidth: '1050px',
+          height: '92vh',
           maxHeight: '92vh',
           background: D.surf1,
           border: `1px solid ${D.borderMed}`,
@@ -264,7 +265,18 @@ export default function ScorecardModal({
         </div>
 
         {/* Scrollable Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+          }}
+        >
           {subTab === 'scorecard' && (
             <>
               {/* Innings Summary Banner */}
