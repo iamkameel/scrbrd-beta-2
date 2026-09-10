@@ -201,17 +201,13 @@ export default function PitchDeckView({ theme: D }: PitchDeckViewProps) {
 
   const currentSlide = SLIDES[currentSlideIndex];
 
-  const nextSlide = () => {
-    if (currentSlideIndex < SLIDES.length - 1) {
-      setCurrentSlideIndex(prev => prev + 1);
-    }
-  };
+  const nextSlide = useCallback(() => {
+    setCurrentSlideIndex(prev => Math.min(prev + 1, SLIDES.length - 1));
+  }, []);
 
-  const prevSlide = () => {
-    if (currentSlideIndex > 0) {
-      setCurrentSlideIndex(prev => prev - 1);
-    }
-  };
+  const prevSlide = useCallback(() => {
+    setCurrentSlideIndex(prev => Math.max(prev - 1, 0));
+  }, []);
 
   // Keyboard navigation
   useEffect(() => {
@@ -226,7 +222,7 @@ export default function PitchDeckView({ theme: D }: PitchDeckViewProps) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentSlideIndex, isFullScreen]);
+  }, [nextSlide, prevSlide, isFullScreen]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

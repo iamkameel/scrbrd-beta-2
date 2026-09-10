@@ -49,55 +49,66 @@ import MultiSquadCoachView from "./MultiSquadCoachView";
 import StatsGuruQueryEngineView from "./StatsGuruQueryEngineView";
 import SettingsView from "./SettingsView";
 import UserProfilesView from "./UserProfilesView";
-import HeadToHeadComparisonView from "./HeadToHeadComparisonView";
 import RulebookView from "./RulebookView";
 import PitchDeckView from "./PitchDeckView";
+import MatchesView from "./MatchesView";
+import StaffManagementView from "./StaffManagementView";
+import HeadToHeadComparisonView from "./HeadToHeadComparisonView";
+import RegisterHubView from "./RegisterHubView";
 import { getSchoolSquads } from "./multiSquadData";
 import { ScrbrdLogo } from "./ScrbrdLogo";
 import Image from "next/image";
-import { ArrowLeft, ArrowRight, Home, ChevronRight, Swords, User, Users } from "lucide-react";
 
 export default function ScrbrdOS() {
   const [role, setRole] = useState<string>("superadmin");
   const [page, setPage] = useState<string>("dashboard");
-  const [navHistory, setNavHistory] = useState<string[]>(["dashboard"]);
-  const [navHistoryIdx, setNavHistoryIdx] = useState<number>(0);
-  const [comparePlayerAId, setComparePlayerAId] = useState<string>("w1");
-  const [comparePlayerBId, setComparePlayerBId] = useState<string>("m1_p");
-  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-
-  const navigateTo = (targetPage: string) => {
-    if (targetPage === page) return;
-    const updated = [...navHistory.slice(0, navHistoryIdx + 1), targetPage];
-    setNavHistory(updated);
-    setNavHistoryIdx(updated.length - 1);
-    setPage(targetPage);
-  };
-
-  const handleNavBack = () => {
-    if (navHistoryIdx > 0) {
-      const prev = navHistory[navHistoryIdx - 1];
-      setNavHistoryIdx(navHistoryIdx - 1);
-      setPage(prev);
-    }
-  };
-
-  const handleNavForward = () => {
-    if (navHistoryIdx < navHistory.length - 1) {
-      const next = navHistory[navHistoryIdx + 1];
-      setNavHistoryIdx(navHistoryIdx + 1);
-      setPage(next);
-    }
-  };
-
+  const [historyStack, setHistoryStack] = useState<string[]>(["dashboard"]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [activeSchoolId, setActiveSchoolId] = useState<string>("WES");
   const [selectedSquadId, setSelectedSquadId] = useState<string>("WES_1ST");
   const [isDark, setIsDark] = useState<boolean>(true);
+  const [matchesList, setMatchesList] = useState<Match[]>(MATCHES);
+  const [h2hPlayers, setH2hPlayers] = useState<{ p1?: string; p2?: string }>({ p1: undefined, p2: undefined });
   const [users, setUsers] = useState(() => USERS_INITIAL.map(u => ({
     ...u,
     roles: [u.role || 'coach'],
     assignedSquads: u.schoolId === 'WES' ? ['WES_2ND'] : [],
   })));
+
+  const navigateToPage = (newPage: string) => {
+    if (newPage !== page) {
+      setHistoryStack(prev => [...prev, newPage]);
+      setPage(newPage);
+    }
+    setMobileMenuOpen(false);
+  };
+
+  const handleGoBack = () => {
+    if (historyStack.length > 1) {
+      const updated = [...historyStack];
+      updated.pop();
+      const prevPage = updated[updated.length - 1];
+      setHistoryStack(updated);
+      setPage(prevPage);
+    } else {
+      setPage("dashboard");
+    }
+  };
+
+  const handleCreateMatch = (newMatch: Match) => {
+    setMatchesList(prev => [newMatch, ...prev]);
+    triggerToast("Match Scheduled", `New fixture scheduled: ${newMatch.homeTeam} vs ${newMatch.awayTeam}`, "match", "matches");
+  };
+
+  const handleUpdateMatch = (updatedMatch: Match) => {
+    setMatchesList(prev => prev.map(m => m.id === updatedMatch.id ? updatedMatch : m));
+    triggerToast("Match Updated", `Fixture details updated: ${updatedMatch.homeTeam} vs ${updatedMatch.awayTeam}`, "match", "matches");
+  };
+
+  const handleDeleteMatch = (matchId: string) => {
+    setMatchesList(prev => prev.filter(m => m.id !== matchId));
+    triggerToast("Match Cancelled", "Fixture removed from institutional calendar.", "match", "matches");
+  };
 
   const handleUpdateUser = (updatedUser: any) => {
     setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
@@ -612,27 +623,74 @@ export default function ScrbrdOS() {
         </div>
       )}
 
-      {/* Global Sidebar */}
-      <aside style={{ width: "230px", background: D.surf0, borderRight: `1px solid ${D.border}`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, flexShrink: 0 }}>
+      {/* Mobile Drawer Backdrop */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.65)",
+            backdropFilter: "blur(4px)",
+            zIndex: 140,
+          }}
+        />
+      )}
+
+      {/* Global Sidebar (Responsive) */}
+      <aside
+        style={{
+          width: "240px",
+          background: D.surf0,
+          borderRight: `1px solid ${D.border}`,
+          display: "flex",
+          flexDirection: "column",
+          height: "100vh",
+          position: "sticky",
+          top: 0,
+          flexShrink: 0,
+          zIndex: 150,
+          transition: "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+        }}
+        className={`sidebar-nav ${mobileMenuOpen ? "mobile-drawer-open" : "mobile-drawer-closed"}`}
+      >
         {/* Brand Header */}
         <div style={{ padding: "14px 16px", borderBottom: `1px solid ${D.border}` }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
             <ScrbrdLogo height={24} isDark={isDark} />
-            <span
-              style={{
-                fontFamily: D.mono,
-                fontSize: "10px",
-                fontWeight: 800,
-                padding: "2px 6px",
-                borderRadius: "4px",
-                background: `${schoolPrimary}22`,
-                color: schoolPrimary,
-                border: `1px solid ${schoolPrimary}44`,
-                letterSpacing: "0.05em",
-              }}
-            >
-              OS
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span
+                style={{
+                  fontFamily: D.mono,
+                  fontSize: "10px",
+                  fontWeight: 800,
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  background: `${schoolPrimary}22`,
+                  color: schoolPrimary,
+                  border: `1px solid ${schoolPrimary}44`,
+                  letterSpacing: "0.05em",
+                }}
+              >
+                OS
+              </span>
+              {/* Close Button for mobile drawer */}
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="md:hidden"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: D.textMuted,
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  padding: "2px 6px",
+                }}
+                aria-label="Close Navigation Drawer"
+              >
+                ✕
+              </button>
+            </div>
           </div>
           <div style={{ fontFamily: D.mono, fontSize: "9px", color: D.textMuted, letterSpacing: "0.02em" }}>
             KZN School Intelligence
@@ -691,7 +749,7 @@ export default function ScrbrdOS() {
             return (
               <button
                 key={k}
-                onClick={() => navigateTo(k)}
+                onClick={() => navigateToPage(k)}
                 style={{
                   width: "100%",
                   padding: "8px 16px",
@@ -756,7 +814,31 @@ export default function ScrbrdOS() {
       {/* Main Layout Area */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
         {/* Top Navbar */}
-        <header style={{ height: "54px", background: D.surf0, borderBottom: `1px solid ${D.border}`, display: "flex", alignItems: "center", padding: "0 20px", gap: "14px", position: "sticky", top: 0, zIndex: 100 }}>
+        <header style={{ minHeight: "54px", background: D.surf0, borderBottom: `1px solid ${D.border}`, display: "flex", alignItems: "center", padding: "0 16px", gap: "10px", position: "sticky", top: 0, zIndex: 100, flexWrap: "wrap" }}>
+          {/* Mobile Hamburger Drawer Toggle */}
+          <button
+            onClick={() => setMobileMenuOpen(prev => !prev)}
+            className="md:hidden"
+            style={{
+              padding: "6px 9px",
+              borderRadius: D.sm,
+              background: mobileMenuOpen ? `${schoolPrimary}25` : D.surf2,
+              border: `1px solid ${mobileMenuOpen ? schoolPrimary : D.border}`,
+              color: D.textPrimary,
+              fontFamily: D.head,
+              fontSize: "13px",
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+            aria-label="Toggle navigation drawer"
+            title="Toggle Navigation Menu"
+          >
+            <span>{mobileMenuOpen ? "✕" : "☰"}</span>
+          </button>
+
           {/* Quick Active School Indicator & Colors */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "16px" }}>{activeSchool.crestIcon}</span>
@@ -769,8 +851,8 @@ export default function ScrbrdOS() {
 
           <div style={{ flex: 1 }} />
 
-          {/* Quick Switch School Pills */}
-          <div style={{ display: "none", alignItems: "center", gap: "4px" }} className="md:flex">
+          {/* Quick Switch School Pills (Desktop) */}
+          <div style={{ display: "none", alignItems: "center", gap: "4px" }} className="xl:flex">
             {SCHOOLS_REGISTRY.map(s => (
               <button
                 key={s.id}
@@ -1146,187 +1228,86 @@ export default function ScrbrdOS() {
           })}
         </div>
 
-        {/* Global Breadcrumb & History Navigation Bar */}
+        {/* Global Breadcrumb Navigation Bar & History Stack */}
         <div
           style={{
-            background: D.surf0,
-            borderBottom: `1px solid ${D.border}`,
             padding: "8px 20px",
+            background: D.surf1,
+            borderBottom: `1px solid ${D.border}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             flexWrap: "wrap",
-            gap: "10px",
-            fontSize: "12px",
+            gap: "8px",
             flexShrink: 0,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-            {/* Back button */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontFamily: D.mono, fontSize: "11px", flexWrap: "wrap" }}>
             <button
-              onClick={handleNavBack}
-              disabled={navHistoryIdx === 0}
-              title={navHistoryIdx > 0 ? `Back to ${NAV_META[navHistory[navHistoryIdx - 1]]?.label || navHistory[navHistoryIdx - 1]}` : 'No previous history'}
+              onClick={handleGoBack}
+              disabled={historyStack.length <= 1}
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "5px",
-                padding: "4px 10px",
+                padding: "3px 8px",
                 borderRadius: D.sm,
-                background: navHistoryIdx > 0 ? D.surf2 : "transparent",
-                border: `1px solid ${navHistoryIdx > 0 ? D.border : "transparent"}`,
-                color: navHistoryIdx > 0 ? D.textPrimary : D.textMuted,
-                cursor: navHistoryIdx > 0 ? "pointer" : "default",
-                opacity: navHistoryIdx > 0 ? 1 : 0.4,
+                background: historyStack.length > 1 ? D.surf2 : "transparent",
+                border: `1px solid ${historyStack.length > 1 ? D.border : "transparent"}`,
+                color: historyStack.length > 1 ? D.textPrimary : D.textMuted,
+                cursor: historyStack.length > 1 ? "pointer" : "default",
                 fontFamily: D.head,
                 fontSize: "11px",
                 fontWeight: 700,
-              }}
-            >
-              <ArrowLeft size={13} />
-              <span>Back</span>
-            </button>
-
-            {/* Forward button */}
-            <button
-              onClick={handleNavForward}
-              disabled={navHistoryIdx >= navHistory.length - 1}
-              title={navHistoryIdx < navHistory.length - 1 ? `Forward to ${NAV_META[navHistory[navHistoryIdx + 1]]?.label || navHistory[navHistoryIdx + 1]}` : 'No forward history'}
-              style={{
-                display: "inline-flex",
+                display: "flex",
                 alignItems: "center",
-                gap: "5px",
-                padding: "4px 10px",
-                borderRadius: D.sm,
-                background: navHistoryIdx < navHistory.length - 1 ? D.surf2 : "transparent",
-                border: `1px solid ${navHistoryIdx < navHistory.length - 1 ? D.border : "transparent"}`,
-                color: navHistoryIdx < navHistory.length - 1 ? D.textPrimary : D.textMuted,
-                cursor: navHistoryIdx < navHistory.length - 1 ? "pointer" : "default",
-                opacity: navHistoryIdx < navHistory.length - 1 ? 1 : 0.4,
-                fontFamily: D.head,
-                fontSize: "11px",
-                fontWeight: 700,
+                gap: "4px",
+                opacity: historyStack.length <= 1 ? 0.4 : 1,
               }}
+              title="Return to previous screen"
             >
-              <span>Forward</span>
-              <ArrowRight size={13} />
+              <span>← Back</span>
             </button>
-
-            <div style={{ width: "1px", height: "16px", background: D.border, margin: "0 2px" }} />
-
-            {/* Breadcrumb Trail */}
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontFamily: D.mono, fontSize: "11px" }}>
-              <button
-                onClick={() => navigateTo("dashboard")}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: page === "dashboard" ? D.indigo : D.textMuted,
-                  cursor: "pointer",
-                  fontWeight: 700,
-                  padding: 0,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-              >
-                <Home size={12} />
-                <span>Scrbrd OS</span>
-              </button>
-
-              <span style={{ color: D.textMuted }}>/</span>
-
-              <span style={{ color: D.textPrimary, fontWeight: 700 }}>
-                {NAV_META[page]?.icon || "📄"} {NAV_META[page]?.label || page}
-              </span>
-
-              {page === "profiles" && selectedProfileId && (
-                <>
-                  <span style={{ color: D.textMuted }}>/</span>
-                  <span style={{ color: D.indigo, fontWeight: 700 }}>
-                    {PLAYERS.find(p => p.id === selectedProfileId)?.name || users.find(u => u.id === selectedProfileId)?.name || selectedProfileId}
-                  </span>
-                </>
-              )}
-
-              {page === "compare" && (
-                <>
-                  <span style={{ color: D.textMuted }}>/</span>
-                  <span style={{ color: D.indigo, fontWeight: 700 }}>
-                    {PLAYERS.find(p => p.id === comparePlayerAId)?.name || 'Player A'} vs {PLAYERS.find(p => p.id === comparePlayerBId)?.name || 'Player B'}
-                  </span>
-                </>
-              )}
-            </div>
+            <span style={{ color: D.textMuted }}>/</span>
+            <button
+              onClick={() => navigateToPage("dashboard")}
+              style={{ background: "none", border: "none", padding: 0, color: D.textMuted, cursor: "pointer", fontFamily: D.mono, fontSize: "11px" }}
+            >
+              SCRBRD OS
+            </button>
+            <span style={{ color: D.textMuted }}>/</span>
+            <span style={{ color: schoolPrimary, fontWeight: 700 }}>{activeSchool.shortName}</span>
+            <span style={{ color: D.textMuted }}>/</span>
+            <span style={{ color: D.textPrimary, fontWeight: 700 }}>{NAV_META[page]?.label || page}</span>
           </div>
 
-          {/* Quick Module Shortcuts */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <button
-              onClick={() => navigateTo("compare")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: "3px 9px",
-                borderRadius: D.pill,
-                background: page === "compare" ? `${D.indigo}25` : D.surf1,
-                border: `1px solid ${page === "compare" ? D.indigo : D.border}`,
-                color: page === "compare" ? D.indigo : D.textSecondary,
-                fontFamily: D.head,
-                fontSize: "10px",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              <span>⚔️ H2H Compare</span>
-            </button>
-            <button
-              onClick={() => {
-                setSelectedProfileId(null);
-                navigateTo("profiles");
-              }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: "3px 9px",
-                borderRadius: D.pill,
-                background: page === "profiles" ? `${D.indigo}25` : D.surf1,
-                border: `1px solid ${page === "profiles" ? D.indigo : D.border}`,
-                color: page === "profiles" ? D.indigo : D.textSecondary,
-                fontFamily: D.head,
-                fontSize: "10px",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              <span>👤 Profiles (63)</span>
-            </button>
-            <button
-              onClick={() => navigateTo("scouting")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: "3px 9px",
-                borderRadius: D.pill,
-                background: page === "scouting" ? `${D.indigo}25` : D.surf1,
-                border: `1px solid ${page === "scouting" ? D.indigo : D.border}`,
-                color: page === "scouting" ? D.indigo : D.textSecondary,
-                fontFamily: D.head,
-                fontSize: "10px",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              <span>🎯 AI Scouting</span>
-            </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
+              Role: <strong style={{ color: ROLES[role]?.color || D.textPrimary }}>{ROLES[role]?.label || role}</strong>
+            </span>
           </div>
         </div>
 
+        {/* Global responsive drawer styles */}
+        <style jsx global>{`
+          @media (max-width: 768px) {
+            .mobile-drawer-closed {
+              position: fixed !important;
+              left: 0 !important;
+              top: 0 !important;
+              bottom: 0 !important;
+              transform: translateX(-100%) !important;
+            }
+            .mobile-drawer-open {
+              position: fixed !important;
+              left: 0 !important;
+              top: 0 !important;
+              bottom: 0 !important;
+              transform: translateX(0) !important;
+              box-shadow: 0 10px 40px rgba(0,0,0,0.65) !important;
+            }
+          }
+        `}</style>
+
         {/* Content View Router */}
-        <main style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
+        <main style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
           {page === "dashboard" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
               {/* School Heritage Banner */}
@@ -1367,6 +1348,9 @@ export default function ScrbrdOS() {
                     </Btn>
                     <Btn variant="tonal" size="sm" onClick={() => setPage("fields")}>
                       🌿 Turfgrass Telemetry
+                    </Btn>
+                    <Btn variant="primary" size="sm" onClick={() => setPage("register")}>
+                      📑 Master Register
                     </Btn>
                   </div>
                 </div>
@@ -1799,111 +1783,20 @@ export default function ScrbrdOS() {
             </div>
           )}
 
-          {/* Matches & Match Centre View */}
+          {/* Matches & Match Centre Multi-View (Cards, Table, Timeline, Live) */}
           {page === "matches" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <SectionHeader
-                title="Match Centre & Fixtures"
-                sub="Live scores, completed scorecards, fixtures and pitch conditions"
-                color={D.emerald}
-                actions={
-                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                    <Btn
-                      variant={matchScopeFilter === "school" ? "primary" : "ghost"}
-                      size="sm"
-                      onClick={() => setMatchScopeFilter("school")}
-                    >
-                      {activeSchool.shortName} Fixtures
-                    </Btn>
-                    <Btn
-                      variant={matchScopeFilter === "all" ? "primary" : "ghost"}
-                      size="sm"
-                      onClick={() => setMatchScopeFilter("all")}
-                    >
-                      All KZN Circuit ({MATCHES.length})
-                    </Btn>
-                    <Btn
-                      variant={matchScopeFilter === "live" ? "primary" : "ghost"}
-                      size="sm"
-                      onClick={() => setMatchScopeFilter("live")}
-                    >
-                      Live Matches ({liveMatches.length})
-                    </Btn>
-                    <Btn variant="success" size="sm" onClick={() => setScorerOpen(true)}>
-                      🏏 Open Scorer
-                    </Btn>
-                  </div>
-                }
-              />
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {(matchScopeFilter === "school"
-                  ? allSchoolMatches
-                  : matchScopeFilter === "live"
-                  ? liveMatches
-                  : MATCHES
-                ).map(m => {
-                  const w = WEATHER[m.id];
-                  const sc = liveScores[m.id];
-                  return (
-                    <Card key={m.id} sx={{ padding: "16px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
-                        <div style={{ flex: 1, minWidth: "260px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                            <Badge color={m.status === "live" ? D.emerald : m.status === "complete" ? D.sky : D.amber}>{m.status}</Badge>
-                            <span style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted }}>{m.date} · {m.time}</span>
-                            {w && <span style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted }}>{w.icon} {w.tempC}°C {w.condition}</span>}
-                          </div>
-                          <div style={{ fontFamily: D.head, fontSize: "16px", fontWeight: 700 }}>{m.homeTeam} vs {m.awayTeam}</div>
-                          <div style={{ fontFamily: D.body, fontSize: "12px", color: D.textMuted, marginTop: "2px" }}>📍 {m.venue}</div>
-
-                          {m.status === "live" && sc && (
-                            <div style={{ fontFamily: D.mono, fontSize: "18px", fontWeight: 700, color: D.emerald, marginTop: "4px" }}>
-                              {sc.runs}/{sc.wkts} ({sc.overStr} ov)
-                            </div>
-                          )}
-
-                          {m.result && <div style={{ fontFamily: D.body, fontSize: "12px", color: D.emerald, fontWeight: 600, marginTop: "4px" }}>{m.result}</div>}
-                          {m.summary && <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>{m.summary}</div>}
-                        </div>
-
-                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
-                          <Btn
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleOpenScorecard(m.id)}
-                          >
-                            📊 Scorecard & Phases
-                          </Btn>
-                          <Btn
-                            variant="tonal"
-                            size="sm"
-                            onClick={() => {
-                              setPage("analytics");
-                              setAnalyticsSubTab("analytics");
-                            }}
-                          >
-                            📈 Live Analytics
-                          </Btn>
-                          {m.status === "live" && (
-                            <Btn
-                              variant="success"
-                              size="sm"
-                              onClick={() => handleLaunchScorer(m)}
-                            >
-                              🏏 Live Scorer →
-                            </Btn>
-                          )}
-                          <Btn variant="ghost" size="sm" onClick={() => { setPage("analytics"); setAnalyticsSubTab("drs"); }}>
-                            📺 DRS
-                          </Btn>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
+            <MatchesView
+              theme={D}
+              activeSchoolId={activeSchool.id}
+              currentRole={role}
+              matches={matchesList}
+              onCreateMatch={handleCreateMatch}
+              onUpdateMatch={handleUpdateMatch}
+              onDeleteMatch={handleDeleteMatch}
+              onLaunchScorer={handleLaunchScorer}
+              onOpenScorecard={handleOpenScorecard}
+              onTriggerToast={(msg) => triggerToast("Match Operations", msg, "matches", "matches")}
+            />
           )}
 
           {/* Competitions & Leagues View */}
@@ -1977,28 +1870,23 @@ export default function ScrbrdOS() {
               onSelectSquad={(squadId) => setSelectedSquadId(squadId)}
               onSelectPlayerProfile={(p) => {
                 setSelectedPlayer(p);
-                setSelectedProfileId(p.id);
-                navigateTo("profiles");
+                setPage("profiles");
               }}
-              onNavigateToSkills={() => navigateTo("skills")}
+              onNavigateToSkills={() => setPage("skills")}
             />
           )}
 
-          {/* Profiles View: Complete Unified Directory of Student Athletes & Staff */}
+          {/* Profiles View */}
           {page === "profiles" && (
             <UserProfilesView
               theme={D}
               users={users}
-              players={PLAYERS}
-              initialSelectedProfileId={selectedProfileId}
-              onClearSelectedProfile={() => setSelectedProfileId(null)}
               onUpdateUser={handleUpdateUser}
               currentRole={role}
               activeSchoolId={activeSchool.id}
-              onOpenH2H={(pAId, pBId) => {
-                setComparePlayerAId(pAId);
-                if (pBId) setComparePlayerBId(pBId);
-                navigateTo("compare");
+              onNavigateToH2H={(p1, p2) => {
+                setH2hPlayers({ player1: p1, player2: p2 });
+                navigateToPage("compare");
               }}
               onTriggerToast={(msg) => {
                 setToastNotification({
@@ -2011,21 +1899,19 @@ export default function ScrbrdOS() {
             />
           )}
 
-          {/* Dedicated Head-to-Head Comparison View */}
-          {page === "compare" && (
+          {/* Head-to-Head Comparison View */}
+          {(page === "compare" || page === "h2h") && (
             <HeadToHeadComparisonView
               theme={D}
-              players={PLAYERS}
-              currentRole={role}
               activeSchoolId={activeSchool.id}
-              initialPlayerAId={comparePlayerAId}
-              initialPlayerBId={comparePlayerBId}
-              onBack={handleNavBack}
-              onNavigateToScouting={() => navigateTo("scouting")}
-              onNavigateToSkills={() => navigateTo("skills")}
+              initialPlayerAId={h2hPlayers.player1?.id || 'w1'}
+              initialPlayerBId={h2hPlayers.player2?.id || 'm1_p'}
+              currentRole={role}
+              onNavigateToSkills={() => setPage("skills")}
+              onNavigateToScouting={() => setPage("scouting")}
               onSelectPlayerProfile={(p) => {
-                setSelectedProfileId(p.id);
-                navigateTo("profiles");
+                setSelectedPlayer(p);
+                setPage("profiles");
               }}
             />
           )}
@@ -2128,11 +2014,10 @@ export default function ScrbrdOS() {
               currentRole={role}
               activeSchoolId={activeSchool.id}
               currentUser={role === "player" ? "James Whitfield" : role === "parent" ? "David Whitfield (Parent)" : "Wayne Scott (Coach)"}
-              onNavigateToScouting={() => navigateTo("scouting")}
+              onNavigateToScouting={() => setPage("scouting")}
               onSelectPlayerProfile={(p) => {
                 setSelectedPlayer(p);
-                setSelectedProfileId(p.id);
-                navigateTo("profiles");
+                setPage("profiles");
               }}
             />
           )}
@@ -2171,8 +2056,14 @@ export default function ScrbrdOS() {
           {/* Injuries & Physio Command View */}
           {page === "injuries" && <InjuriesView theme={D} players={PLAYERS} currentRole={role} />}
 
-          {/* Logistics & Fleet Operations */}
-          {page === "logistics" && <LogisticsView theme={D} />}
+          {/* Logistics & Fleet Operations (Kanban, Fleet, Timeline, Equipment) */}
+          {page === "logistics" && (
+            <LogisticsView
+              theme={D}
+              currentRole={role}
+              onTriggerToast={(msg) => triggerToast("Fleet & Logistics", msg, "logistics", "logistics")}
+            />
+          )}
 
           {/* Fields & Turfgrass Management */}
           {page === "fields" && (
@@ -2197,35 +2088,26 @@ export default function ScrbrdOS() {
             />
           )}
 
-          {/* Staff & User Management */}
+          {/* Master Register: Schools, Athletes, Umpires, Scorers, Coaches with RBAC */}
+          {(page === "register" || page === "management") && (
+            <RegisterHubView
+              theme={D}
+              currentRole={role}
+              activeSchoolId={activeSchool.id}
+              onTriggerToast={(msg) => triggerToast("Master Register", msg, "register", "register")}
+              onNavigateToSquad={() => setPage("squad")}
+              onNavigateToProfiles={() => setPage("profiles")}
+            />
+          )}
+
+          {/* Staff & User Management Multi-View (Directory, Compliance, Rota) */}
           {page === "staff" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <SectionHeader title="Staff & Access Control" sub="Role-Based Permissions for Registered School Personnel" color={D.violet} />
-              <Card sx={{ padding: "16px" }}>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ borderBottom: `1px solid ${D.border}`, textAlign: "left" }}>
-                        <th style={{ padding: "8px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>NAME</th>
-                        <th style={{ padding: "8px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>EMAIL</th>
-                        <th style={{ padding: "8px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>ROLE</th>
-                        <th style={{ padding: "8px", fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>STATUS</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.map(u => (
-                        <tr key={u.id} style={{ borderBottom: `1px solid ${D.border}` }}>
-                          <td style={{ padding: "10px 8px", fontFamily: D.body, fontSize: "13px", fontWeight: 600 }}>{u.name}</td>
-                          <td style={{ padding: "10px 8px", fontFamily: D.mono, fontSize: "12px", color: D.textMuted }}>{u.email}</td>
-                          <td style={{ padding: "10px 8px" }}><Badge color={ROLES[u.role]?.color || D.indigo}>{ROLES[u.role]?.label || u.role}</Badge></td>
-                          <td style={{ padding: "10px 8px" }}><Badge color={D.emerald}>{u.status}</Badge></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </div>
+            <StaffManagementView
+              theme={D}
+              activeSchoolId={activeSchool.id}
+              currentRole={role}
+              onTriggerToast={(msg) => triggerToast("Staff Operations", msg, "governance", "staff")}
+            />
           )}
 
           {/* Settings View */}

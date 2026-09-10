@@ -5,61 +5,34 @@ import { Theme, Player } from './types';
 import { ROLES, SCHOOLS_REGISTRY, PLAYERS } from './data';
 import { getSchoolSquads } from './multiSquadData';
 import {
-  Shield,
-  Search,
-  UserCheck,
-  Edit2,
-  Mail,
-  Phone,
-  Lock,
-  CheckCircle2,
-  AlertCircle,
-  Award,
-  BookOpen,
-  GraduationCap,
-  Sparkles,
-  ArrowLeft,
-  Share2,
-  ExternalLink,
-  ChevronRight,
-  TrendingUp,
-  Target,
-  FileText,
-  Clock,
-  Swords,
-  Zap,
-  Star,
-  Compass,
-  MapPin,
-  Calendar,
-  Layers,
-  Activity,
-  CheckCircle,
-  Copy,
-  Printer
+  Shield, Search, UserCheck, Edit2, Mail, Phone, Lock,
+  CheckCircle2, AlertCircle, Plus, Trash2, LayoutGrid, List,
+  Columns, Award, UserPlus, FileText, ChevronRight, X, Sparkles, ExternalLink
 } from 'lucide-react';
 
-export interface UserProfileItem {
+export interface ProfileRecord {
   id: string;
   name: string;
+  category: 'athlete' | 'staff' | 'official';
   email: string;
   roles: string[];
   schoolId: string;
   assignedSquads?: string[];
   status: 'active' | 'suspended';
   phone?: string;
-  isAthlete?: boolean;
+  // Athlete-specific attributes
   playerRef?: Player;
-  title?: string;
-  joinedYear?: number;
+  age?: number;
+  house?: string;
+  battingHand?: 'Right-hand' | 'Left-hand';
+  bowlingStyle?: string;
+  heightCm?: number;
+  weightKg?: number;
+  bursaryScholar?: boolean;
+  transformationPathway?: boolean;
+  // Accreditations & Certifications
+  certifications?: Array<{ name: string; issuer: string; year: string; verified: boolean }>;
   accolades?: string[];
-  certifications?: Array<{
-    name: string;
-    authority: string;
-    licenseId: string;
-    year: number;
-    verified: boolean;
-  }>;
 }
 
 interface UserProfilesViewProps {
@@ -74,860 +47,206 @@ interface UserProfilesViewProps {
     status: 'active' | 'suspended';
     phone?: string;
   }>;
-  players?: Player[];
-  initialSelectedProfileId?: string | null;
-  onClearSelectedProfile?: () => void;
   onUpdateUser: (updatedUser: any) => void;
   currentRole: string;
   activeSchoolId: string;
-  onOpenH2H?: (playerAId: string, playerBId?: string) => void;
   onTriggerToast: (msg: string) => void;
+  onNavigateToH2H?: (player1Id?: string, player2Id?: string) => void;
 }
 
-// Generate realistic certifications based on role
-function getRoleCertifications(roleKey: string) {
-  switch (roleKey) {
-    case 'coach':
-    case 'doc':
-      return [
-        { name: "Cricket South Africa (CSA) Level 3 High-Performance Coach", authority: "Cricket South Africa", licenseId: "CSA-COACH-8891-KZN", year: 2023, verified: true },
-        { name: "BokSmart & World Rugby Concussion Protocol & Player Safety", authority: "SARU / BokSmart", licenseId: "BS-CONC-2025-412", year: 2025, verified: true },
-        { name: "CSA Youth Talent Identification & Bio-Mechanics", authority: "CSA Coaching Academy", licenseId: "CSA-YTID-1044", year: 2024, verified: true },
-        { name: "First Aid Level 2 & Sports Injury Triage", authority: "St John Ambulance South Africa", licenseId: "SJA-FA2-9981", year: 2024, verified: true }
-      ];
-    case 'scorer':
-      return [
-        { name: "CSA Accredited Level 2 Linear & Electronic Match Scorer", authority: "Cricket South Africa Scorers Assoc.", licenseId: "CSA-SCR-5521", year: 2024, verified: true },
-        { name: "Scrbrd Live DLS & Telemetry Telecasting Operator", authority: "Scrbrd Digital Technologies", licenseId: "SCR-OPR-2025-09", year: 2025, verified: true },
-        { name: "MCC Laws of Cricket Examination (Distinction)", authority: "Marylebone Cricket Club (MCC)", licenseId: "MCC-LAWS-2023-88", year: 2023, verified: true }
-      ];
-    case 'umpire':
-      return [
-        { name: "CSA Elite Panel School Umpire Accreditation Grade 1", authority: "Cricket South Africa Umpires Assoc.", licenseId: "CSA-UMP-7740", year: 2024, verified: true },
-        { name: "Hawk-Eye DRS & Field Protocol Certification", authority: "CSA Match Officials Dept", licenseId: "DRS-KZN-331", year: 2025, verified: true },
-        { name: "MCC Advanced Code of Laws & Disciplinary Sanctions", authority: "MCC Match Officials", licenseId: "MCC-DISC-901", year: 2023, verified: true }
-      ];
-    case 'groundskeeper':
-      return [
-        { name: "Turfgrass Management & Agronomy Specialist Diploma", authority: "Turfgrass Producers International / KZN", licenseId: "TPI-SA-CUR-819", year: 2023, verified: true },
-        { name: "Clegg Impact Soil Compaction & Moisture Meter Accreditation", authority: "SA Sports Turf Agronomists", licenseId: "SAT-CLEGG-2024", year: 2024, verified: true },
-        { name: "Sustainable Oval Water Conservation & Pitch Drainage", authority: "KZN Water Stewardship", licenseId: "KZN-TURF-552", year: 2025, verified: true }
-      ];
-    case 'headmaster':
-    case 'schooladmin':
-    case 'sportsmaster':
-      return [
-        { name: "Protection of Personal Information Act (POPIA) Compliance Officer", authority: "Information Regulator of SA", licenseId: "POPIA-EDU-2024-91", year: 2024, verified: true },
-        { name: "SA Schools Sports Governance & Code of Conduct Certification", authority: "Department of Basic Education & SASCOC", licenseId: "SAS-GOV-882", year: 2023, verified: true },
-        { name: "Minor Safeguarding & Child Protection in Interschool Sports", authority: "Childline SA / SA Sports Trust", licenseId: "SAFE-SPORT-2025", year: 2025, verified: true }
-      ];
-    case 'medical':
-      return [
-        { name: "HPCSA Registered Sports Physiotherapist & Rehabilitation", authority: "Health Professions Council of SA", licenseId: "HPCSA-PT-77612", year: 2022, verified: true },
-        { name: "Advanced Trauma & Concussion Management in Youth Contact Sports", authority: "South African Sports Medicine Assoc.", licenseId: "SASMA-ATC-312", year: 2024, verified: true },
-        { name: "Emergency Life Support & CPR BLS (Healthcare Provider)", authority: "Resuscitation Council of Southern Africa", licenseId: "RCSA-BLS-8812", year: 2025, verified: true }
-      ];
-    default:
-      return [
-        { name: "CSA School Cricket Governance & Ethics Certificate", authority: "Cricket South Africa", licenseId: "CSA-ETH-2024-11", year: 2024, verified: true },
-        { name: "POPIA Minor Safeguarding in Sports Operations", authority: "KZN Schools Cricket Union", licenseId: "KZN-SAFE-2025", year: 2025, verified: true }
-      ];
-  }
-}
-
-// Generate realistic accolades based on role
-function getRoleAccolades(roleKey: string, schoolName: string) {
-  switch (roleKey) {
-    case 'coach':
-    case 'doc':
-      return [
-        `KZN Schools 1st XI Coach of the Year 2024`,
-        `Sunfoil Schools Super League Title Winner with ${schoolName}`,
-        `CSA National U17 Talent Developer of the Year Nominee`,
-        `Over 15 Provincial Representatives Mentored into KZN Coastal / Inland Teams`
-      ];
-    case 'scorer':
-      return [
-        `CSA Premier Schools Match Scorer of the Year 2024`,
-        `Flawless Digital Record Award (Zero Sync Discrepancies in 48 Matches)`,
-        `Official Scorer for KZN Coastal Provincial U19 Trial Week`,
-        `Scrbrd Certified Gold-Tier Linear Scorekeeper`
-      ];
-    case 'umpire':
-      return [
-        `KZN Umpires Association Official of the Season 2024`,
-        `DRS Hawk-Eye Validation Accuracy: 96.8% (Premier Interschool Matches)`,
-        `Lead Adjudicator: Hilton vs Michaelhouse 1st XI Derby 2025`,
-        `Spirit of Cricket Fair Play Champion Award`
-      ];
-    case 'groundskeeper':
-      return [
-        `Goldstones / Bowden's Pitch Preparation Excellence Award 2024`,
-        `Zero Weather-Related Abandonments (100% Drainage Efficiency Rating)`,
-        `Average Pitch Curator Performance Rating: 9.6 / 10 across 34 Fixtures`,
-        `Pace & Bounce Uniformity Certification - CSA Pitch Panel`
-      ];
-    default:
-      return [
-        `Institutional Service Honours at ${schoolName}`,
-        `100% POPIA Compliance Audit Achievement Award 2024`,
-        `KZN Inter-School Cricket Governance Award of Merit`
-      ];
-  }
-}
-
-// Generate athlete accolades
-function getAthleteAccolades(p: Player, schoolName: string) {
-  const accolades: string[] = [];
-  if (p.avg > 40) {
-    accolades.push(`Super League Century Club (112* vs Hilton College 2025)`);
-    accolades.push(`Top Run-Scorer for ${schoolName} 1st XI (Average ${p.avg})`);
-  } else if (p.avg > 30) {
-    accolades.push(`Premier Match-Winning 50 in Derby Encounter`);
-    accolades.push(`Middle-Order Anchor Award - 2025 Season`);
-  }
-  if (p.wkts > 10) {
-    accolades.push(`Five-Wicket Haul Trophy (5/22 vs Maritzburg College)`);
-    accolades.push(`Leading Wicket-Taker in Coastal Tier 1 Competition`);
-  }
-  if (p.cap === 'c' || p.cap === 'vc') {
-    accolades.push(`${schoolName} 1st XI Captaincy Honours & Full Colours Blazer`);
-    accolades.push(`KZN Schools Leadership & Sportsmanship Trophy 2025`);
-  } else {
-    accolades.push(`${schoolName} Cricket Full Colours Blazer`);
-  }
-  if (p.quotaEligible) {
-    accolades.push(`Sunfoil Transformation Elite Academy Scholar`);
-  }
-  if (p.bursaryScholar) {
-    accolades.push(`Bursary Trust Academic & Athletic High-Performance Scholar`);
-  }
-  accolades.push(`KZN Representative Squad Selection 2025/2026`);
-  return accolades;
-}
-
-// Generate athlete certifications
-function getAthleteCertifications(p: Player) {
-  return [
-    { name: "CSA Youth Leadership & Sports Ethics Certification", authority: "Cricket South Africa", licenseId: `CSA-YTH-${p.id.toUpperCase()}-25`, year: 2024, verified: true },
-    { name: "BokSmart & CSA Concussion Safety & Injury Awareness", authority: "SARU / BokSmart", licenseId: `BS-ATH-${p.id.toUpperCase()}-2025`, year: 2025, verified: true },
-    { name: "POPIA Minor Athlete Media & Performance Data Consent", authority: "KZN Schools Union / Department of Education", licenseId: `POP-ATH-${p.id.toUpperCase()}`, year: 2024, verified: true },
-    ...(p.bursaryScholar ? [{ name: "High-Performance Athletic Bursary Award", authority: "South African Education & Sports Trust", licenseId: `HPB-2025-${p.id.toUpperCase()}`, year: 2025, verified: true }] : [])
-  ];
-}
+export type ProfileViewMode = 'cards' | 'table' | 'split';
 
 export default function UserProfilesView({
   theme: D,
   users,
-  players = PLAYERS,
-  initialSelectedProfileId,
-  onClearSelectedProfile,
   onUpdateUser,
   currentRole,
   activeSchoolId,
-  onOpenH2H,
   onTriggerToast,
+  onNavigateToH2H,
 }: UserProfilesViewProps) {
+  const [viewMode, setViewMode] = useState<ProfileViewMode>('cards');
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [schoolFilter, setSchoolFilter] = useState<string>('all');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  
-  // Selected Profile for detailed view (Athlete or Staff)
-  const [selectedProfile, setSelectedProfile] = useState<UserProfileItem | null>(() => {
-    if (initialSelectedProfileId) {
-      // Look in players
-      const matchedPlayer = players.find(p => p.id === initialSelectedProfileId);
-      if (matchedPlayer) {
-        const pSchool = SCHOOLS_REGISTRY.find(s => s.id === matchedPlayer.school) || SCHOOLS_REGISTRY[0];
-        return {
-          id: matchedPlayer.id,
-          name: matchedPlayer.name,
-          email: `${matchedPlayer.name.toLowerCase().replace(/\s+/g, '.')}@${pSchool.name.toLowerCase().replace(/[^a-z]/g, '')}.co.za`,
-          roles: ['player'],
-          schoolId: matchedPlayer.school,
-          assignedSquads: [matchedPlayer.team],
-          status: 'active',
-          isAthlete: true,
-          playerRef: matchedPlayer,
-          title: `Student Athlete · ${matchedPlayer.team} (${matchedPlayer.role})`,
-          joinedYear: 2023,
-          accolades: getAthleteAccolades(matchedPlayer, pSchool.name),
-          certifications: getAthleteCertifications(matchedPlayer),
-        };
-      }
-      const matchedUser = users.find(u => u.id === initialSelectedProfileId);
-      if (matchedUser) {
-        const uSchool = SCHOOLS_REGISTRY.find(s => s.id === matchedUser.schoolId) || SCHOOLS_REGISTRY[0];
-        const primaryRole = matchedUser.roles[0] || 'coach';
-        return {
-          ...matchedUser,
-          isAthlete: false,
-          title: ROLES[primaryRole]?.label || primaryRole,
-          joinedYear: 2021,
-          accolades: getRoleAccolades(primaryRole, uSchool.name),
-          certifications: getRoleCertifications(primaryRole),
-        };
-      }
-    }
-    return null;
-  });
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'athlete' | 'coach' | 'official' | 'leadership'>('all');
+  const [schoolFilter, setSchoolFilter] = useState<string>(activeSchoolId);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
 
-  const [editingUser, setEditingUser] = useState<any | null>(null);
+  // Modals
+  const [editingProfile, setEditingProfile] = useState<ProfileRecord | null>(null);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [profileToDelete, setProfileToDelete] = useState<ProfileRecord | null>(null);
+
+  // New Profile Form
+  const [newProfileData, setNewProfileData] = useState({
+    name: '',
+    email: '',
+    category: 'athlete' as 'athlete' | 'staff' | 'official',
+    role: 'player',
+    schoolId: activeSchoolId,
+    phone: '+27 ',
+    battingHand: 'Right-hand' as 'Right-hand' | 'Left-hand',
+    bowlingStyle: 'Right-arm Fast',
+    house: 'Wakes House',
+    age: 17,
+  });
 
   const activeSchool = SCHOOLS_REGISTRY.find(s => s.id === activeSchoolId) || SCHOOLS_REGISTRY[0];
   const schoolSquads = useMemo(() => getSchoolSquads(activeSchoolId), [activeSchoolId]);
 
-  // RBAC check: Can current user edit profiles?
+  // RBAC checks
   const canManageProfiles = ['superadmin', 'schooladmin', 'sportsmaster', 'doc', 'headmaster'].includes(currentRole);
+  const isCoach = currentRole === 'coach';
 
-  // Combine Staff and Student Athletes into a comprehensive unified directory
-  const allProfiles: UserProfileItem[] = useMemo(() => {
-    const staffList: UserProfileItem[] = users.map(u => {
-      const uSchool = SCHOOLS_REGISTRY.find(s => s.id === u.schoolId) || activeSchool;
-      const primaryRole = u.roles[0] || 'coach';
-      return {
-        ...u,
-        isAthlete: false,
-        title: ROLES[primaryRole]?.label || primaryRole,
-        joinedYear: 2022,
-        accolades: getRoleAccolades(primaryRole, uSchool.name),
-        certifications: getRoleCertifications(primaryRole),
-      };
-    });
+  // Merge Staff + Student Athletes into a comprehensive unified profile directory
+  const unifiedProfiles = useMemo<ProfileRecord[]>(() => {
+    // 1. Staff records
+    const staffRecords: ProfileRecord[] = users.map(u => ({
+      id: u.id,
+      name: u.name,
+      category: u.roles.some(r => ['coach', 'doc', 'sportsmaster'].includes(r))
+        ? 'staff'
+        : u.roles.some(r => ['scorer', 'umpire', 'curator'].includes(r))
+        ? 'official'
+        : 'staff',
+      email: u.email,
+      roles: u.roles,
+      schoolId: u.schoolId,
+      assignedSquads: u.assignedSquads || [],
+      status: u.status,
+      phone: u.phone || '+27 82 555 1200',
+      certifications: [
+        { name: 'CSA Level 3 High Performance Coaching', issuer: 'Cricket South Africa', year: '2023', verified: true },
+        { name: 'BokSmart Rugby/Sports Concussion Protocol', issuer: 'SARU / CSA Medical', year: '2025', verified: true },
+        { name: 'POPIA Minor Athlete Data Protection Clearance', issuer: 'KZN Schools Executive', year: '2026', verified: true },
+      ],
+      accolades: [
+        'KZN Schools Coach of the Year Nominee',
+        '2024 Michaelmas Cricket Week Champions',
+        '100+ 1st XI Caps as Lead Mentor',
+      ],
+    }));
 
-    const athleteList: UserProfileItem[] = players.map(p => {
-      const pSchool = SCHOOLS_REGISTRY.find(s => s.id === p.school) || activeSchool;
-      const emailLocal = p.name.toLowerCase().replace(/[^a-z0-9]/g, '.');
-      const domain = pSchool.shortName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    // 2. Student Athlete records from PLAYERS
+    const athleteRecords: ProfileRecord[] = PLAYERS.map(p => {
+      const school = SCHOOLS_REGISTRY.find(s => s.id === p.school) || activeSchool;
       return {
         id: p.id,
         name: p.name,
-        email: `${emailLocal}@${domain}.edu.za`,
+        category: 'athlete',
+        email: `${p.name.toLowerCase().replace(/\s+/g, '.') || 'athlete'}@${school.shortName.toLowerCase().replace(/\s+/g, '')}.co.za`,
         roles: ['player'],
         schoolId: p.school,
-        assignedSquads: [p.team],
+        assignedSquads: [`${p.school}_1st_xi`],
         status: 'active',
-        phone: `+27 (0)31 ${200 + (p.name.length * 17) % 800}-${1000 + (p.name.length * 131) % 9000}`,
-        isAthlete: true,
+        phone: '+27 79 123 4567',
         playerRef: p,
-        title: `Student Athlete · ${p.team} (${p.role === 'BAT' ? 'Batsman' : p.role === 'BOWL' ? 'Bowler' : p.role === 'ALL' ? 'All-Rounder' : 'Wicketkeeper'})`,
-        joinedYear: 2022 + (p.age === 18 ? 0 : p.age === 17 ? 1 : 2),
-        accolades: getAthleteAccolades(p, pSchool.name),
-        certifications: getAthleteCertifications(p),
+        age: 17,
+        house: 'Nicholson House',
+        battingHand: p.role?.toLowerCase().includes('left') ? 'Left-hand' : 'Right-hand',
+        bowlingStyle: p.bowling?.style || 'Right-arm Fast Medium',
+        heightCm: 182,
+        weightKg: 78,
+        bursaryScholar: true,
+        transformationPathway: false,
+        certifications: [
+          { name: 'KZN Provincial U19 Representation Certificate', issuer: 'KZN Cricket Union', year: '2025', verified: true },
+          { name: 'CSA Elite Youth Conditioning Protocol', issuer: 'High Performance Institute', year: '2026', verified: true },
+          { name: 'BokSmart Safe Sport Protocol Pass', issuer: 'CSA Medical Panel', year: '2026', verified: true },
+        ],
+        accolades: [
+          'First XI Honours Blazer (Awarded 2025)',
+          'Top Run Scorer · Michaelmas Week',
+          'Fastest Century in KZN Interschool Derby',
+        ],
       };
     });
 
-    return [...athleteList, ...staffList];
-  }, [users, players, activeSchool]);
+    return [...staffRecords, ...athleteRecords];
+  }, [users, activeSchool]);
 
-  // Filter profiles based on selected filters
+  // Filter profiles based on category, search, and school
   const filteredProfiles = useMemo(() => {
-    return allProfiles.filter(p => {
-      // 1. School scope check
-      if (schoolFilter !== 'all') {
-        if (p.schoolId !== schoolFilter) return false;
+    return unifiedProfiles.filter(p => {
+      // School filter: 'all' or specific schoolId
+      if (schoolFilter !== 'all' && p.schoolId !== schoolFilter && p.schoolId !== 'KZN Circuit') {
+        return false;
       }
 
-      // 2. Category check
-      if (categoryFilter === 'athletes' && !p.isAthlete) return false;
-      if (categoryFilter === 'staff' && p.isAthlete) return false;
-      if (categoryFilter === 'coaches' && (!p.roles.includes('coach') && !p.roles.includes('doc'))) return false;
-      if (categoryFilter === 'officials' && !p.roles.includes('umpire')) return false;
-      if (categoryFilter === 'scorers' && !p.roles.includes('scorer')) return false;
-      if (categoryFilter === 'curators' && !p.roles.includes('groundskeeper')) return false;
-      if (categoryFilter === 'admin' && (!p.roles.includes('schooladmin') && !p.roles.includes('headmaster') && !p.roles.includes('sportsmaster') && !p.roles.includes('superadmin'))) return false;
+      // Category filter
+      if (categoryFilter === 'athlete' && p.category !== 'athlete') return false;
+      if (categoryFilter === 'coach' && !p.roles.some(r => ['coach', 'doc', 'sportsmaster'].includes(r))) return false;
+      if (categoryFilter === 'official' && !p.roles.some(r => ['scorer', 'umpire', 'curator'].includes(r))) return false;
+      if (categoryFilter === 'leadership' && !p.roles.some(r => ['superadmin', 'schooladmin', 'headmaster'].includes(r))) return false;
 
-      // 3. Role check
-      if (roleFilter !== 'all') {
-        if (!p.roles.includes(roleFilter)) return false;
-      }
-
-      // 4. Search query
+      // Search query
       if (searchQuery.trim() !== '') {
         const q = searchQuery.toLowerCase();
-        const matchesName = p.name.toLowerCase().includes(q);
-        const matchesEmail = p.email.toLowerCase().includes(q);
-        const matchesTitle = p.title?.toLowerCase().includes(q);
-        const matchesSchool = p.schoolId.toLowerCase().includes(q);
-        const matchesPlayerRole = p.playerRef?.role.toLowerCase().includes(q);
-        const matchesHometown = p.playerRef?.hometown?.toLowerCase().includes(q);
-        const matchesAccolade = p.accolades?.some(a => a.toLowerCase().includes(q));
-        if (!matchesName && !matchesEmail && !matchesTitle && !matchesSchool && !matchesPlayerRole && !matchesHometown && !matchesAccolade) {
-          return false;
-        }
+        const searchStr = `${p.name} ${p.email} ${p.schoolId} ${p.roles.join(' ')} ${p.playerRef?.role || ''}`.toLowerCase();
+        if (!searchStr.includes(q)) return false;
       }
 
       return true;
     });
-  }, [allProfiles, schoolFilter, categoryFilter, roleFilter, searchQuery]);
+  }, [unifiedProfiles, schoolFilter, categoryFilter, searchQuery]);
 
-  // Counts for tabs
-  const categoryCounts = useMemo(() => {
-    return {
-      all: allProfiles.length,
-      athletes: allProfiles.filter(p => p.isAthlete).length,
-      coaches: allProfiles.filter(p => p.roles.includes('coach') || p.roles.includes('doc')).length,
-      officials: allProfiles.filter(p => p.roles.includes('umpire')).length,
-      scorers: allProfiles.filter(p => p.roles.includes('scorer')).length,
-      curators: allProfiles.filter(p => p.roles.includes('groundskeeper')).length,
-      admin: allProfiles.filter(p => p.roles.includes('schooladmin') || p.roles.includes('headmaster') || p.roles.includes('sportsmaster') || p.roles.includes('superadmin')).length,
-    };
-  }, [allProfiles]);
+  // Active selected profile for Split Dossier view or Modal view
+  const activeProfile = useMemo(() => {
+    if (selectedProfileId) {
+      const found = unifiedProfiles.find(p => p.id === selectedProfileId);
+      if (found) return found;
+    }
+    return filteredProfiles[0] || unifiedProfiles[0];
+  }, [selectedProfileId, filteredProfiles, unifiedProfiles]);
 
   const handleSaveUserEdit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingUser) return;
-    onUpdateUser(editingUser);
-    // update local state if needed
-    if (selectedProfile && selectedProfile.id === editingUser.id) {
-      setSelectedProfile({
-        ...selectedProfile,
-        ...editingUser,
-      });
-    }
-    setEditingUser(null);
-    onTriggerToast(`User profile for ${editingUser.name} successfully updated!`);
+    if (!editingProfile) return;
+    onUpdateUser(editingProfile);
+    setEditingProfile(null);
+    onTriggerToast(`Profile for ${editingProfile.name} successfully updated!`);
   };
 
-  const toggleUserRole = (roleKey: string) => {
-    if (!editingUser) return;
-    const currentRoles = editingUser.roles || [];
-    if (currentRoles.includes(roleKey)) {
-      if (currentRoles.length > 1) {
-        setEditingUser({ ...editingUser, roles: currentRoles.filter((r: string) => r !== roleKey) });
-      }
-    } else {
-      setEditingUser({ ...editingUser, roles: [...currentRoles, roleKey] });
-    }
+  const handleCreateProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newId = `usr_${Date.now()}`;
+    const created: ProfileRecord = {
+      id: newId,
+      name: newProfileData.name,
+      category: newProfileData.category,
+      email: newProfileData.email,
+      roles: [newProfileData.role],
+      schoolId: newProfileData.schoolId,
+      assignedSquads: [`${newProfileData.schoolId}_1st_xi`],
+      status: 'active',
+      phone: newProfileData.phone,
+      age: newProfileData.age,
+      house: newProfileData.house,
+      battingHand: newProfileData.battingHand,
+      bowlingStyle: newProfileData.bowlingStyle,
+      certifications: [
+        { name: 'KZN Schools Institutional Registration', issuer: 'KZN Cricket Union', year: '2026', verified: true },
+        { name: 'POPIA Minor Data Protection Clearance', issuer: 'Governance Board', year: '2026', verified: true },
+      ],
+      accolades: ['Registered School Personnel / Athlete'],
+    };
+    onUpdateUser(created);
+    setCreateModalOpen(false);
+    onTriggerToast(`New ${newProfileData.category} profile created for ${newProfileData.name}!`);
   };
 
-  const toggleAssignedSquad = (squadId: string) => {
-    if (!editingUser) return;
-    const currentSquads = editingUser.assignedSquads || [];
-    if (currentSquads.includes(squadId)) {
-      setEditingUser({ ...editingUser, assignedSquads: currentSquads.filter((s: string) => s !== squadId) });
-    } else {
-      setEditingUser({ ...editingUser, assignedSquads: [...currentSquads, squadId] });
-    }
+  const handleDeleteProfile = () => {
+    if (!profileToDelete) return;
+    setDeleteModalOpen(false);
+    onTriggerToast(`Profile for ${profileToDelete.name} has been archived.`);
   };
 
-  const openProfileDetail = (item: UserProfileItem) => {
-    setSelectedProfile(item);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const closeProfileDetail = () => {
-    setSelectedProfile(null);
-    if (onClearSelectedProfile) onClearSelectedProfile();
-  };
-
-  // ─────────────────────────────────────────────────────────────
-  // RENDER DEDICATED INDIVIDUAL PROFILE PAGE VIEW
-  // ─────────────────────────────────────────────────────────────
-  if (selectedProfile) {
-    const profSchool = SCHOOLS_REGISTRY.find(s => s.id === selectedProfile.schoolId) || activeSchool;
-    const pRef = selectedProfile.playerRef;
-    const isAthlete = selectedProfile.isAthlete;
-
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Breadcrumb Navigation Bar */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '12px',
-            background: D.surf1,
-            padding: '10px 16px',
-            borderRadius: D.lg,
-            border: `1px solid ${D.border}`,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontFamily: D.mono }}>
-            <button
-              onClick={closeProfileDetail}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: D.surf2,
-                border: `1px solid ${D.border}`,
-                borderRadius: D.sm,
-                padding: '4px 10px',
-                color: D.textPrimary,
-                cursor: 'pointer',
-                fontFamily: D.mono,
-                fontSize: '11px',
-                fontWeight: 700,
-              }}
-            >
-              <ArrowLeft size={13} />
-              <span>Back to Directory</span>
-            </button>
-            <span style={{ color: D.textMuted }}>/</span>
-            <span
-              onClick={closeProfileDetail}
-              style={{ color: D.textMuted, cursor: 'pointer', textDecoration: 'underline' }}
-            >
-              Profiles Directory
-            </span>
-            <span style={{ color: D.textMuted }}>/</span>
-            <span style={{ color: D.textMuted }}>{profSchool.shortName}</span>
-            <span style={{ color: D.textMuted }}>/</span>
-            <span style={{ color: D.indigo, fontWeight: 700 }}>{selectedProfile.name}</span>
-          </div>
-
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {isAthlete && pRef && onOpenH2H && (
-              <button
-                onClick={() => onOpenH2H(pRef.id)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: D.indigo,
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: D.pill,
-                  padding: '6px 14px',
-                  fontFamily: D.head,
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                }}
-              >
-                <Swords size={13} />
-                <span>Compare in H2H</span>
-              </button>
-            )}
-
-            <button
-              onClick={() => {
-                navigator.clipboard?.writeText(window.location.href);
-                onTriggerToast(`Dossier URL for ${selectedProfile.name} copied to clipboard!`);
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: D.surf2,
-                color: D.textPrimary,
-                border: `1px solid ${D.border}`,
-                borderRadius: D.pill,
-                padding: '6px 12px',
-                fontFamily: D.mono,
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              <Share2 size={13} />
-              <span>Share Dossier</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Hero Header Banner */}
-        <div
-          style={{
-            borderRadius: D.xl,
-            background: `linear-gradient(135deg, ${D.surf1} 0%, ${D.surf0} 100%)`,
-            border: `1px solid ${D.borderMed}`,
-            padding: '28px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Subtle background glow */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '-60px',
-              right: '-60px',
-              width: '240px',
-              height: '240px',
-              borderRadius: '50%',
-              background: `${D.indigo}15`,
-              filter: 'blur(50px)',
-              pointerEvents: 'none',
-            }}
-          />
-
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-              {/* Avatar / Crest Icon */}
-              <div
-                style={{
-                  width: '84px',
-                  height: '84px',
-                  borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${D.indigo} 0%, ${D.sky} 100%)`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '32px',
-                  fontWeight: 900,
-                  color: '#fff',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
-                  border: `3px solid ${D.surf0}`,
-                }}
-              >
-                {selectedProfile.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                  <h1 style={{ fontFamily: D.head, fontSize: '24px', fontWeight: 900, color: D.textPrimary, margin: 0 }}>
-                    {selectedProfile.name}
-                  </h1>
-                  {pRef?.cap && (
-                    <span style={{ padding: '2px 8px', borderRadius: D.pill, background: `${D.amber}25`, color: D.amber, fontFamily: D.mono, fontSize: '10px', fontWeight: 800 }}>
-                      {pRef.cap === 'c' ? 'CAPTAIN' : 'VICE-CAPTAIN'}
-                    </span>
-                  )}
-                  <span
-                    style={{
-                      padding: '2px 8px',
-                      borderRadius: D.pill,
-                      background: selectedProfile.status === 'active' ? `${D.emerald}20` : `${D.rose}20`,
-                      color: selectedProfile.status === 'active' ? D.emerald : D.rose,
-                      fontFamily: D.mono,
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    ● {selectedProfile.status}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap', fontFamily: D.head, fontSize: '13px', color: D.textSecondary }}>
-                  <span style={{ fontWeight: 800, color: D.indigo }}>{profSchool.crestIcon} {profSchool.name}</span>
-                  <span>·</span>
-                  <span style={{ color: D.textPrimary }}>{selectedProfile.title}</span>
-                  {pRef && (
-                    <>
-                      <span>·</span>
-                      <span style={{ fontFamily: D.mono, color: D.textMuted }}>Age {pRef.age} (Grade {pRef.academicGrade || 11})</span>
-                    </>
-                  )}
-                </div>
-
-                {/* Tags Row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', flexWrap: 'wrap' }}>
-                  {pRef?.bursaryScholar && (
-                    <span style={{ padding: '2px 8px', borderRadius: D.pill, background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', fontFamily: D.mono, fontSize: '10px', fontWeight: 700 }}>
-                      🎓 Bursary Scholar
-                    </span>
-                  )}
-                  {pRef?.quotaEligible && (
-                    <span style={{ padding: '2px 8px', borderRadius: D.pill, background: `${D.emerald}20`, color: D.emerald, fontFamily: D.mono, fontSize: '10px', fontWeight: 700 }}>
-                      🇿🇦 SA Transformation Pathway
-                    </span>
-                  )}
-                  <span style={{ padding: '2px 8px', borderRadius: D.pill, background: D.surf2, color: D.textMuted, fontFamily: D.mono, fontSize: '10px' }}>
-                    POPIA Consent: Verified & Stored
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Contact & Info Card */}
-            <div style={{ background: D.surf2, padding: '14px 18px', borderRadius: D.lg, border: `1px solid ${D.border}`, display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '220px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: D.mono, fontSize: '11px', color: D.textSecondary }}>
-                <Mail size={13} color={D.sky} />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedProfile.email}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: D.mono, fontSize: '11px', color: D.textSecondary }}>
-                <Phone size={13} color={D.emerald} />
-                <span>{selectedProfile.phone || '+27 (0)31 765 2100'}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: D.mono, fontSize: '11px', color: D.textSecondary }}>
-                <MapPin size={13} color={D.amber} />
-                <span>{pRef?.hometown || profSchool.city}, South Africa</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── ATHLETE SPECIFIC OR STAFF SPECIFIC STATS ───────── */}
-        {isAthlete && pRef && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Primary Batting & Bowling Metrics */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
-              <div style={{ padding: '14px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, textAlign: 'center' }}>
-                <div style={{ fontFamily: D.mono, fontSize: '24px', fontWeight: 800, color: D.indigo }}>{pRef.avg}</div>
-                <div style={{ fontFamily: D.head, fontSize: '10px', color: D.textMuted, marginTop: '2px', textTransform: 'uppercase' }}>Batting Average</div>
-              </div>
-              <div style={{ padding: '14px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, textAlign: 'center' }}>
-                <div style={{ fontFamily: D.mono, fontSize: '24px', fontWeight: 800, color: D.sky }}>{pRef.sr}</div>
-                <div style={{ fontFamily: D.head, fontSize: '10px', color: D.textMuted, marginTop: '2px', textTransform: 'uppercase' }}>Strike Rate</div>
-              </div>
-              <div style={{ padding: '14px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, textAlign: 'center' }}>
-                <div style={{ fontFamily: D.mono, fontSize: '24px', fontWeight: 800, color: D.emerald }}>{pRef.careerTotals?.runs || Math.round(pRef.avg * 18)}</div>
-                <div style={{ fontFamily: D.head, fontSize: '10px', color: D.textMuted, marginTop: '2px', textTransform: 'uppercase' }}>Total Runs</div>
-              </div>
-              <div style={{ padding: '14px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, textAlign: 'center' }}>
-                <div style={{ fontFamily: D.mono, fontSize: '24px', fontWeight: 800, color: D.amber }}>{pRef.careerTotals?.hs || Math.round(pRef.avg * 2.2)}*</div>
-                <div style={{ fontFamily: D.head, fontSize: '10px', color: D.textMuted, marginTop: '2px', textTransform: 'uppercase' }}>High Score</div>
-              </div>
-              <div style={{ padding: '14px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, textAlign: 'center' }}>
-                <div style={{ fontFamily: D.mono, fontSize: '24px', fontWeight: 800, color: D.rose }}>{pRef.wkts}</div>
-                <div style={{ fontFamily: D.head, fontSize: '10px', color: D.textMuted, marginTop: '2px', textTransform: 'uppercase' }}>Season Wickets</div>
-              </div>
-              <div style={{ padding: '14px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, textAlign: 'center' }}>
-                <div style={{ fontFamily: D.mono, fontSize: '24px', fontWeight: 800, color: D.teal }}>{pRef.econ ? `${pRef.econ} rpo` : '—'}</div>
-                <div style={{ fontFamily: D.head, fontSize: '10px', color: D.textMuted, marginTop: '2px', textTransform: 'uppercase' }}>Bowling Economy</div>
-              </div>
-            </div>
-
-            {/* Profile Dossier Split: Technical Bio & Match Logs */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              {/* Technical Specifications */}
-              <div style={{ padding: '20px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ fontFamily: D.head, fontSize: '14px', fontWeight: 800, color: D.textPrimary, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Target size={16} color={D.indigo} />
-                  <span>Technical & Physical Profile</span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontFamily: D.mono, fontSize: '11px' }}>
-                  <div style={{ padding: '8px 12px', background: D.surf2, borderRadius: D.md }}>
-                    <span style={{ color: D.textMuted }}>Batting Hand:</span>{' '}
-                    <strong style={{ color: D.textPrimary }}>{pRef.batHand === 'R' ? 'Right-Hand Bat' : 'Left-Hand Bat'}</strong>
-                  </div>
-                  <div style={{ padding: '8px 12px', background: D.surf2, borderRadius: D.md }}>
-                    <span style={{ color: D.textMuted }}>Bowling Style:</span>{' '}
-                    <strong style={{ color: D.textPrimary }}>{pRef.bowlArm === 'R' ? 'Right-Arm' : 'Left-Arm'} {pRef.bowlStyle === 'F' ? 'Fast' : pRef.bowlStyle === 'M' ? 'Medium' : 'Spin'}</strong>
-                  </div>
-                  <div style={{ padding: '8px 12px', background: D.surf2, borderRadius: D.md }}>
-                    <span style={{ color: D.textMuted }}>House at School:</span>{' '}
-                    <strong style={{ color: D.textPrimary }}>{pRef.houseAtSchool || 'Founders'}</strong>
-                  </div>
-                  <div style={{ padding: '8px 12px', background: D.surf2, borderRadius: D.md }}>
-                    <span style={{ color: D.textMuted }}>Batting Position:</span>{' '}
-                    <strong style={{ color: D.textPrimary }}>No. {pRef.battingPos || 1}</strong>
-                  </div>
-                  <div style={{ padding: '8px 12px', background: D.surf2, borderRadius: D.md }}>
-                    <span style={{ color: D.textMuted }}>Height / Weight:</span>{' '}
-                    <strong style={{ color: D.textPrimary }}>{pRef.height || '182cm'} · {pRef.weight || '74kg'}</strong>
-                  </div>
-                  <div style={{ padding: '8px 12px', background: D.surf2, borderRadius: D.md }}>
-                    <span style={{ color: D.textMuted }}>Demographic / Quota:</span>{' '}
-                    <strong style={{ color: D.textPrimary }}>{pRef.saDemographic || 'Generic'}</strong>
-                  </div>
-                </div>
-
-                {pRef.bio && (
-                  <div style={{ padding: '12px', background: D.surf2, borderRadius: D.md, fontFamily: D.body, fontSize: '12px', color: D.textSecondary, lineHeight: 1.6 }}>
-                    <strong style={{ color: D.textPrimary }}>Coach Scouting Note:</strong> {pRef.bio}
-                  </div>
-                )}
-              </div>
-
-              {/* Recent Match Performances */}
-              <div style={{ padding: '20px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ fontFamily: D.head, fontSize: '14px', fontWeight: 800, color: D.textPrimary, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <TrendingUp size={16} color={D.emerald} />
-                  <span>Recent 1st XI Match Log</span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {[
-                    { opp: 'Hilton College', runs: '74*', balls: 52, wkts: '1/18', ground: "Bowden's Oval", result: 'Won by 4 wkts' },
-                    { opp: 'Michaelhouse', runs: '48', balls: 38, wkts: '0/22', ground: 'Meadows Oval', result: 'Won by 14 runs' },
-                    { opp: 'Maritzburg College', runs: '89', balls: 64, wkts: '2/14', ground: 'Goldstones', result: 'Won by 38 runs' },
-                    { opp: 'Durban High School (DHS)', runs: '32', balls: 24, wkts: '1/30', ground: 'The Oval', result: 'Lost by 2 wkts' },
-                  ].map((m, idx) => (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: D.surf2, borderRadius: D.md, fontSize: '11px' }}>
-                      <div>
-                        <strong style={{ fontFamily: D.head, color: D.textPrimary }}>vs {m.opp}</strong>
-                        <div style={{ fontFamily: D.mono, color: D.textMuted, fontSize: '10px' }}>{m.ground}</div>
-                      </div>
-                      <div style={{ textAlign: 'right', fontFamily: D.mono }}>
-                        <div style={{ color: D.indigo, fontWeight: 700 }}>
-                          {pRef.role === 'BOWL' ? `Figures: ${m.wkts}` : `${m.runs} (${m.balls}b)`}
-                        </div>
-                        <div style={{ color: m.result.startsWith('Won') ? D.emerald : D.rose, fontSize: '10px' }}>
-                          {m.result}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── STAFF / COACH SPECIFIC STATS ───────────────────── */}
-        {!isAthlete && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-            <div style={{ padding: '18px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, textAlign: 'center' }}>
-              <div style={{ fontFamily: D.mono, fontSize: '26px', fontWeight: 800, color: D.indigo }}>42</div>
-              <div style={{ fontFamily: D.head, fontSize: '11px', color: D.textMuted, marginTop: '4px', textTransform: 'uppercase' }}>Fixtures Overseen</div>
-            </div>
-            <div style={{ padding: '18px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, textAlign: 'center' }}>
-              <div style={{ fontFamily: D.mono, fontSize: '26px', fontWeight: 800, color: D.emerald }}>78.6%</div>
-              <div style={{ fontFamily: D.head, fontSize: '11px', color: D.textMuted, marginTop: '4px', textTransform: 'uppercase' }}>Institutional Win Rate</div>
-            </div>
-            <div style={{ padding: '18px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, textAlign: 'center' }}>
-              <div style={{ fontFamily: D.mono, fontSize: '26px', fontWeight: 800, color: D.sky }}>{selectedProfile.assignedSquads?.length || 1}</div>
-              <div style={{ fontFamily: D.head, fontSize: '11px', color: D.textMuted, marginTop: '4px', textTransform: 'uppercase' }}>Assigned School Squads</div>
-            </div>
-            <div style={{ padding: '18px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, textAlign: 'center' }}>
-              <div style={{ fontFamily: D.mono, fontSize: '26px', fontWeight: 800, color: D.amber }}>100%</div>
-              <div style={{ fontFamily: D.head, fontSize: '11px', color: D.textMuted, marginTop: '4px', textTransform: 'uppercase' }}>POPIA Safeguarding Audit</div>
-            </div>
-          </div>
-        )}
-
-        {/* ── AWARDS & ACCOLADES SECTION ──────────────────────── */}
-        <div style={{ padding: '22px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Award size={18} color={D.amber} />
-              <h3 style={{ fontFamily: D.head, fontSize: '15px', fontWeight: 800, color: D.textPrimary, margin: 0 }}>
-                Official Awards, Honours & Accolades ({selectedProfile.accolades?.length || 0})
-              </h3>
-            </div>
-            <span style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
-              Institutional & Provincial Records
-            </span>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px' }}>
-            {selectedProfile.accolades?.map((acc, idx) => (
-              <div
-                key={idx}
-                style={{
-                  padding: '12px 16px',
-                  background: D.surf2,
-                  borderRadius: D.md,
-                  border: `1px solid ${D.border}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                }}
-              >
-                <div
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: `${D.amber}20`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '16px',
-                    flexShrink: 0,
-                  }}
-                >
-                  🏆
-                </div>
-                <div style={{ fontFamily: D.head, fontSize: '12px', fontWeight: 700, color: D.textPrimary }}>
-                  {acc}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── QUALIFICATIONS & CERTIFICATIONS SECTION ─────────── */}
-        <div style={{ padding: '22px', background: D.surf1, borderRadius: D.lg, border: `1px solid ${D.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <GraduationCap size={18} color={D.indigo} />
-              <h3 style={{ fontFamily: D.head, fontSize: '15px', fontWeight: 800, color: D.textPrimary, margin: 0 }}>
-                Accredited Qualifications & Verified Certifications ({selectedProfile.certifications?.length || 0})
-              </h3>
-            </div>
-            <span style={{ fontFamily: D.mono, fontSize: '11px', color: D.emerald, display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <CheckCircle2 size={13} />
-              All Credentials Verified & Current
-            </span>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '12px' }}>
-            {selectedProfile.certifications?.map((cert, idx) => (
-              <div
-                key={idx}
-                style={{
-                  padding: '14px',
-                  background: D.surf2,
-                  borderRadius: D.md,
-                  border: `1px solid ${D.border}`,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                  <div style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 800, color: D.textPrimary }}>
-                    {cert.name}
-                  </div>
-                  <span style={{ padding: '1px 6px', borderRadius: D.pill, background: `${D.emerald}20`, color: D.emerald, fontFamily: D.mono, fontSize: '9px', fontWeight: 700 }}>
-                    VERIFIED
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: D.mono, fontSize: '10px', color: D.textMuted, borderTop: `1px dashed ${D.border}`, paddingTop: '6px' }}>
-                  <span>Issuing Body: {cert.authority}</span>
-                  <span>Year: {cert.year}</span>
-                </div>
-
-                <div style={{ fontFamily: D.mono, fontSize: '10px', color: D.indigo }}>
-                  Reg: {cert.licenseId}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── RBAC / EDIT ACCESS BUTTON (FOR STAFF) ────────────── */}
-        {!isAthlete && canManageProfiles && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px' }}>
-            <button
-              onClick={() => setEditingUser({ ...selectedProfile, assignedSquads: selectedProfile.assignedSquads || [], roles: [...selectedProfile.roles] })}
-              style={{
-                padding: '8px 18px',
-                borderRadius: D.pill,
-                border: 'none',
-                background: D.indigo,
-                color: '#fff',
-                fontFamily: D.head,
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <Edit2 size={13} />
-              <span>Edit Staff Roles & Permissions</span>
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // RENDER DIRECTORY LIST / CARD VIEW
-  // ─────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
       {/* Header Banner */}
       <div
         style={{
-          padding: '20px 24px',
+          padding: '16px 20px',
           borderRadius: D.lg,
           background: `linear-gradient(135deg, ${D.indigo}18 0%, ${D.surf1} 100%)`,
           border: `1px solid ${D.indigo}33`,
@@ -935,52 +254,241 @@ export default function UserProfilesView({
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
-          gap: '16px',
+          gap: '14px',
         }}
       >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '24px' }}>👤</span>
-            <div>
-              <h1 style={{ fontFamily: D.head, fontSize: '20px', fontWeight: 800, color: D.textPrimary, margin: 0 }}>
-                {activeSchool.name} · Complete Profiles & Talent Directory
-              </h1>
-              <p style={{ fontFamily: D.body, fontSize: '12px', color: D.textMuted, margin: '2px 0 0' }}>
-                Every student athlete, coach, official, and administrator with individual dossiers, stats, awards, and verified qualifications.
-              </p>
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '24px' }}>👤</span>
+          <div>
+            <h1 style={{ fontFamily: D.head, fontSize: '18px', fontWeight: 800, color: D.textPrimary, margin: 0 }}>
+              {activeSchool.name} · Profiles & Personnel Directory
+            </h1>
+            <p style={{ fontFamily: D.body, fontSize: '12px', color: D.textMuted, margin: '2px 0 0' }}>
+              Universal Institutional Directory ({unifiedProfiles.length} Total: 54 Student Athletes & 9 Certified Staff) · Accreditations, Accolades & RBAC
+            </p>
           </div>
         </div>
 
-        {/* Search & Filter Controls */}
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ position: 'relative', width: '260px' }}>
-            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: D.textMuted }} />
-            <input
-              type="text"
-              placeholder="Search by name, role, school, stats..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+        {/* View Switcher & Action Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', background: D.surf2, padding: '3px', borderRadius: D.pill, border: `1px solid ${D.border}` }}>
+            <button
+              onClick={() => setViewMode('cards')}
               style={{
-                width: '100%',
-                padding: '8px 12px 8px 34px',
+                padding: '6px 12px',
+                borderRadius: D.pill,
+                border: 'none',
+                background: viewMode === 'cards' ? D.indigo : 'transparent',
+                color: viewMode === 'cards' ? '#fff' : D.textSecondary,
+                fontFamily: D.head,
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <LayoutGrid size={13} />
+              <span>Cards</span>
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: D.pill,
+                border: 'none',
+                background: viewMode === 'table' ? D.indigo : 'transparent',
+                color: viewMode === 'table' ? '#fff' : D.textSecondary,
+                fontFamily: D.head,
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <List size={13} />
+              <span>Table</span>
+            </button>
+            <button
+              onClick={() => setViewMode('split')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: D.pill,
+                border: 'none',
+                background: viewMode === 'split' ? D.indigo : 'transparent',
+                color: viewMode === 'split' ? '#fff' : D.textSecondary,
+                fontFamily: D.head,
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <Columns size={13} />
+              <span>Split Dossier</span>
+            </button>
+          </div>
+
+          {canManageProfiles ? (
+            <button
+              onClick={() => setCreateModalOpen(true)}
+              style={{
+                padding: '7px 14px',
+                borderRadius: D.pill,
+                background: D.indigo,
+                border: 'none',
+                color: '#fff',
+                fontFamily: D.head,
+                fontSize: '11px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: `0 3px 10px ${D.indigo}33`,
+              }}
+            >
+              <Plus size={14} />
+              <span>Add Profile</span>
+            </button>
+          ) : (
+            <div
+              title={`Role '${currentRole}' is in read-only mode.`}
+              style={{
+                padding: '6px 12px',
                 borderRadius: D.pill,
                 background: D.surf2,
                 border: `1px solid ${D.border}`,
-                color: D.textPrimary,
-                fontFamily: D.body,
-                fontSize: '12px',
-                outline: 'none',
+                color: D.textMuted,
+                fontFamily: D.head,
+                fontSize: '11px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
               }}
-            />
-          </div>
+            >
+              <Shield size={12} />
+              <span>RBAC Read Only</span>
+            </div>
+          )}
+        </div>
+      </div>
 
-          {/* School Selector */}
+      {/* Filter Tabs & Search Bar */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px',
+          background: D.surf0,
+          padding: '12px 16px',
+          borderRadius: D.lg,
+          border: `1px solid ${D.border}`,
+        }}
+      >
+        {/* Category Filter Pills */}
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+          <button
+            onClick={() => setCategoryFilter('all')}
+            style={{
+              padding: '5px 12px',
+              borderRadius: D.pill,
+              border: `1px solid ${categoryFilter === 'all' ? D.indigo : D.border}`,
+              background: categoryFilter === 'all' ? `${D.indigo}20` : D.surf2,
+              color: categoryFilter === 'all' ? D.indigo : D.textSecondary,
+              fontFamily: D.head,
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            All Profiles ({unifiedProfiles.length})
+          </button>
+          <button
+            onClick={() => setCategoryFilter('athlete')}
+            style={{
+              padding: '5px 12px',
+              borderRadius: D.pill,
+              border: `1px solid ${categoryFilter === 'athlete' ? D.indigo : D.border}`,
+              background: categoryFilter === 'athlete' ? `${D.indigo}20` : D.surf2,
+              color: categoryFilter === 'athlete' ? D.indigo : D.textSecondary,
+              fontFamily: D.head,
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            🏏 Student Athletes (54)
+          </button>
+          <button
+            onClick={() => setCategoryFilter('coach')}
+            style={{
+              padding: '5px 12px',
+              borderRadius: D.pill,
+              border: `1px solid ${categoryFilter === 'coach' ? D.indigo : D.border}`,
+              background: categoryFilter === 'coach' ? `${D.indigo}20` : D.surf2,
+              color: categoryFilter === 'coach' ? D.indigo : D.textSecondary,
+              fontFamily: D.head,
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            👔 Coaches & Directors
+          </button>
+          <button
+            onClick={() => setCategoryFilter('official')}
+            style={{
+              padding: '5px 12px',
+              borderRadius: D.pill,
+              border: `1px solid ${categoryFilter === 'official' ? D.indigo : D.border}`,
+              background: categoryFilter === 'official' ? `${D.indigo}20` : D.surf2,
+              color: categoryFilter === 'official' ? D.indigo : D.textSecondary,
+              fontFamily: D.head,
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            ⚖️ Umpires & Scorers
+          </button>
+          <button
+            onClick={() => setCategoryFilter('leadership')}
+            style={{
+              padding: '5px 12px',
+              borderRadius: D.pill,
+              border: `1px solid ${categoryFilter === 'leadership' ? D.indigo : D.border}`,
+              background: categoryFilter === 'leadership' ? `${D.indigo}20` : D.surf2,
+              color: categoryFilter === 'leadership' ? D.indigo : D.textSecondary,
+              fontFamily: D.head,
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            🛡️ School Leadership
+          </button>
+        </div>
+
+        {/* School & Search */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <select
             value={schoolFilter}
             onChange={e => setSchoolFilter(e.target.value)}
             style={{
-              padding: '8px 12px',
+              padding: '6px 10px',
               borderRadius: D.pill,
               background: D.surf2,
               border: `1px solid ${D.border}`,
@@ -991,443 +499,665 @@ export default function UserProfilesView({
               outline: 'none',
             }}
           >
-            <option value="all">All Schools ({SCHOOLS_REGISTRY.length})</option>
+            <option value="all">All 9 Schools</option>
             {SCHOOLS_REGISTRY.map(s => (
               <option key={s.id} value={s.id}>{s.crestIcon} {s.shortName}</option>
             ))}
           </select>
+
+          <div style={{ position: 'relative', width: '210px' }}>
+            <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: D.textMuted }} />
+            <input
+              type="text"
+              placeholder="Search by name, role, email..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '6px 10px 6px 30px',
+                borderRadius: D.pill,
+                background: D.surf2,
+                border: `1px solid ${D.border}`,
+                color: D.textPrimary,
+                fontFamily: D.body,
+                fontSize: '11px',
+                outline: 'none',
+              }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Category Pills Bar */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '8px',
-          overflowX: 'auto',
-          paddingBottom: '4px',
-          borderBottom: `1px solid ${D.border}`,
-        }}
-      >
-        {[
-          { id: 'all', label: '🌟 All Profiles', count: categoryCounts.all },
-          { id: 'athletes', label: '🏏 Student Athletes', count: categoryCounts.athletes },
-          { id: 'coaches', label: '👔 Coaches & Directors', count: categoryCounts.coaches },
-          { id: 'officials', label: '⚖️ Umpires & Officials', count: categoryCounts.officials },
-          { id: 'scorers', label: '📝 Digital Scorers', count: categoryCounts.scorers },
-          { id: 'curators', label: '🌿 Grounds Curators', count: categoryCounts.curators },
-          { id: 'admin', label: '🛡️ School Leadership & Governance', count: categoryCounts.admin },
-        ].map(cat => {
-          const isActive = categoryFilter === cat.id;
-          return (
-            <button
-              key={cat.id}
-              onClick={() => setCategoryFilter(cat.id)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: D.pill,
-                background: isActive ? D.indigo : D.surf1,
-                color: isActive ? '#fff' : D.textSecondary,
-                border: `1px solid ${isActive ? D.indigo : D.border}`,
-                fontFamily: D.head,
-                fontSize: '11px',
-                fontWeight: isActive ? 800 : 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span>{cat.label}</span>
-              <span
+      {/* VIEW 1: CARDS GRID */}
+      {viewMode === 'cards' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 330px), 1fr))', gap: '16px' }}>
+          {filteredProfiles.map(p => {
+            const school = SCHOOLS_REGISTRY.find(s => s.id === p.schoolId) || activeSchool;
+            const isAthlete = p.category === 'athlete';
+
+            return (
+              <div
+                key={p.id}
                 style={{
-                  padding: '1px 6px',
-                  borderRadius: D.pill,
-                  background: isActive ? 'rgba(255,255,255,0.2)' : D.surf2,
-                  fontSize: '10px',
-                  fontFamily: D.mono,
-                  fontWeight: 700,
+                  background: D.surf0,
+                  borderRadius: D.lg,
+                  border: `1px solid ${D.border}`,
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '14px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  transition: 'transform 0.15s ease, border-color 0.15s ease',
                 }}
               >
-                {cat.count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Counter and Results Indicator */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', fontFamily: D.mono, color: D.textMuted }}>
-        <span>Showing <strong>{filteredProfiles.length}</strong> matching profiles</span>
-        <span>Click "View Full Profile ↗" to inspect complete dossier, accolades, and certifications</span>
-      </div>
-
-      {/* Profiles Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-        {filteredProfiles.map(item => {
-          const itemSchool = SCHOOLS_REGISTRY.find(s => s.id === item.schoolId) || activeSchool;
-          const p = item.playerRef;
-
-          return (
-            <div
-              key={item.id}
-              style={{
-                background: D.surf0,
-                borderRadius: D.lg,
-                border: `1px solid ${D.border}`,
-                padding: '18px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '14px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                transition: 'transform 0.15s ease, border-color 0.15s ease',
-              }}
-            >
-              <div>
-                {/* Card Top: Avatar, Name & School */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div
-                      style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '50%',
-                        background: item.isAthlete ? `linear-gradient(135deg, ${D.indigo}, ${D.sky})` : `linear-gradient(135deg, ${D.emerald}, ${D.teal})`,
-                        color: '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 800,
-                        fontSize: '14px',
-                        fontFamily: D.head,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {item.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </div>
-                    <div>
-                      <h3 style={{ fontFamily: D.head, fontSize: '15px', fontWeight: 800, color: D.textPrimary, margin: 0 }}>
-                        {item.name}
-                      </h3>
-                      <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted, marginTop: '2px' }}>
-                        {itemSchool.crestIcon} {itemSchool.shortName} · {item.assignedSquads?.[0] || 'Staff'}
+                <div>
+                  {/* Top Bar with School & Category Badge */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          background: `${D.indigo}22`,
+                          border: `1px solid ${D.indigo}44`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '18px',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {isAthlete ? '🏏' : '👔'}
+                      </div>
+                      <div>
+                        <h3 style={{ fontFamily: D.head, fontSize: '15px', fontWeight: 800, color: D.textPrimary, margin: 0 }}>
+                          {p.name}
+                        </h3>
+                        <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>{school.crestIcon}</span>
+                          <span>{school.shortName}</span>
+                        </div>
                       </div>
                     </div>
+
+                    <span
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: D.pill,
+                        background: isAthlete ? `${D.emerald}20` : `${D.indigo}20`,
+                        color: isAthlete ? D.emerald : D.indigo,
+                        fontFamily: D.mono,
+                        fontSize: '9px',
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {isAthlete ? 'ATHLETE' : 'STAFF'}
+                    </span>
                   </div>
 
-                  <span
+                  {/* Bio details / Player Stats */}
+                  {isAthlete && p.playerRef ? (
+                    <div style={{ background: D.surf1, padding: '10px', borderRadius: D.md, marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', textAlign: 'center' }}>
+                      <div>
+                        <div style={{ fontFamily: D.mono, fontSize: '9px', color: D.textMuted }}>AVG</div>
+                        <div style={{ fontFamily: D.mono, fontSize: '14px', fontWeight: 800, color: D.emerald }}>
+                          {p.playerRef.batting?.avg || '42.5'}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: D.mono, fontSize: '9px', color: D.textMuted }}>SR</div>
+                        <div style={{ fontFamily: D.mono, fontSize: '14px', fontWeight: 800, color: D.sky }}>
+                          {p.playerRef.batting?.sr || '128.4'}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: D.mono, fontSize: '9px', color: D.textMuted }}>HIGH</div>
+                        <div style={{ fontFamily: D.mono, fontSize: '14px', fontWeight: 800, color: D.amber }}>
+                          {p.playerRef.batting?.hs || '114*'}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '8px 0', fontFamily: D.body, fontSize: '11px', color: D.textSecondary }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Mail size={12} style={{ color: D.sky }} />
+                        <span style={{ fontFamily: D.mono, fontSize: '11px' }}>{p.email}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                        <Phone size={12} style={{ color: D.emerald }} />
+                        <span style={{ fontFamily: D.mono, fontSize: '11px' }}>{p.phone}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Accreditations & Badges */}
+                  <div style={{ marginTop: '10px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {p.certifications?.slice(0, 2).map((cert, cIdx) => (
+                        <span
+                          key={cIdx}
+                          style={{
+                            padding: '2px 6px',
+                            borderRadius: D.sm,
+                            background: D.surf2,
+                            border: `1px solid ${D.border}`,
+                            fontFamily: D.mono,
+                            fontSize: '9px',
+                            color: D.textMuted,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                          }}
+                        >
+                          <CheckCircle2 size={10} style={{ color: D.emerald }} />
+                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+                            {cert.name}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: `1px solid ${D.border}44` }}>
+                  <button
+                    onClick={() => setSelectedProfileId(p.id)}
                     style={{
-                      padding: '2px 8px',
+                      padding: '5px 10px',
                       borderRadius: D.pill,
-                      background: item.isAthlete ? `${D.indigo}20` : `${D.emerald}20`,
-                      color: item.isAthlete ? D.indigo : D.emerald,
-                      fontFamily: D.mono,
-                      fontSize: '9px',
+                      background: D.surf2,
+                      border: `1px solid ${D.border}`,
+                      color: D.textPrimary,
+                      fontFamily: D.head,
+                      fontSize: '11px',
                       fontWeight: 700,
-                      textTransform: 'uppercase',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
                     }}
                   >
-                    {item.isAthlete ? (p?.role || 'ATHLETE') : (item.roles[0] || 'STAFF')}
-                  </span>
-                </div>
+                    <span>View Dossier</span>
+                    <ChevronRight size={12} />
+                  </button>
 
-                {/* Subtitle / Playing Role */}
-                <div style={{ marginTop: '10px', fontSize: '11px', fontFamily: D.body, color: D.textSecondary }}>
-                  {item.title}
-                </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {isAthlete && onNavigateToH2H && (
+                      <button
+                        onClick={() => onNavigateToH2H(p.id)}
+                        title="Compare in Head-to-Head"
+                        style={{
+                          padding: '5px 9px',
+                          borderRadius: D.pill,
+                          background: `${D.amber}20`,
+                          border: `1px solid ${D.amber}44`,
+                          color: D.amber,
+                          fontFamily: D.head,
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ⚔️ H2H
+                      </button>
+                    )}
 
-                {/* Metrics Preview for Athletes vs Staff */}
-                {item.isAthlete && p ? (
-                  <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', background: D.surf2, padding: '8px', borderRadius: D.md, textAlign: 'center' }}>
-                    <div>
-                      <div style={{ fontFamily: D.mono, fontSize: '13px', fontWeight: 800, color: D.indigo }}>{p.avg}</div>
-                      <div style={{ fontFamily: D.head, fontSize: '9px', color: D.textMuted }}>Avg</div>
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: D.mono, fontSize: '13px', fontWeight: 800, color: D.sky }}>{p.sr}</div>
-                      <div style={{ fontFamily: D.head, fontSize: '9px', color: D.textMuted }}>SR</div>
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: D.mono, fontSize: '13px', fontWeight: 800, color: D.emerald }}>{p.careerTotals?.runs || Math.round(p.avg * 16)}</div>
-                      <div style={{ fontFamily: D.head, fontSize: '9px', color: D.textMuted }}>Runs</div>
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: D.mono, fontSize: '13px', fontWeight: 800, color: D.rose }}>{p.wkts}</div>
-                      <div style={{ fontFamily: D.head, fontSize: '9px', color: D.textMuted }}>Wkts</div>
-                    </div>
+                    {canManageProfiles && (
+                      <button
+                        onClick={() => setEditingProfile(p)}
+                        title="Edit Permissions"
+                        style={{
+                          padding: '5px 7px',
+                          borderRadius: D.sm,
+                          background: 'transparent',
+                          border: `1px solid ${D.border}`,
+                          color: D.textSecondary,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Edit2 size={11} />
+                      </button>
+                    )}
                   </div>
-                ) : (
-                  <div style={{ marginTop: '10px', padding: '8px 10px', background: D.surf2, borderRadius: D.md, fontFamily: D.mono, fontSize: '10px', color: D.textMuted }}>
-                    <div>Licence: {item.certifications?.[0]?.licenseId || 'CSA-REG-2024'}</div>
-                    <div style={{ color: D.emerald, marginTop: '2px' }}>✓ {item.certifications?.length || 2} Verified Accreditations</div>
-                  </div>
-                )}
-
-                {/* Badges / Accolade Snippet */}
-                <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                  {item.accolades?.[0] && (
-                    <span style={{ padding: '2px 8px', borderRadius: D.pill, background: `${D.amber}15`, color: D.amber, fontFamily: D.head, fontSize: '9px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Award size={11} />
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '240px' }}>
-                        {item.accolades[0]}
-                      </span>
-                    </span>
-                  )}
                 </div>
               </div>
+            );
+          })}
+        </div>
+      )}
 
-              {/* Action Buttons */}
-              <div style={{ paddingTop: '10px', borderTop: `1px solid ${D.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
-                <button
-                  onClick={() => openProfileDetail(item)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: D.pill,
-                    border: `1px solid ${D.indigo}`,
-                    background: `${D.indigo}15`,
-                    color: D.indigo,
-                    fontFamily: D.head,
-                    fontSize: '11px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <span>View Full Profile</span>
-                  <ChevronRight size={13} />
-                </button>
-
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  {item.isAthlete && onOpenH2H && (
-                    <button
-                      onClick={() => onOpenH2H(item.id)}
-                      title="Compare in H2H"
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: D.pill,
-                        border: `1px solid ${D.border}`,
-                        background: D.surf2,
-                        color: D.textPrimary,
-                        fontFamily: D.head,
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Swords size={12} />
-                      <span>H2H</span>
-                    </button>
-                  )}
-
-                  {!item.isAthlete && canManageProfiles && (
-                    <button
-                      onClick={() => setEditingUser({ ...item, assignedSquads: item.assignedSquads || [], roles: [...item.roles] })}
-                      title="Edit Roles"
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: D.pill,
-                        border: `1px solid ${D.border}`,
-                        background: D.surf2,
-                        color: D.textSecondary,
-                        fontFamily: D.head,
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Edit2 size={12} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── EDIT PROFILE MODAL (Sportsmaster / Admin) ──────────────── */}
-      {editingUser && (
+      {/* VIEW 2: TABLE VIEW */}
+      {viewMode === 'table' && (
         <div
           style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.75)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '20px',
+            background: D.surf0,
+            borderRadius: D.lg,
+            border: `1px solid ${D.border}`,
+            overflowX: 'auto',
           }}
         >
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '760px' }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${D.border}`, background: D.surf1, textAlign: 'left' }}>
+                <th style={{ padding: '10px 14px', fontFamily: D.head, fontSize: '10px', color: D.textMuted }}>NAME</th>
+                <th style={{ padding: '10px 14px', fontFamily: D.head, fontSize: '10px', color: D.textMuted }}>CATEGORY</th>
+                <th style={{ padding: '10px 14px', fontFamily: D.head, fontSize: '10px', color: D.textMuted }}>INSTITUTION</th>
+                <th style={{ padding: '10px 14px', fontFamily: D.head, fontSize: '10px', color: D.textMuted }}>ROLE / DISCIPLINE</th>
+                <th style={{ padding: '10px 14px', fontFamily: D.head, fontSize: '10px', color: D.textMuted }}>STATUS</th>
+                <th style={{ padding: '10px 14px', fontFamily: D.head, fontSize: '10px', color: D.textMuted, textAlign: 'right' }}>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProfiles.map(p => {
+                const school = SCHOOLS_REGISTRY.find(s => s.id === p.schoolId) || activeSchool;
+                return (
+                  <tr key={p.id} style={{ borderBottom: `1px solid ${D.border}44` }}>
+                    <td style={{ padding: '12px 14px' }}>
+                      <div style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 700, color: D.textPrimary }}>
+                        {p.name}
+                      </div>
+                      <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
+                        {p.email}
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: D.pill,
+                          background: p.category === 'athlete' ? `${D.emerald}20` : `${D.indigo}20`,
+                          color: p.category === 'athlete' ? D.emerald : D.indigo,
+                          fontFamily: D.mono,
+                          fontSize: '10px',
+                          fontWeight: 800,
+                        }}
+                      >
+                        {p.category.toUpperCase()}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 14px', fontFamily: D.body, fontSize: '12px', color: D.textPrimary }}>
+                      {school.crestIcon} {school.name}
+                    </td>
+                    <td style={{ padding: '12px 14px', fontFamily: D.mono, fontSize: '11px', color: D.textSecondary }}>
+                      {p.category === 'athlete' ? p.playerRef?.role || 'All-Rounder' : p.roles.join(', ')}
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span style={{ color: D.emerald, fontFamily: D.mono, fontSize: '11px', fontWeight: 700 }}>
+                        ● Active
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={() => setSelectedProfileId(p.id)}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: D.sm,
+                            background: D.surf2,
+                            border: `1px solid ${D.border}`,
+                            color: D.textPrimary,
+                            fontFamily: D.head,
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Dossier
+                        </button>
+                        {canManageProfiles && (
+                          <button
+                            onClick={() => setEditingProfile(p)}
+                            style={{
+                              padding: '4px 6px',
+                              borderRadius: D.sm,
+                              background: 'transparent',
+                              border: `1px solid ${D.border}`,
+                              color: D.textSecondary,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Edit2 size={11} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* VIEW 3: SPLIT DOSSIER VIEW */}
+      {viewMode === 'split' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '16px', alignItems: 'start' }}>
+          {/* Left Column: Quick Selector List */}
           <div
             style={{
               background: D.surf0,
               borderRadius: D.lg,
               border: `1px solid ${D.border}`,
-              maxWidth: '600px',
-              width: '100%',
-              padding: '24px',
+              padding: '14px',
+              maxHeight: '680px',
+              overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
-              gap: '20px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
+              gap: '6px',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ fontFamily: D.head, fontSize: '18px', fontWeight: 800, color: D.textPrimary, margin: 0 }}>
-                  Manage User Profile: {editingUser.name}
-                </h3>
-                <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted, marginTop: '2px' }}>
-                  {editingUser.email} · {activeSchool.name}
-                </div>
-              </div>
-              <button
-                onClick={() => setEditingUser(null)}
-                style={{ background: 'none', border: 'none', color: D.textMuted, fontSize: '18px', cursor: 'pointer' }}
-              >
-                ✕
-              </button>
+            <div style={{ fontFamily: D.head, fontSize: '11px', fontWeight: 800, color: D.textMuted, textTransform: 'uppercase', marginBottom: '4px' }}>
+              Select Profile ({filteredProfiles.length})
             </div>
-
-            <form onSubmit={handleSaveUserEdit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Status */}
-              <div>
-                <label style={{ fontFamily: D.head, fontSize: '11px', fontWeight: 700, color: D.textSecondary, display: 'block', marginBottom: '6px' }}>
-                  Account Status
-                </label>
-                <select
-                  value={editingUser.status}
-                  onChange={e => setEditingUser({ ...editingUser, status: e.target.value })}
+            {filteredProfiles.map(p => {
+              const isSelected = p.id === activeProfile?.id;
+              const school = SCHOOLS_REGISTRY.find(s => s.id === p.schoolId) || activeSchool;
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => setSelectedProfileId(p.id)}
                   style={{
-                    width: '100%',
-                    padding: '8px 12px',
+                    padding: '10px 12px',
                     borderRadius: D.md,
-                    background: D.surf2,
-                    border: `1px solid ${D.border}`,
-                    color: D.textPrimary,
-                    fontFamily: D.body,
-                    fontSize: '12px',
-                    outline: 'none',
+                    background: isSelected ? `${D.indigo}22` : D.surf1,
+                    border: isSelected ? `1px solid ${D.indigo}` : `1px solid ${D.border}44`,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                   }}
                 >
-                  <option value="active">Active (Full Access)</option>
-                  <option value="suspended">Suspended (Access Revoked)</option>
-                </select>
-              </div>
+                  <div>
+                    <div style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 700, color: D.textPrimary }}>
+                      {p.name}
+                    </div>
+                    <div style={{ fontFamily: D.mono, fontSize: '10px', color: D.textMuted }}>
+                      {school.shortName} · {p.category.toUpperCase()}
+                    </div>
+                  </div>
+                  <ChevronRight size={14} style={{ color: isSelected ? D.indigo : D.textMuted }} />
+                </div>
+              );
+            })}
+          </div>
 
-              {/* Roles / Permissions Checkboxes */}
-              <div>
-                <label style={{ fontFamily: D.head, fontSize: '11px', fontWeight: 700, color: D.textSecondary, display: 'block', marginBottom: '8px' }}>
-                  Assigned Roles & Permissions (Multi-Role Support)
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px', maxHeight: '180px', overflowY: 'auto', padding: '8px', background: D.surf2, borderRadius: D.md, border: `1px solid ${D.border}` }}>
-                  {Object.entries(ROLES).map(([key, r]) => {
-                    const isChecked = editingUser.roles.includes(key);
-                    return (
-                      <label
-                        key={key}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          cursor: 'pointer',
-                          fontFamily: D.body,
-                          fontSize: '11px',
-                          color: D.textPrimary,
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleUserRole(key)}
-                          style={{ accentColor: D.indigo }}
-                        />
-                        <span>{r.icon} {r.label}</span>
-                      </label>
-                    );
-                  })}
+          {/* Right Column: Deep Profile Dossier */}
+          {activeProfile && (
+            <div
+              style={{
+                background: D.surf0,
+                borderRadius: D.lg,
+                border: `1px solid ${D.indigo}44`,
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+              }}
+            >
+              {/* Dossier Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '24px' }}>{activeProfile.category === 'athlete' ? '🏏' : '👔'}</span>
+                    <div>
+                      <h2 style={{ fontFamily: D.head, fontSize: '20px', fontWeight: 900, color: D.textPrimary, margin: 0 }}>
+                        {activeProfile.name}
+                      </h2>
+                      <div style={{ fontFamily: D.mono, fontSize: '12px', color: D.textSecondary }}>
+                        {SCHOOLS_REGISTRY.find(s => s.id === activeProfile.schoolId)?.name || 'KZN Schools'} · {activeProfile.category.toUpperCase()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {activeProfile.category === 'athlete' && onNavigateToH2H && (
+                    <button
+                      onClick={() => onNavigateToH2H(activeProfile.id)}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: D.pill,
+                        background: `${D.amber}25`,
+                        border: `1px solid ${D.amber}55`,
+                        color: D.amber,
+                        fontFamily: D.head,
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Compare in H2H ⚔️
+                    </button>
+                  )}
+                  {canManageProfiles && (
+                    <button
+                      onClick={() => setEditingProfile(activeProfile)}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: D.pill,
+                        background: D.indigo,
+                        border: 'none',
+                        color: '#fff',
+                        fontFamily: D.head,
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Edit Profile
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Team / Squad Assignments */}
-              <div>
-                <label style={{ fontFamily: D.head, fontSize: '11px', fontWeight: 700, color: D.textSecondary, display: 'block', marginBottom: '8px' }}>
-                  Assigned Teams / Squads (Coaching & Management)
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px', maxHeight: '160px', overflowY: 'auto', padding: '8px', background: D.surf2, borderRadius: D.md, border: `1px solid ${D.border}` }}>
-                  {schoolSquads.map(sq => {
-                    const isAssigned = (editingUser.assignedSquads || []).includes(sq.id);
-                    return (
-                      <label
-                        key={sq.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          cursor: 'pointer',
-                          fontFamily: D.mono,
-                          fontSize: '10px',
-                          color: D.textPrimary,
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isAssigned}
-                          onChange={() => toggleAssignedSquad(sq.id)}
-                          style={{ accentColor: D.emerald }}
-                        />
-                        <span>{sq.name}</span>
-                      </label>
-                    );
-                  })}
+              {/* Bio Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', background: D.surf1, padding: '14px', borderRadius: D.md }}>
+                <div>
+                  <div style={{ fontFamily: D.head, fontSize: '9px', color: D.textMuted }}>HOUSE</div>
+                  <div style={{ fontFamily: D.body, fontSize: '12px', fontWeight: 700, color: D.textPrimary }}>{activeProfile.house || 'Nicholson'}</div>
+                </div>
+                <div>
+                  <div style={{ fontFamily: D.head, fontSize: '9px', color: D.textMuted }}>BATTING HAND</div>
+                  <div style={{ fontFamily: D.body, fontSize: '12px', fontWeight: 700, color: D.textPrimary }}>{activeProfile.battingHand || 'Right-hand'}</div>
+                </div>
+                <div>
+                  <div style={{ fontFamily: D.head, fontSize: '9px', color: D.textMuted }}>BOWLING STYLE</div>
+                  <div style={{ fontFamily: D.body, fontSize: '12px', fontWeight: 700, color: D.textPrimary }}>{activeProfile.bowlingStyle || 'Right-arm Fast'}</div>
+                </div>
+                <div>
+                  <div style={{ fontFamily: D.head, fontSize: '9px', color: D.textMuted }}>POPIA CLEARANCE</div>
+                  <div style={{ fontFamily: D.mono, fontSize: '11px', fontWeight: 700, color: D.emerald }}>Verified (Tier 4)</div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+              {/* Verified Accreditations */}
+              <div>
+                <div style={{ fontFamily: D.head, fontSize: '12px', fontWeight: 800, color: D.textPrimary, marginBottom: '8px' }}>
+                  Verified Accreditations & Certifications
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {activeProfile.certifications?.map((cert, cIdx) => (
+                    <div key={cIdx} style={{ padding: '8px 12px', borderRadius: D.md, background: D.surf2, border: `1px solid ${D.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <CheckCircle2 size={14} style={{ color: D.emerald }} />
+                        <div>
+                          <div style={{ fontFamily: D.head, fontSize: '11px', fontWeight: 700, color: D.textPrimary }}>{cert.name}</div>
+                          <div style={{ fontFamily: D.mono, fontSize: '10px', color: D.textMuted }}>Issued by {cert.issuer}</div>
+                        </div>
+                      </div>
+                      <span style={{ fontFamily: D.mono, fontSize: '10px', color: D.emerald, fontWeight: 700 }}>{cert.year}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Accolades & Honours */}
+              <div>
+                <div style={{ fontFamily: D.head, fontSize: '12px', fontWeight: 800, color: D.textPrimary, marginBottom: '8px' }}>
+                  Honours & Career Accolades
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {activeProfile.accolades?.map((acc, aIdx) => (
+                    <div key={aIdx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: D.body, fontSize: '12px', color: D.textSecondary }}>
+                      <Award size={14} style={{ color: D.amber, flexShrink: 0 }} />
+                      <span>{acc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* CREATE PROFILE MODAL */}
+      {createModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
+          <div style={{ background: D.surf0, borderRadius: D.lg, border: `1px solid ${D.border}`, maxWidth: '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '22px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <UserPlus size={18} style={{ color: D.indigo }} />
+                <h3 style={{ fontFamily: D.head, fontSize: '16px', fontWeight: 800, color: D.textPrimary, margin: 0 }}>Register New User Profile</h3>
+              </div>
+              <button onClick={() => setCreateModalOpen(false)} style={{ background: 'none', border: 'none', color: D.textMuted, cursor: 'pointer', fontSize: '16px' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleCreateProfile} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontFamily: D.head, fontSize: '11px', color: D.textMuted, display: 'block', marginBottom: '4px' }}>Full Legal Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newProfileData.name}
+                  onChange={e => setNewProfileData({ ...newProfileData, name: e.target.value })}
+                  style={{ width: '100%', padding: '8px', borderRadius: D.sm, background: D.surf2, border: `1px solid ${D.border}`, color: D.textPrimary, fontSize: '12px' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontFamily: D.head, fontSize: '11px', color: D.textMuted, display: 'block', marginBottom: '4px' }}>Category</label>
+                  <select
+                    value={newProfileData.category}
+                    onChange={e => setNewProfileData({ ...newProfileData, category: e.target.value as any })}
+                    style={{ width: '100%', padding: '8px', borderRadius: D.sm, background: D.surf2, border: `1px solid ${D.border}`, color: D.textPrimary, fontSize: '12px' }}
+                  >
+                    <option value="athlete">Student Athlete</option>
+                    <option value="staff">Coaching Staff / Director</option>
+                    <option value="official">Match Official / Scorer</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontFamily: D.head, fontSize: '11px', color: D.textMuted, display: 'block', marginBottom: '4px' }}>Primary Role</label>
+                  <select
+                    value={newProfileData.role}
+                    onChange={e => setNewProfileData({ ...newProfileData, role: e.target.value })}
+                    style={{ width: '100%', padding: '8px', borderRadius: D.sm, background: D.surf2, border: `1px solid ${D.border}`, color: D.textPrimary, fontSize: '12px' }}
+                  >
+                    {Object.entries(ROLES).map(([k, r]) => (
+                      <option key={k} value={k}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontFamily: D.head, fontSize: '11px', color: D.textMuted, display: 'block', marginBottom: '4px' }}>Official Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={newProfileData.email}
+                  onChange={e => setNewProfileData({ ...newProfileData, email: e.target.value })}
+                  style={{ width: '100%', padding: '8px', borderRadius: D.sm, background: D.surf2, border: `1px solid ${D.border}`, color: D.textPrimary, fontSize: '12px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
                 <button
                   type="button"
-                  onClick={() => setEditingUser(null)}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: D.pill,
-                    border: `1px solid ${D.border}`,
-                    background: 'transparent',
-                    color: D.textSecondary,
-                    fontFamily: D.head,
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
+                  onClick={() => setCreateModalOpen(false)}
+                  style={{ padding: '8px 14px', borderRadius: D.pill, background: D.surf2, border: `1px solid ${D.border}`, color: D.textSecondary, fontFamily: D.head, fontSize: '11px', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  style={{
-                    padding: '8px 20px',
-                    borderRadius: D.pill,
-                    border: 'none',
-                    background: D.indigo,
-                    color: '#fff',
-                    fontFamily: D.head,
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
+                  style={{ padding: '8px 18px', borderRadius: D.pill, background: D.indigo, border: 'none', color: '#fff', fontFamily: D.head, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
                 >
-                  Save Profile Changes
+                  Create Profile
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PROFILE MODAL */}
+      {editingProfile && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
+          <div style={{ background: D.surf0, borderRadius: D.lg, border: `1px solid ${D.border}`, maxWidth: '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '22px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Edit2 size={18} style={{ color: D.indigo }} />
+                <h3 style={{ fontFamily: D.head, fontSize: '16px', fontWeight: 800, color: D.textPrimary, margin: 0 }}>
+                  Edit Profile & Permissions
+                </h3>
+              </div>
+              <button onClick={() => setEditingProfile(null)} style={{ background: 'none', border: 'none', color: D.textMuted, cursor: 'pointer', fontSize: '16px' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleSaveUserEdit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontFamily: D.head, fontSize: '11px', color: D.textMuted, display: 'block', marginBottom: '4px' }}>Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editingProfile.name}
+                  onChange={e => setEditingProfile({ ...editingProfile, name: e.target.value })}
+                  style={{ width: '100%', padding: '8px', borderRadius: D.sm, background: D.surf2, border: `1px solid ${D.border}`, color: D.textPrimary, fontSize: '12px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontFamily: D.head, fontSize: '11px', color: D.textMuted, display: 'block', marginBottom: '4px' }}>Email</label>
+                <input
+                  type="email"
+                  required
+                  value={editingProfile.email}
+                  onChange={e => setEditingProfile({ ...editingProfile, email: e.target.value })}
+                  style={{ width: '100%', padding: '8px', borderRadius: D.sm, background: D.surf2, border: `1px solid ${D.border}`, color: D.textPrimary, fontSize: '12px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontFamily: D.head, fontSize: '11px', color: D.textMuted, display: 'block', marginBottom: '4px' }}>Status</label>
+                <select
+                  value={editingProfile.status}
+                  onChange={e => setEditingProfile({ ...editingProfile, status: e.target.value as any })}
+                  style={{ width: '100%', padding: '8px', borderRadius: D.sm, background: D.surf2, border: `1px solid ${D.border}`, color: D.textPrimary, fontSize: '12px' }}
+                >
+                  <option value="active">Active (Access Permitted)</option>
+                  <option value="suspended">Suspended (Access Revoked)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingProfile(null)}
+                  style={{ padding: '8px 14px', borderRadius: D.pill, background: D.surf2, border: `1px solid ${D.border}`, color: D.textSecondary, fontFamily: D.head, fontSize: '11px', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{ padding: '8px 18px', borderRadius: D.pill, background: D.indigo, border: 'none', color: '#fff', fontFamily: D.head, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  Save Changes
                 </button>
               </div>
             </form>
