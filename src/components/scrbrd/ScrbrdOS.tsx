@@ -333,11 +333,29 @@ export default function ScrbrdOS() {
 
   // Interactive Live Score simulation state per match
   const [liveScores, setLiveScores] = useState<Record<string, { runs: number; wkts: number; balls: number; overStr: string }>>({
-    m1: { runs: 142, wkts: 3, balls: 86, overStr: "14.2" },
+    m1: { runs: 146, wkts: 3, balls: 88, overStr: "14.4" },
     m2: { runs: 214, wkts: 4, balls: 289, overStr: "48.1" },
     m3: { runs: 189, wkts: 6, balls: 220, overStr: "36.4" },
     m4: { runs: 98, wkts: 2, balls: 66, overStr: "11.0" },
   });
+
+  // Dynamic Recent Delivery Trajectory Strip for Live Broadcast Hub
+  const [recentBalls, setRecentBalls] = useState<Array<{ id: number; run: number; label: string; isWkt?: boolean; isFour?: boolean; isSix?: boolean; isExtra?: boolean }>>([
+    { id: 1, run: 1, label: "1" },
+    { id: 2, run: 0, label: "•" },
+    { id: 3, run: 4, label: "4", isFour: true },
+    { id: 4, run: 1, label: "1" },
+    { id: 5, run: 6, label: "6", isSix: true },
+    { id: 6, run: 0, label: "W", isWkt: true },
+    { id: 7, run: 2, label: "2" },
+    { id: 8, run: 4, label: "4", isFour: true },
+  ]);
+
+  // Dynamic Live Strikers & Bowler Figures for broadcast realism
+  const [liveStriker, setLiveStriker] = useState({ name: "M. Dlamini", runs: 64, balls: 42, fours: 7, sixes: 2 });
+  const [liveNonStriker, setLiveNonStriker] = useState({ name: "K. Anderson", runs: 34, balls: 26, fours: 4, sixes: 0 });
+  const [liveBowler, setLiveBowler] = useState({ name: "J. van der Merwe", overs: "3.4", maidens: 0, runs: 32, wkts: 2, econ: "8.72" });
+  const [lastSimEvent, setLastSimEvent] = useState<{ text: string; color: string } | null>(null);
 
   // Interactive Derby Simulator State
   const [derbySimRunning, setDerbySimRunning] = useState<boolean>(false);
@@ -373,23 +391,76 @@ export default function ScrbrdOS() {
   const derbyKey = Object.keys(DERBY_RECORDS).find(k => k.includes(activeSchool.id)) || "WES_KEA";
   const activeDerby = DERBY_RECORDS[derbyKey] || DERBY_RECORDS["WES_KEA"];
 
-  // Helper to trigger live simulation run addition
-  const handleSimulateBall = (matchId: string, runAdd: number, isWkt: boolean = false) => {
+  // Helper to trigger live simulation run addition with ball trajectory animation & stats
+  const handleSimulateBall = (matchId: string, runAdd: number, isWkt: boolean = false, isExtra: boolean = false) => {
+    let newScore = { runs: 146, wkts: 3, balls: 88, overStr: "14.4" };
     setLiveScores(prev => {
-      const current = prev[matchId] || { runs: 140, wkts: 3, balls: 84, overStr: "14.0" };
-      const nextBalls = current.balls + 1;
+      const current = prev[matchId] || { runs: 146, wkts: 3, balls: 88, overStr: "14.4" };
+      const nextBalls = isExtra ? current.balls : current.balls + 1;
       const completedOvers = Math.floor(nextBalls / 6);
       const remBalls = nextBalls % 6;
+      const newRuns = current.runs + runAdd;
+      const newWkts = isWkt ? Math.min(10, current.wkts + 1) : current.wkts;
+      newScore = {
+        runs: newRuns,
+        wkts: newWkts,
+        balls: nextBalls,
+        overStr: `${completedOvers}.${remBalls}`,
+      };
       return {
         ...prev,
-        [matchId]: {
-          runs: current.runs + runAdd,
-          wkts: isWkt ? Math.min(10, current.wkts + 1) : current.wkts,
-          balls: nextBalls,
-          overStr: `${completedOvers}.${remBalls}`,
-        },
+        [matchId]: newScore,
       };
     });
+
+    // Add ball to live recent strip
+    const newBallId = Date.now();
+    const label = isWkt ? "W" : runAdd === 0 ? "•" : isExtra ? "Wd" : `${runAdd}`;
+    setRecentBalls(prev => [
+      ...prev.slice(-9),
+      { id: newBallId, run: runAdd, label, isWkt, isFour: runAdd === 4, isSix: runAdd === 6, isExtra },
+    ]);
+
+    // Flash event
+    if (isWkt) {
+      setLastSimEvent({ text: "WICKET! Bowling breakthrough!", color: D.rose });
+      setLiveStriker({ name: "S. Khumalo", runs: 0, balls: 0, fours: 0, sixes: 0 });
+      setLiveBowler(b => ({ ...b, runs: b.runs + runAdd, wkts: b.wkts + 1 }));
+    } else if (runAdd === 6) {
+      setLastSimEvent({ text: "MAXIMUM! 6 Runs over long-on!", color: D.violet });
+    } else if (runAdd === 4) {
+      setLastSimEvent({ text: "BOUNDARY 4! Swept through midwicket!", color: D.emerald });
+    } else {
+      setLastSimEvent(null);
+    }
+
+    if (!isWkt && !isExtra) {
+      setLiveStriker(s => ({
+        ...s,
+        runs: s.runs + runAdd,
+        balls: s.balls + 1,
+        fours: runAdd === 4 ? s.fours + 1 : s.fours,
+        sixes: runAdd === 6 ? s.sixes + 1 : s.sixes,
+      }));
+      setLiveBowler(b => {
+        const nextRuns = b.runs + runAdd;
+        const oNum = parseFloat(b.overs) + 0.1;
+        return {
+          ...b,
+          runs: nextRuns,
+          econ: (nextRuns / 3.5).toFixed(2),
+        };
+      });
+
+      // Strike rotation on singles/triples
+      if (runAdd % 2 === 1) {
+        setLiveStriker(currStriker => {
+          const prevNonStriker = liveNonStriker;
+          setLiveNonStriker(currStriker);
+          return prevNonStriker;
+        });
+      }
+    }
   };
 
   // Run Derby Simulator calculation
@@ -413,16 +484,17 @@ export default function ScrbrdOS() {
     }, 600);
   };
 
-  // UI Primitives
+  // Modern UI Primitives (Sports Dashboard Grade)
   const Card = ({ children, sx = {}, onClick }: { children: React.ReactNode; sx?: React.CSSProperties; onClick?: () => void }) => (
     <div
       onClick={onClick}
       style={{
         background: D.surf1,
         border: `1px solid ${D.border}`,
-        borderRadius: D.lg,
+        borderRadius: "14px",
         overflow: "hidden",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+        boxShadow: isDark ? "0 4px 24px rgba(0,0,0,0.32)" : "0 4px 20px rgba(0,0,0,0.06)",
+        transition: "box-shadow 0.2s ease, border-color 0.2s ease",
         ...sx,
       }}
     >
@@ -430,15 +502,62 @@ export default function ScrbrdOS() {
     </div>
   );
 
-  const KPICard = ({ label, value, sub, icon, color = D.indigo }: { label: string; value: string | number; sub?: string; icon: string; color?: string }) => (
-    <Card sx={{ padding: "16px 18px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <div style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>{label}</div>
-          <div style={{ fontFamily: D.mono, fontSize: "24px", fontWeight: 700, color, lineHeight: 1 }}>{value}</div>
-          {sub && <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, marginTop: "4px" }}>{sub}</div>}
+  const KPICard = ({
+    label,
+    value,
+    sub,
+    icon,
+    color = D.indigo,
+    delta,
+    badge,
+  }: {
+    label: string;
+    value: string | number;
+    sub?: string;
+    icon: string;
+    color?: string;
+    delta?: string;
+    badge?: string;
+  }) => (
+    <Card sx={{ padding: "16px 18px", borderTop: `3px solid ${color}`, position: "relative" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+            <span style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              {label}
+            </span>
+            {badge && (
+              <span style={{ fontSize: "9px", fontFamily: D.mono, fontWeight: 700, padding: "1px 6px", borderRadius: D.pill, background: `${color}18`, color, border: `1px solid ${color}33` }}>
+                {badge}
+              </span>
+            )}
+          </div>
+          <div style={{ fontFamily: D.mono, fontSize: "26px", fontWeight: 800, color, lineHeight: 1.1, marginTop: "2px" }}>
+            {value}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "6px", flexWrap: "wrap" }}>
+            {delta && (
+              <span style={{ fontFamily: D.mono, fontSize: "10px", fontWeight: 700, color: delta.startsWith("▲") || delta.startsWith("+") ? D.emerald : D.sky }}>
+                {delta}
+              </span>
+            )}
+            {sub && <span style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted }}>{sub}</span>}
+          </div>
         </div>
-        <div style={{ width: "36px", height: "36px", borderRadius: D.md, background: color + "18", border: `1px solid ${color}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", flexShrink: 0 }}>
+        <div
+          style={{
+            width: "38px",
+            height: "38px",
+            borderRadius: "10px",
+            background: color + "14",
+            border: `1px solid ${color}28`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "19px",
+            flexShrink: 0,
+          }}
+        >
           {icon}
         </div>
       </div>
@@ -458,10 +577,22 @@ export default function ScrbrdOS() {
     </div>
   );
 
-  const Btn = ({ children, onClick, variant = "primary", size = "md", disabled }: { children: React.ReactNode; onClick?: () => void; variant?: "primary" | "success" | "danger" | "ghost" | "tonal"; size?: "sm" | "md" | "lg"; disabled?: boolean }) => {
+  const Btn = ({
+    children,
+    onClick,
+    variant = "primary",
+    size = "md",
+    disabled,
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    variant?: "primary" | "success" | "danger" | "ghost" | "tonal";
+    size?: "sm" | "md" | "lg";
+    disabled?: boolean;
+  }) => {
     const bg = variant === "primary" ? D.gradMain : variant === "success" ? D.gradLive : variant === "danger" ? D.rose : variant === "ghost" ? "transparent" : D.surf3;
     const col = variant === "ghost" ? D.textSecondary : "#fff";
-    const pad = size === "sm" ? "5px 12px" : size === "lg" ? "12px 24px" : "8px 18px";
+    const pad = size === "sm" ? "6px 14px" : size === "lg" ? "12px 24px" : "8px 18px";
     const fs = size === "sm" ? "11px" : size === "lg" ? "14px" : "12px";
     return (
       <button
@@ -478,9 +609,13 @@ export default function ScrbrdOS() {
           fontFamily: D.head,
           fontSize: fs,
           fontWeight: 700,
-          letterSpacing: "0.04em",
+          letterSpacing: "0.03em",
           opacity: disabled ? 0.4 : 1,
-          boxShadow: variant === "primary" ? `0 2px 12px ${D.indigo}33` : "none",
+          boxShadow: variant === "primary" ? `0 4px 14px ${D.indigo}33` : variant === "success" ? `0 4px 14px ${D.emerald}33` : "none",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          whiteSpace: "nowrap",
         }}
       >
         {children}
@@ -1309,33 +1444,37 @@ export default function ScrbrdOS() {
         {/* Content View Router */}
         <main style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
           {page === "dashboard" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              {/* School Heritage Banner */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
+              {/* School Championship Heritage Banner */}
               <Card
                 sx={{
-                  padding: "20px 24px",
-                  background: `linear-gradient(135deg, ${schoolPrimary}24 0%, ${D.surf1} 100%)`,
-                  border: `1px solid ${schoolPrimary}44`,
+                  padding: "22px 26px",
+                  background: `linear-gradient(135deg, ${schoolPrimary}28 0%, ${D.surf1} 100%)`,
+                  border: `1px solid ${schoolPrimary}48`,
                   position: "relative",
                   overflow: "hidden",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                      <span style={{ fontSize: "24px" }}>{activeSchool.crestIcon}</span>
-                      <Badge color={schoolPrimary}>{activeSchool.region} · Established {activeSchool.founded}</Badge>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "28px" }}>{activeSchool.crestIcon}</span>
+                      <Badge color={schoolPrimary}>{activeSchool.region} · Est. {activeSchool.founded}</Badge>
                       <Badge color={D.sky}>Head of Cricket: {activeSchool.headOfCricket}</Badge>
+                      <span style={{ fontSize: "10px", fontFamily: D.mono, fontWeight: 700, padding: "3px 8px", borderRadius: D.pill, background: `${D.amber}22`, color: D.amber, border: `1px solid ${D.amber}44` }}>
+                        🔥 4-0 Win Streak
+                      </span>
                     </div>
-                    <h1 style={{ fontFamily: D.head, fontSize: "22px", fontWeight: 800, color: D.textPrimary, margin: "4px 0" }}>
+                    <h1 style={{ fontFamily: D.head, fontSize: "24px", fontWeight: 800, color: D.textPrimary, margin: "4px 0", letterSpacing: "-0.01em" }}>
                       {activeSchool.name}
                     </h1>
                     <div style={{ fontFamily: D.body, fontSize: "13px", color: D.textSecondary }}>
-                      &ldquo;{activeSchool.motto}&rdquo; · Main Venue: <strong style={{ color: D.textPrimary }}>{activeSchool.mainOval}</strong>
+                      &ldquo;{activeSchool.motto}&rdquo; · Home Oval: <strong style={{ color: D.textPrimary }}>{activeSchool.mainOval}</strong>
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  {/* Quick Action Deck */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                     <Btn
                       variant="success"
                       size="sm"
@@ -1344,7 +1483,10 @@ export default function ScrbrdOS() {
                         setScorerOpen(true);
                       }}
                     >
-                      🏏 Launch Broadcast Scorer
+                      🏏 Launch Scorer
+                    </Btn>
+                    <Btn variant="tonal" size="sm" onClick={() => { setPage("analytics"); setAnalyticsSubTab("wagon"); }}>
+                      🎯 360° Wagon
                     </Btn>
                     <Btn variant="tonal" size="sm" onClick={() => setPage("fields")}>
                       🌿 Turfgrass Telemetry
@@ -1352,135 +1494,326 @@ export default function ScrbrdOS() {
                     <Btn variant="primary" size="sm" onClick={() => setPage("register")}>
                       📑 Master Register
                     </Btn>
+                    <Btn variant="ghost" size="sm" onClick={() => setPage("scouting")}>
+                      🔍 AI Scouting
+                    </Btn>
                   </div>
                 </div>
 
                 {/* Trophy & Honors Ticker */}
-                <div style={{ marginTop: "14px", paddingTop: "12px", borderTop: `1px solid ${D.border}`, display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                  <span style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>Honors Cabinet:</span>
+                <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: `1px solid ${D.border}`, display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <span style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                    Honors Cabinet:
+                  </span>
                   {activeSchool.trophies.map((t, idx) => (
-                    <span key={idx} style={{ fontFamily: D.body, fontSize: "11px", padding: "2px 8px", borderRadius: D.pill, background: D.surf2, border: `1px solid ${D.border}`, color: D.textSecondary }}>
+                    <span
+                      key={idx}
+                      style={{
+                        fontFamily: D.mono,
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        padding: "3px 10px",
+                        borderRadius: D.pill,
+                        background: `${D.amber}14`,
+                        border: `1px solid ${D.amber}33`,
+                        color: D.textPrimary,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                      }}
+                    >
                       🏆 {t}
                     </span>
                   ))}
                 </div>
               </Card>
 
-              {/* Dynamic KPI Metrics for Active School */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-                <KPICard label="Active Players" value={activeSchool.stats.activePlayers} sub="1st XI, U16A, U15A, U14A" icon="👥" color={D.sky} />
-                <KPICard label="League Standing" value={activeSchool.stats.leaguePos} sub="KZN Super League 2026" icon="🏆" color={D.amber} />
-                <KPICard label="Win Rate" value={activeSchool.stats.winRate} sub="5-Match Form: " icon="📈" color={D.emerald} />
-                <KPICard label="Provincial Reps" value={activeSchool.stats.provincialReps} sub="SA Schools & KZN Inland/Coastal" icon="🇿🇦" color={D.violet} />
-                <KPICard label="Injuries Restricted" value={schoolInjuries.length} sub="Under Medical Protocol" icon="🏥" color={D.rose} />
+              {/* Opta-Grade 5-KPI Bento Grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px" }}>
+                <KPICard
+                  label="Active Players"
+                  value={activeSchool.stats.activePlayers}
+                  sub="1st XI, U16A, U15A, U14A"
+                  icon="👥"
+                  color={D.sky}
+                  delta="▲ +12% YoY"
+                  badge="POPIA Valid"
+                />
+                <KPICard
+                  label="League Standing"
+                  value={activeSchool.stats.leaguePos}
+                  sub="28 Pts · 7 Wins / 1 Loss"
+                  icon="🏆"
+                  color={D.amber}
+                  delta="Rank #1 KZN"
+                  badge="Super League"
+                />
+                <KPICard
+                  label="5-Match Form"
+                  value={activeSchool.stats.winRate}
+                  sub="W · W · L · W · W"
+                  icon="📈"
+                  color={D.emerald}
+                  delta="▲ +4.8% Streak"
+                  badge="Form 9.2/10"
+                />
+                <KPICard
+                  label="Provincial Reps"
+                  value={activeSchool.stats.provincialReps}
+                  sub="SA Schools & KZN Inland"
+                  icon="🇿🇦"
+                  color={D.violet}
+                  delta="▲ 2 Selected"
+                  badge="Elite Pathway"
+                />
+                <KPICard
+                  label="Squad Availability"
+                  value={schoolInjuries.length === 0 ? "100%" : `${schoolInjuries.length} Restr.`}
+                  sub={schoolInjuries.length === 0 ? "Full Squad Match Fit" : "Under Medical RTP"}
+                  icon="🏥"
+                  color={schoolInjuries.length === 0 ? D.emerald : D.rose}
+                  delta={schoolInjuries.length === 0 ? "All Cleared" : "1 In Rehab"}
+                  badge="Medical"
+                />
               </div>
 
-              {/* Interactive Live Match Hero Card */}
-              {activeHeroMatch && (
-                <Card sx={{ padding: "20px", background: `linear-gradient(135deg, ${D.emerald}12, ${D.surf1})`, border: `1px solid ${D.emerald}33` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "14px" }}>
-                    <div style={{ flex: 1, minWidth: "280px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Badge color={D.emerald}>● Live Match in Progress</Badge>
-                        <span style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted }}>{activeHeroMatch.format} Match · {activeHeroMatch.venue}</span>
-                      </div>
-                      <div style={{ fontFamily: D.head, fontSize: "20px", fontWeight: 800, marginTop: "8px" }}>
-                        {activeHeroMatch.homeTeam} vs {activeHeroMatch.awayTeam}
+              {/* Broadcast-Grade Live Match Telemetry Hub */}
+              {activeHeroMatch && (() => {
+                const curScore = liveScores[activeHeroMatch.id] || { runs: 146, wkts: 3, balls: 88, overStr: "14.4" };
+                const crr = curScore.balls > 0 ? ((curScore.runs / curScore.balls) * 6).toFixed(2) : "0.00";
+                const targetNum = parseInt(activeHeroMatch.target || "245", 10);
+                const runsNeeded = Math.max(0, targetNum - curScore.runs);
+                const ballsLeft = Math.max(1, 300 - curScore.balls);
+                const rrr = ((runsNeeded / ballsLeft) * 6).toFixed(2);
+                const winProbA = Math.min(92, Math.max(8, Math.round(55 + (curScore.runs - 130) * 0.35 - curScore.wkts * 5)));
+                const winProbB = 100 - winProbA;
+
+                return (
+                  <Card
+                    sx={{
+                      padding: "22px",
+                      background: isDark
+                        ? `linear-gradient(135deg, ${D.emerald}14 0%, ${D.surf1} 60%, ${schoolPrimary}10 100%)`
+                        : `linear-gradient(135deg, ${D.emerald}0e 0%, #ffffff 60%, ${schoolPrimary}08 100%)`,
+                      border: `1px solid ${D.emerald}44`,
+                      position: "relative",
+                    }}
+                  >
+                    {/* Top Broadcast Bar */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", paddingBottom: "14px", borderBottom: `1px solid ${D.border}` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "4px 10px",
+                            borderRadius: D.pill,
+                            background: `${D.emerald}20`,
+                            border: `1px solid ${D.emerald}55`,
+                            color: D.emerald,
+                            fontFamily: D.mono,
+                            fontSize: "11px",
+                            fontWeight: 800,
+                            letterSpacing: "0.05em",
+                          }}
+                        >
+                          <span className="live-beacon" style={{ width: "8px", height: "8px", borderRadius: "50%", background: D.emerald, display: "inline-block" }} />
+                          LIVE ON CIRCUIT
+                        </span>
+                        <span style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 700, color: D.textSecondary }}>
+                          {activeHeroMatch.format} DERBY · {activeHeroMatch.venue}
+                        </span>
                       </div>
 
-                      {/* Live Score Ticker with Interactive Quick Run Simulator */}
-                      {(() => {
-                        const curScore = liveScores[activeHeroMatch.id] || { runs: 142, wkts: 3, overStr: "14.2" };
-                        return (
-                          <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginTop: "4px" }}>
-                            <div style={{ fontFamily: D.mono, fontSize: "34px", fontWeight: 700, color: D.emerald }}>
-                              {curScore.runs}/{curScore.wkts}{" "}
-                              <span style={{ fontSize: "16px", color: D.textMuted }}>({curScore.overStr} ov)</span>
-                            </div>
-                            <span style={{ fontFamily: D.mono, fontSize: "12px", color: D.textMuted }}>Target: {activeHeroMatch.target || "245"}</span>
-                          </div>
-                        );
-                      })()}
-
-                      <div style={{ fontFamily: D.body, fontSize: "12px", color: D.textSecondary, marginTop: "4px" }}>
-                        {activeHeroMatch.battingTeam} Batting · <strong style={{ color: D.textPrimary }}>{activeHeroMatch.strikerSummary}</strong>
-                      </div>
-                      <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, marginTop: "4px" }}>
-                        {activeHeroMatch.summary}
-                      </div>
-
-                      {/* Interactive Quick Scoring Simulator Bar */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "12px", flexWrap: "wrap" }}>
-                        <span style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.textMuted, textTransform: "uppercase" }}>Interactive Ball Sim:</span>
-                        <button
-                          onClick={() => handleSimulateBall(activeHeroMatch.id, 1)}
-                          style={{ padding: "3px 8px", borderRadius: D.pill, background: D.surf2, border: `1px solid ${D.border}`, color: D.textPrimary, fontFamily: D.mono, fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
-                        >
-                          +1 Single
-                        </button>
-                        <button
-                          onClick={() => handleSimulateBall(activeHeroMatch.id, 4)}
-                          style={{ padding: "3px 8px", borderRadius: D.pill, background: `${D.emerald}20`, border: `1px solid ${D.emerald}44`, color: D.emerald, fontFamily: D.mono, fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
-                        >
-                          +4 Four!
-                        </button>
-                        <button
-                          onClick={() => handleSimulateBall(activeHeroMatch.id, 6)}
-                          style={{ padding: "3px 8px", borderRadius: D.pill, background: `${D.sky}20`, border: `1px solid ${D.sky}44`, color: D.sky, fontFamily: D.mono, fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
-                        >
-                          +6 Six!
-                        </button>
-                        <button
-                          onClick={() => handleSimulateBall(activeHeroMatch.id, 0, true)}
-                          style={{ padding: "3px 8px", borderRadius: D.pill, background: `${D.rose}20`, border: `1px solid ${D.rose}44`, color: D.rose, fontFamily: D.mono, fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
-                        >
-                          W Wicket!
-                        </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px", fontFamily: D.mono, fontSize: "11px", color: D.textMuted }}>
+                        <span>⛅ 24°C · Wind 14km/h SSE · Hum 62%</span>
+                        <span style={{ padding: "2px 8px", borderRadius: D.sm, background: D.surf2, border: `1px solid ${D.border}`, color: D.textSecondary }}>
+                          DLS Par: {Math.round(curScore.runs * 0.95)}/{curScore.wkts}
+                        </span>
                       </div>
                     </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      <Btn
-                        variant="success"
-                        size="md"
-                        onClick={() => handleLaunchScorer(activeHeroMatch)}
-                      >
+                    {/* Main Score & Teams Duel Grid */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", marginTop: "16px", alignItems: "center" }}>
+                      <div>
+                        {/* Team Names */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <span style={{ fontFamily: D.head, fontSize: "22px", fontWeight: 800, color: D.textPrimary }}>
+                            {activeHeroMatch.homeTeam}
+                          </span>
+                          <span style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 600, color: D.textMuted }}>vs</span>
+                          <span style={{ fontFamily: D.head, fontSize: "20px", fontWeight: 700, color: D.textSecondary }}>
+                            {activeHeroMatch.awayTeam}
+                          </span>
+                        </div>
+
+                        {/* Large Athletic Score & Equation */}
+                        <div style={{ display: "flex", alignItems: "baseline", gap: "14px", marginTop: "6px", flexWrap: "wrap" }}>
+                          <div style={{ fontFamily: D.mono, fontSize: "40px", fontWeight: 800, color: D.emerald, lineHeight: 1 }}>
+                            {curScore.runs}/{curScore.wkts}
+                          </div>
+                          <div style={{ fontFamily: D.mono, fontSize: "18px", color: D.textSecondary, fontWeight: 700 }}>
+                            ({curScore.overStr} ov)
+                          </div>
+                          <div style={{ fontFamily: D.mono, fontSize: "12px", padding: "4px 8px", borderRadius: D.md, background: D.surf2, border: `1px solid ${D.border}`, color: D.textMuted }}>
+                            Target: <strong style={{ color: D.textPrimary }}>{activeHeroMatch.target || "245"}</strong> ({runsNeeded} off {ballsLeft}b)
+                          </div>
+                        </div>
+
+                        {/* Run Rates & Match State */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
+                          <span style={{ fontFamily: D.mono, fontSize: "11px", padding: "3px 8px", borderRadius: D.pill, background: `${D.sky}18`, color: D.sky, border: `1px solid ${D.sky}33`, fontWeight: 700 }}>
+                            CRR: {crr} rpo
+                          </span>
+                          <span style={{ fontFamily: D.mono, fontSize: "11px", padding: "3px 8px", borderRadius: D.pill, background: `${D.amber}18`, color: D.amber, border: `1px solid ${D.amber}33`, fontWeight: 700 }}>
+                            RRR: {rrr} rpo
+                          </span>
+                          <span style={{ fontFamily: D.body, fontSize: "12px", color: D.textSecondary }}>
+                            {activeHeroMatch.battingTeam} batting · <strong style={{ color: D.textPrimary }}>{activeHeroMatch.strikerSummary}</strong>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Win Probability & Match Control Bar */}
+                      <div style={{ padding: "14px", background: D.surf2, borderRadius: D.md, border: `1px solid ${D.border}` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: D.head, fontSize: "11px", fontWeight: 700, marginBottom: "6px" }}>
+                          <span style={{ color: schoolPrimary }}>{activeHeroMatch.homeTeam} {winProbA}%</span>
+                          <span style={{ color: D.textMuted, textTransform: "uppercase", fontSize: "10px" }}>Win Probability Model</span>
+                          <span style={{ color: D.textSecondary }}>{activeHeroMatch.awayTeam} {winProbB}%</span>
+                        </div>
+                        {/* Split Bar */}
+                        <div style={{ width: "100%", height: "8px", background: D.surf3, borderRadius: D.pill, overflow: "hidden", display: "flex" }}>
+                          <div style={{ width: `${winProbA}%`, background: `linear-gradient(90deg, ${D.emerald}, ${schoolPrimary})`, transition: "width 0.4s ease" }} />
+                          <div style={{ width: `${winProbB}%`, background: D.surf3 }} />
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontFamily: D.mono, fontSize: "10px", color: D.textMuted, marginTop: "6px" }}>
+                          <span>Projected: {Math.round(curScore.runs + (300 - curScore.balls) * (parseFloat(crr) / 6))} runs</span>
+                          <span>Par Score: 245</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Active Pitch Battlers: Strikers & Bowler Bento */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px", marginTop: "16px" }}>
+                      {/* Striker Box */}
+                      <div style={{ padding: "10px 14px", background: `${D.emerald}10`, border: `1px solid ${D.emerald}33`, borderRadius: D.md, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 800, color: D.textPrimary }}>
+                              ⚡ {liveStriker.name}*
+                            </span>
+                            <span style={{ fontSize: "9px", fontFamily: D.mono, background: D.emerald, color: "#fff", padding: "1px 5px", borderRadius: D.pill, fontWeight: 700 }}>
+                              ON STRIKE
+                            </span>
+                          </div>
+                          <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>
+                            {liveStriker.fours}x4 · {liveStriker.sixes}x6 · SR {liveStriker.balls > 0 ? ((liveStriker.runs / liveStriker.balls) * 100).toFixed(1) : "0.0"}
+                          </div>
+                        </div>
+                        <div style={{ fontFamily: D.mono, fontSize: "20px", fontWeight: 800, color: D.emerald }}>
+                          {liveStriker.runs} <span style={{ fontSize: "12px", color: D.textMuted }}>({liveStriker.balls})</span>
+                        </div>
+                      </div>
+
+                      {/* Non-Striker Box */}
+                      <div style={{ padding: "10px 14px", background: D.surf2, border: `1px solid ${D.border}`, borderRadius: D.md, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <div style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 700, color: D.textPrimary }}>
+                            {liveNonStriker.name}
+                          </div>
+                          <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>
+                            {liveNonStriker.fours}x4 · {liveNonStriker.sixes}x6 · SR {liveNonStriker.balls > 0 ? ((liveNonStriker.runs / liveNonStriker.balls) * 100).toFixed(1) : "0.0"}
+                          </div>
+                        </div>
+                        <div style={{ fontFamily: D.mono, fontSize: "18px", fontWeight: 700, color: D.textSecondary }}>
+                          {liveNonStriker.runs} <span style={{ fontSize: "12px", color: D.textMuted }}>({liveNonStriker.balls})</span>
+                        </div>
+                      </div>
+
+                      {/* Current Bowler Box */}
+                      <div style={{ padding: "10px 14px", background: D.surf2, border: `1px solid ${D.border}`, borderRadius: D.md, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <div style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 700, color: D.textPrimary }}>
+                            🎯 {liveBowler.name}
+                          </div>
+                          <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>
+                            Econ: {liveBowler.econ} rpo
+                          </div>
+                        </div>
+                        <div style={{ fontFamily: D.mono, fontSize: "16px", fontWeight: 800, color: D.rose }}>
+                          {liveBowler.wkts}/{liveBowler.runs} <span style={{ fontSize: "11px", color: D.textMuted }}>({liveBowler.overs} ov)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Delivery Trajectory Strip */}
+                    <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: `1px solid ${D.border}`, display: "flex", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                      {/* Recent Deliveries Strip */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <span style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.textMuted, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                          Recent Balls:
+                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          {recentBalls.map(ball => {
+                            const bg = ball.isWkt
+                              ? D.rose
+                              : ball.isSix
+                              ? D.violet
+                              : ball.isFour
+                              ? D.emerald
+                              : ball.run === 0
+                              ? D.surf3
+                              : D.sky;
+                            const textCol = ball.run === 0 ? D.textMuted : "#fff";
+                            return (
+                              <span
+                                key={ball.id}
+                                className="ball-pop"
+                                style={{
+                                  width: "26px",
+                                  height: "26px",
+                                  borderRadius: "50%",
+                                  background: bg,
+                                  color: textCol,
+                                  fontFamily: D.mono,
+                                  fontSize: "11px",
+                                  fontWeight: 800,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  boxShadow: ball.isWkt ? "0 0 8px rgba(244,63,94,0.5)" : ball.isSix ? "0 0 8px rgba(168,85,247,0.5)" : "none",
+                                }}
+                              >
+                                {ball.label}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Tools Action Bar */}
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "14px", paddingTop: "12px", borderTop: `1px solid ${D.border}`, flexWrap: "wrap" }}>
+                      <Btn variant="success" size="sm" onClick={() => handleLaunchScorer(activeHeroMatch)}>
                         🏏 Open Live Scorer →
                       </Btn>
-                      <Btn
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleOpenScorecard(activeHeroMatch.id)}
-                      >
+                      <Btn variant="primary" size="sm" onClick={() => handleOpenScorecard(activeHeroMatch.id)}>
                         📊 Full Scorecard & Phases
                       </Btn>
-                      <Btn
-                        variant="tonal"
-                        size="sm"
-                        onClick={() => {
-                          setPage("analytics");
-                          setAnalyticsSubTab("analytics");
-                        }}
-                      >
-                        📈 Match Analytics & Worm
+                      <Btn variant="tonal" size="sm" onClick={() => { setPage("analytics"); setAnalyticsSubTab("analytics"); }}>
+                        📈 Worm & Over Graphs
                       </Btn>
-                      <Btn
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setPage("analytics");
-                          setAnalyticsSubTab("wagon");
-                        }}
-                      >
+                      <Btn variant="ghost" size="sm" onClick={() => { setPage("analytics"); setAnalyticsSubTab("wagon"); }}>
                         🎯 360° Wagon Wheel
                       </Btn>
                     </div>
-                  </div>
-                </Card>
-              )}
+                  </Card>
+                );
+              })()}
 
-              {/* Derby Day Matrix & Simulator Module */}
-              <Card sx={{ padding: "20px" }}>
+              {/* Derby Day Matrix & AI Simulator Module */}
+              <Card sx={{ padding: "22px" }}>
                 <SectionHeader
                   title={`${activeDerby.derbyTitle}`}
                   sub={`${activeDerby.schoolA} vs ${activeDerby.schoolB} · Contested since ${activeDerby.sinceYear} · ${activeDerby.trophyName}`}
@@ -1492,41 +1825,41 @@ export default function ScrbrdOS() {
                       onClick={runDerbySimulator}
                       disabled={derbySimRunning}
                     >
-                      {derbySimRunning ? "Simulating Match..." : "⚡ Simulate Derby Clash"}
+                      {derbySimRunning ? "Simulating Match Model..." : "⚡ Simulate Derby Clash"}
                     </Btn>
                   }
                 />
 
                 {/* Head to Head Visual Record */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px", marginTop: "10px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "18px", marginTop: "12px" }}>
                   <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontFamily: D.head, fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
-                      <span>{activeDerby.schoolA}: {activeDerby.winsA} Wins ({Math.round((activeDerby.winsA / activeDerby.totalClashes) * 100)}%)</span>
-                      <span>Draws: {activeDerby.draws}</span>
-                      <span>{activeDerby.schoolB}: {activeDerby.winsB} Wins ({Math.round((activeDerby.winsB / activeDerby.totalClashes) * 100)}%)</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontFamily: D.head, fontSize: "12px", fontWeight: 700, marginBottom: "8px" }}>
+                      <span style={{ color: schoolPrimary }}>{activeDerby.schoolA}: {activeDerby.winsA} Wins ({Math.round((activeDerby.winsA / activeDerby.totalClashes) * 100)}%)</span>
+                      <span style={{ color: D.textMuted }}>Draws: {activeDerby.draws}</span>
+                      <span style={{ color: schoolSecondary }}>{activeDerby.schoolB}: {activeDerby.winsB} Wins ({Math.round((activeDerby.winsB / activeDerby.totalClashes) * 100)}%)</span>
                     </div>
                     {/* Visual bar */}
-                    <div style={{ width: "100%", height: "10px", background: D.surf3, borderRadius: D.pill, overflow: "hidden", display: "flex" }}>
+                    <div style={{ width: "100%", height: "12px", background: D.surf3, borderRadius: D.pill, overflow: "hidden", display: "flex" }}>
                       <div style={{ width: `${(activeDerby.winsA / activeDerby.totalClashes) * 100}%`, background: schoolPrimary }} />
                       <div style={{ width: `${(activeDerby.draws / activeDerby.totalClashes) * 100}%`, background: D.borderMed }} />
                       <div style={{ width: `${(activeDerby.winsB / activeDerby.totalClashes) * 100}%`, background: schoolSecondary }} />
                     </div>
 
-                    <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted, marginTop: "8px" }}>
-                      Total Official Encounters: <strong>{activeDerby.totalClashes}</strong> matches recorded in historical archives.
+                    <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted, marginTop: "10px" }}>
+                      Total Official Encounters: <strong>{activeDerby.totalClashes}</strong> matches recorded in historical archives since {activeDerby.sinceYear}.
                     </div>
                   </div>
 
                   {/* Recent Clashes Table */}
                   <div>
-                    <div style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 700, color: D.textMuted, textTransform: "uppercase", marginBottom: "6px" }}>
+                    <div style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 700, color: D.textMuted, textTransform: "uppercase", marginBottom: "8px" }}>
                       Recent Clashes on Record
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                       {activeDerby.recentEncounters.map((enc, i) => (
-                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", background: D.surf2, borderRadius: D.md, fontSize: "11px" }}>
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: D.surf2, borderRadius: D.md, fontSize: "11px" }}>
                           <div>
-                            <strong>{enc.year} ({enc.venue})</strong>: <span style={{ color: D.emerald }}>{enc.winner} won by {enc.margin}</span>
+                            <strong>{enc.year} ({enc.venue})</strong>: <span style={{ color: D.emerald, fontWeight: 700 }}>{enc.winner} won by {enc.margin}</span>
                           </div>
                           <span style={{ fontFamily: D.mono, color: D.textMuted }}>{enc.starPerformer}</span>
                         </div>
@@ -1537,22 +1870,20 @@ export default function ScrbrdOS() {
 
                 {/* Derby Simulation Result Banner */}
                 {derbySimResult && (
-                  <div style={{ marginTop: "16px", padding: "12px 16px", borderRadius: D.md, background: `${D.amber}18`, border: `1px solid ${D.amber}44`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ marginTop: "18px", padding: "14px 18px", borderRadius: D.md, background: `${D.amber}18`, border: `1px solid ${D.amber}44`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
                     <div>
                       <Badge color={D.amber}>Derby AI Projection Engine</Badge>
-                      <div style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 800, color: D.textPrimary, marginTop: "4px" }}>
+                      <div style={{ fontFamily: D.head, fontSize: "15px", fontWeight: 800, color: D.textPrimary, marginTop: "4px" }}>
                         Projected Winner: <span style={{ color: D.amber }}>{derbySimResult.projectedWinner}</span> ({derbySimResult.probA}% vs {derbySimResult.probB}%)
                       </div>
                       <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textSecondary, marginTop: "2px" }}>
-                        Projected Scoreline: {derbySimResult.predictedScore} · Key Clash: {derbySimResult.keyMatchup}
+                        Scoreline: {derbySimResult.predictedScore} · Key Tactical Clash: {derbySimResult.keyMatchup}
                       </div>
                     </div>
                     <Btn
                       variant="tonal"
                       size="sm"
-                      onClick={() => {
-                        setPage("scouting");
-                      }}
+                      onClick={() => setPage("scouting")}
                     >
                       Open AI Scouting Suite →
                     </Btn>
@@ -1561,8 +1892,8 @@ export default function ScrbrdOS() {
               </Card>
 
               {/* Pitch Conditions & Home Ground Curator Telemetry */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "16px" }}>
-                <Card sx={{ padding: "18px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "18px" }}>
+                <Card sx={{ padding: "20px" }}>
                   <SectionHeader
                     title={`Venue Conditions: ${schoolPitch.name}`}
                     sub={`${activeSchool.shortName} · Field ${currentPitchIdx + 1} of ${schoolPitches.length}`}
@@ -1730,7 +2061,7 @@ export default function ScrbrdOS() {
                 </Card>
 
                 {/* School Squad Health & RTP Medical Status */}
-                <Card sx={{ padding: "18px" }}>
+                <Card sx={{ padding: "20px" }}>
                   <SectionHeader title={`${activeSchool.shortName} Health & Physio Status`} color={D.rose} />
                   {schoolInjuries.length > 0 ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -1790,6 +2121,8 @@ export default function ScrbrdOS() {
               activeSchoolId={activeSchool.id}
               currentRole={role}
               matches={matchesList}
+              weather={WEATHER}
+              liveScores={liveScores}
               onCreateMatch={handleCreateMatch}
               onUpdateMatch={handleUpdateMatch}
               onDeleteMatch={handleDeleteMatch}
@@ -2071,7 +2404,7 @@ export default function ScrbrdOS() {
               theme={D}
               activeSchoolId={activeSchool.id}
               currentRole={role}
-              onSelectSchool={(sId) => setActiveSchool(SCHOOLS_REGISTRY.find((s) => s.id === sId) || activeSchool)}
+              onSelectSchool={(sId) => setActiveSchoolId(sId)}
             />
           )}
 
@@ -2097,6 +2430,17 @@ export default function ScrbrdOS() {
               onTriggerToast={(msg) => triggerToast("Master Register", msg, "register", "register")}
               onNavigateToSquad={() => setPage("squad")}
               onNavigateToProfiles={() => setPage("profiles")}
+              onOpenSchoolProfile={(schoolId) => {
+                setActiveSchoolId(schoolId);
+                setPage("school");
+              }}
+              onSelectPlayerProfile={(p) => {
+                setSelectedPlayer(p);
+                setPage("profiles");
+              }}
+              onNavigateToH2H={() => {
+                setPage("h2h");
+              }}
             />
           )}
 

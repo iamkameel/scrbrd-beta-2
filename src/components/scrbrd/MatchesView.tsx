@@ -11,9 +11,9 @@ import {
 
 interface MatchesViewProps {
   theme: Theme;
-  matches: Match[];
-  weather: Record<string, WeatherData>;
-  liveScores: Record<string, LiveScoreState>;
+  matches?: Match[];
+  weather?: Record<string, WeatherData>;
+  liveScores?: Record<string, LiveScoreState>;
   activeSchoolId: string;
   currentRole: string;
   onOpenScorecard: (matchId: string) => void;
@@ -29,9 +29,9 @@ export type MatchViewMode = 'cards' | 'table' | 'timeline' | 'live_broadcast';
 
 export default function MatchesView({
   theme: D,
-  matches,
-  weather,
-  liveScores,
+  matches = [],
+  weather = {},
+  liveScores = {},
   activeSchoolId,
   currentRole,
   onOpenScorecard,

@@ -7,7 +7,8 @@ import {
   Shield, Edit2, Plus, Search, Filter,
   CheckCircle2, AlertCircle, Mail, Phone, Lock,
   Unlock, FileSpreadsheet, Download, RefreshCw, X,
-  BadgeCheck, Award, Eye, Trash2, SlidersHorizontal
+  BadgeCheck, Award, Eye, Trash2, SlidersHorizontal,
+  LayoutGrid, List
 } from 'lucide-react';
 
 export type RegisterTab = 'schools' | 'athletes' | 'umpires' | 'scorers' | 'coaches';
@@ -397,6 +398,9 @@ interface RegisterHubViewProps {
   onTriggerToast: (msg: string) => void;
   onNavigateToH2H?: (p1Id?: string, p2Id?: string) => void;
   onSelectPlayerProfile?: (player: Player) => void;
+  onNavigateToSquad?: () => void;
+  onNavigateToProfiles?: () => void;
+  onOpenSchoolProfile?: (schoolId: string) => void;
 }
 
 export default function RegisterHubView({
@@ -406,8 +410,12 @@ export default function RegisterHubView({
   onTriggerToast,
   onNavigateToH2H,
   onSelectPlayerProfile,
+  onNavigateToSquad,
+  onNavigateToProfiles,
+  onOpenSchoolProfile,
 }: RegisterHubViewProps) {
   const [activeTab, setActiveTab] = useState<RegisterTab>('schools');
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [searchQuery, setSearchQuery] = useState('');
   const [schoolFilter, setSchoolFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -1039,7 +1047,7 @@ export default function RegisterHubView({
           </div>
         </div>
 
-        {/* Secondary Filters */}
+        {/* Secondary Filters & View Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {activeTab !== 'umpires' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1118,148 +1126,231 @@ export default function RegisterHubView({
               </select>
             </div>
           )}
+
+          {/* View Mode Toggle: Cards vs List */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: D.surf1,
+              border: `1px solid ${D.border}`,
+              borderRadius: D.pill,
+              padding: '3px',
+              gap: '2px',
+            }}
+          >
+            <button
+              onClick={() => setViewMode('card')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '5px 10px',
+                borderRadius: D.pill,
+                background: viewMode === 'card' ? `${D.emerald}22` : 'transparent',
+                border: `1px solid ${viewMode === 'card' ? D.emerald : 'transparent'}`,
+                color: viewMode === 'card' ? D.emerald : D.textMuted,
+                fontFamily: D.head,
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              title="Card Grid View"
+            >
+              <LayoutGrid size={13} />
+              <span>Cards</span>
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '5px 10px',
+                borderRadius: D.pill,
+                background: viewMode === 'list' ? `${D.emerald}22` : 'transparent',
+                border: `1px solid ${viewMode === 'list' ? D.emerald : 'transparent'}`,
+                color: viewMode === 'list' ? D.emerald : D.textMuted,
+                fontFamily: D.head,
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              title="Compact List / Table View"
+            >
+              <List size={13} />
+              <span>List</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* TAB CONTENT: 1. SCHOOLS REGISTER */}
       {activeTab === 'schools' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
-          {filteredSchools.map(school => {
-            const canEdit = canEditItem('schools', school);
-            return (
-              <div
-                key={school.id}
-                style={{
-                  background: D.surf1,
-                  border: `1px solid ${school.id === activeSchoolId ? D.emerald : D.border}`,
-                  borderRadius: D.lg,
-                  padding: '18px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  position: 'relative',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div
+        viewMode === 'card' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
+            {filteredSchools.map(school => {
+              const canEdit = canEditItem('schools', school);
+              return (
+                <div
+                  key={school.id}
+                  style={{
+                    background: D.surf1,
+                    border: `1px solid ${school.id === activeSchoolId ? D.emerald : D.border}`,
+                    borderRadius: D.lg,
+                    padding: '18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    position: 'relative',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
+                        style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: D.md,
+                          background: school.colors[0],
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '22px',
+                          border: `1px solid ${school.colors[1]}44`,
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                        }}
+                      >
+                        {school.crestIcon}
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: D.head, fontSize: '16px', fontWeight: 700, color: D.textPrimary }}>
+                          {school.name}
+                        </div>
+                        <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
+                          {school.city} · {school.region} Region · Est. {school.founded}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {canEdit ? (
+                        <button
+                          onClick={() => handleOpenEdit('schools', school)}
+                          style={{
+                            padding: '5px 10px',
+                            borderRadius: D.sm,
+                            background: D.surf2,
+                            border: `1px solid ${D.border}`,
+                            color: D.textPrimary,
+                            cursor: 'pointer',
+                            fontFamily: D.head,
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                          title="Edit School Registration Information"
+                        >
+                          <Edit2 size={12} />
+                          <span>Edit</span>
+                        </button>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: D.textMuted, fontFamily: D.mono, fontSize: '10px' }}>
+                          <Lock size={12} />
+                          <span>Locked</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      background: D.surf0,
+                      padding: '10px 12px',
+                      borderRadius: D.sm,
+                      border: `1px solid ${D.border}`,
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '8px',
+                      fontFamily: D.body,
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '11px', display: 'block' }}>Head of Cricket</span>
+                      <strong style={{ color: D.textPrimary }}>{school.headOfCricket}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '11px', display: 'block' }}>Main Oval</span>
+                      <strong style={{ color: D.textPrimary }}>{school.mainOval}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '11px', display: 'block' }}>Active Athletes</span>
+                      <strong style={{ color: D.emerald }}>{school.stats.activePlayers} registered</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '11px', display: 'block' }}>Provincial Reps</span>
+                      <strong style={{ color: D.sky }}>{school.stats.provincialReps} SA / KZN</strong>
+                    </div>
+                  </div>
+
+                  <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textSecondary, lineHeight: '1.4' }}>
+                    <em>&ldquo;{school.motto}&rdquo;</em> · Rivalry: <strong>{school.derbyName}</strong>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {school.fields.map(f => (
+                      <span
+                        key={f}
+                        style={{
+                          fontFamily: D.mono,
+                          fontSize: '10px',
+                          padding: '2px 7px',
+                          borderRadius: D.pill,
+                          background: D.surf2,
+                          color: D.textMuted,
+                          border: `1px solid ${D.border}`,
+                        }}
+                      >
+                        🏟️ {f}
+                      </span>
+                    ))}
+                  </div>
+
+                  {onOpenSchoolProfile && (
+                    <button
+                      onClick={() => onOpenSchoolProfile(school.id)}
                       style={{
-                        width: '42px',
-                        height: '42px',
+                        marginTop: 'auto',
+                        padding: '8px 12px',
                         borderRadius: D.md,
-                        background: school.colors[0],
+                        background: `${D.emerald}18`,
+                        border: `1px solid ${D.emerald}44`,
+                        color: D.emerald,
+                        fontFamily: D.head,
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '22px',
-                        border: `1px solid ${school.colors[1]}44`,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                        gap: '6px',
+                        transition: 'all 0.15s ease',
                       }}
                     >
-                      {school.crestIcon}
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: D.head, fontSize: '16px', fontWeight: 700, color: D.textPrimary }}>
-                        {school.name}
-                      </div>
-                      <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
-                        {school.city} · {school.region} Region · Est. {school.founded}
-                      </div>
-                    </div>
-                  </div>
-
-                  {canEdit ? (
-                    <button
-                      onClick={() => handleOpenEdit('schools', school)}
-                      style={{
-                        padding: '5px 10px',
-                        borderRadius: D.sm,
-                        background: D.surf2,
-                        border: `1px solid ${D.border}`,
-                        color: D.textPrimary,
-                        cursor: 'pointer',
-                        fontFamily: D.head,
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                      title="Edit School Registration Information"
-                    >
-                      <Edit2 size={12} />
-                      <span>Edit</span>
+                      <span>🏛️ View Institutional Profile</span>
+                      <span style={{ fontSize: '14px' }}>→</span>
                     </button>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: D.textMuted, fontFamily: D.mono, fontSize: '10px' }}>
-                      <Lock size={12} />
-                      <span>Locked</span>
-                    </div>
                   )}
                 </div>
-
-                <div
-                  style={{
-                    background: D.surf0,
-                    padding: '10px 12px',
-                    borderRadius: D.sm,
-                    border: `1px solid ${D.border}`,
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '8px',
-                    fontFamily: D.body,
-                    fontSize: '12px',
-                  }}
-                >
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '11px', display: 'block' }}>Head of Cricket</span>
-                    <strong style={{ color: D.textPrimary }}>{school.headOfCricket}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '11px', display: 'block' }}>Main Oval</span>
-                    <strong style={{ color: D.textPrimary }}>{school.mainOval}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '11px', display: 'block' }}>Active Athletes</span>
-                    <strong style={{ color: D.emerald }}>{school.stats.activePlayers} registered</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '11px', display: 'block' }}>Provincial Reps</span>
-                    <strong style={{ color: D.sky }}>{school.stats.provincialReps} SA / KZN</strong>
-                  </div>
-                </div>
-
-                <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textSecondary, lineHeight: '1.4' }}>
-                  <em>&ldquo;{school.motto}&rdquo;</em> · Rivalry: <strong>{school.derbyName}</strong>
-                </div>
-
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: 'auto' }}>
-                  {school.fields.map(f => (
-                    <span
-                      key={f}
-                      style={{
-                        fontFamily: D.mono,
-                        fontSize: '10px',
-                        padding: '2px 7px',
-                        borderRadius: D.pill,
-                        background: D.surf2,
-                        color: D.textMuted,
-                        border: `1px solid ${D.border}`,
-                      }}
-                    >
-                      🏟️ {f}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* TAB CONTENT: 2. ATHLETES REGISTER */}
-      {activeTab === 'athletes' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              );
+            })}
+          </div>
+        ) : (
           <div
             style={{
               background: D.surf1,
@@ -1268,69 +1359,72 @@ export default function RegisterHubView({
               overflowX: 'auto',
             }}
           >
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '850px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '920px' }}>
               <thead>
                 <tr style={{ background: D.surf0, borderBottom: `1px solid ${D.border}` }}>
-                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>ATHLETE NAME</th>
-                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>SCHOOL & SQUAD</th>
-                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>PRIMARY ROLE</th>
-                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>STYLE (BAT / BOWL)</th>
-                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>GRADE / AGE</th>
-                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>FITNESS CLEARANCE</th>
-                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>STATS (AVG / WKTS)</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>INSTITUTION</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>REGION / CITY</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>FOUNDED</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>HEAD OF CRICKET</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>MAIN OVAL</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>ATHLETES</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>PROV. REPS</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>PRIMARY RIVALRY</th>
                   <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted, textAlign: 'right' }}>ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredAthletes.map(player => {
-                  const canEdit = canEditItem('athletes', player);
-                  const schoolObj = SCHOOLS_REGISTRY.find(s => s.id === player.school);
+                {filteredSchools.map(school => {
+                  const canEdit = canEditItem('schools', school);
                   return (
                     <tr
-                      key={player.id}
+                      key={school.id}
                       style={{
                         borderBottom: `1px solid ${D.border}`,
+                        background: school.id === activeSchoolId ? `${D.emerald}08` : 'transparent',
                         transition: 'background 0.15s ease',
                       }}
                     >
                       <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '15px' }}>{schoolObj?.crestIcon || '🏏'}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: D.sm,
+                              background: school.colors[0],
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '18px',
+                              border: `1px solid ${school.colors[1]}44`,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {school.crestIcon}
+                          </div>
                           <div>
-                            <div style={{ fontFamily: D.body, fontSize: '13px', fontWeight: 700, color: D.textPrimary }}>
-                              {player.name}
-                              {player.cap && (
-                                <span style={{ marginLeft: '6px', color: D.amber, fontSize: '11px', fontWeight: 800 }}>
-                                  ({player.cap.toUpperCase()})
-                                </span>
-                              )}
+                            <div style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 700, color: D.textPrimary }}>
+                              {school.name}
                             </div>
-                            <div style={{ fontFamily: D.mono, fontSize: '10px', color: D.textMuted }}>
-                              ID: {player.id} · House: {player.houseAtSchool || 'N/A'}
+                            <div style={{ fontFamily: D.body, fontSize: '11px', color: D.textMuted, fontStyle: 'italic' }}>
+                              &ldquo;{school.motto}&rdquo;
                             </div>
                           </div>
                         </div>
                       </td>
-
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ fontFamily: D.head, fontSize: '12px', fontWeight: 700, color: schoolObj?.colors[0] || D.textPrimary }}>
-                          {schoolObj?.shortName || player.school}
-                        </div>
-                        <span
-                          style={{
-                            fontFamily: D.mono,
-                            fontSize: '10px',
-                            padding: '1px 6px',
-                            borderRadius: D.pill,
-                            background: D.surf2,
-                            color: D.textMuted,
-                            border: `1px solid ${D.border}`,
-                          }}
-                        >
-                          {player.team}
-                        </span>
+                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '12px', color: D.textSecondary }}>
+                        {school.city}, {school.region}
                       </td>
-
+                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '12px', color: D.textMuted }}>
+                        {school.founded}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.body, fontSize: '12px', fontWeight: 600, color: D.textPrimary }}>
+                        {school.headOfCricket}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '12px', color: D.textSecondary }}>
+                        🏟️ {school.mainOval}
+                      </td>
                       <td style={{ padding: '12px 16px' }}>
                         <span
                           style={{
@@ -1339,117 +1433,42 @@ export default function RegisterHubView({
                             fontWeight: 700,
                             padding: '2px 8px',
                             borderRadius: D.pill,
-                            background:
-                              player.role === 'BAT' ? `${D.sky}22` :
-                              player.role === 'BOWL' ? `${D.emerald}22` :
-                              player.role === 'ALL' ? `${D.violet}22` : `${D.amber}22`,
-                            color:
-                              player.role === 'BAT' ? D.sky :
-                              player.role === 'BOWL' ? D.emerald :
-                              player.role === 'ALL' ? D.violet : D.amber,
-                            border: `1px solid ${
-                              player.role === 'BAT' ? D.sky :
-                              player.role === 'BOWL' ? D.emerald :
-                              player.role === 'ALL' ? D.violet : D.amber
-                            }44`,
+                            background: `${D.emerald}20`,
+                            color: D.emerald,
+                            border: `1px solid ${D.emerald}40`,
                           }}
                         >
-                          {player.role === 'BAT' ? '🏏 Batter' :
-                           player.role === 'BOWL' ? '🎯 Bowler' :
-                           player.role === 'ALL' ? '⚡ All-Rounder' : '🧤 Keeper'}
+                          {school.stats.activePlayers}
                         </span>
                       </td>
-
-                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '11px', color: D.textSecondary }}>
-                        <div>{player.batHand}HB · {player.bowlArm}A {player.bowlStyle}</div>
-                      </td>
-
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textPrimary }}>
-                          {player.age} yrs
-                        </div>
-                        <div style={{ fontFamily: D.mono, fontSize: '10px', color: D.textMuted }}>
-                          Grade {player.age <= 14 ? '8' : player.age === 15 ? '9' : player.age === 16 ? '10' : player.age === 17 ? '11' : '12'}
-                        </div>
-                      </td>
-
                       <td style={{ padding: '12px 16px' }}>
                         <span
                           style={{
                             fontFamily: D.mono,
-                            fontSize: '10px',
+                            fontSize: '11px',
                             fontWeight: 700,
                             padding: '2px 8px',
                             borderRadius: D.pill,
-                            background:
-                              player.fitness === 'fit' ? `${D.emerald}22` :
-                              player.fitness === 'rehab' ? `${D.amber}22` : `${D.rose}22`,
-                            color:
-                              player.fitness === 'fit' ? D.emerald :
-                              player.fitness === 'rehab' ? D.amber : D.rose,
-                            border: `1px solid ${
-                              player.fitness === 'fit' ? D.emerald :
-                              player.fitness === 'rehab' ? D.amber : D.rose
-                            }44`,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
+                            background: `${D.sky}20`,
+                            color: D.sky,
+                            border: `1px solid ${D.sky}40`,
                           }}
                         >
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: player.fitness === 'fit' ? D.emerald : player.fitness === 'rehab' ? D.amber : D.rose }} />
-                          {player.fitness === 'fit' ? 'Cleared (Fit)' : player.fitness === 'rehab' ? 'In Rehab' : 'Injured (Locked)'}
+                          {school.stats.provincialReps} SA/KZN
                         </span>
                       </td>
-
-                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '11px' }}>
-                        <span style={{ color: D.textPrimary, fontWeight: 700 }}>{player.avg}</span> avg · <span style={{ color: D.emerald, fontWeight: 700 }}>{player.wkts}</span> wkts
+                      <td style={{ padding: '12px 16px', fontFamily: D.body, fontSize: '12px', color: D.textSecondary }}>
+                        {school.derbyName}
                       </td>
-
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                          {onSelectPlayerProfile && (
+                          {onOpenSchoolProfile && (
                             <button
-                              onClick={() => onSelectPlayerProfile(player)}
+                              onClick={() => onOpenSchoolProfile(school.id)}
                               style={{
                                 padding: '4px 8px',
                                 borderRadius: D.sm,
-                                background: D.surf2,
-                                border: `1px solid ${D.border}`,
-                                color: D.textPrimary,
-                                cursor: 'pointer',
-                                fontSize: '11px',
-                              }}
-                              title="View Full Profile Dossier"
-                            >
-                              <Eye size={12} />
-                            </button>
-                          )}
-
-                          {onNavigateToH2H && (
-                            <button
-                              onClick={() => onNavigateToH2H(player.id)}
-                              style={{
-                                padding: '4px 8px',
-                                borderRadius: D.sm,
-                                background: D.surf2,
-                                border: `1px solid ${D.border}`,
-                                color: D.textPrimary,
-                                cursor: 'pointer',
-                                fontSize: '11px',
-                              }}
-                              title="Compare in Head-to-Head"
-                            >
-                              ⚔️
-                            </button>
-                          )}
-
-                          {canEdit ? (
-                            <button
-                              onClick={() => handleOpenEdit('athletes', player)}
-                              style={{
-                                padding: '4px 8px',
-                                borderRadius: D.sm,
-                                background: `${D.emerald}20`,
+                                background: `${D.emerald}18`,
                                 border: `1px solid ${D.emerald}44`,
                                 color: D.emerald,
                                 cursor: 'pointer',
@@ -1460,10 +1479,27 @@ export default function RegisterHubView({
                                 alignItems: 'center',
                                 gap: '4px',
                               }}
-                              title="Edit Athlete Registration"
+                              title="View Institutional Profile"
+                            >
+                              <span>Profile</span>
+                              <span>→</span>
+                            </button>
+                          )}
+                          {canEdit ? (
+                            <button
+                              onClick={() => handleOpenEdit('schools', school)}
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: D.sm,
+                                background: D.surf2,
+                                border: `1px solid ${D.border}`,
+                                color: D.textPrimary,
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                              }}
+                              title="Edit School"
                             >
                               <Edit2 size={12} />
-                              <span>Edit</span>
                             </button>
                           ) : (
                             <span style={{ color: D.textMuted, fontSize: '11px' }}>
@@ -1478,393 +1514,1164 @@ export default function RegisterHubView({
               </tbody>
             </table>
           </div>
-        </div>
+        )
+      )}
+
+      {/* TAB CONTENT: 2. ATHLETES REGISTER */}
+      {activeTab === 'athletes' && (
+        viewMode === 'list' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div
+              style={{
+                background: D.surf1,
+                border: `1px solid ${D.border}`,
+                borderRadius: D.lg,
+                overflowX: 'auto',
+              }}
+            >
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '850px' }}>
+                <thead>
+                  <tr style={{ background: D.surf0, borderBottom: `1px solid ${D.border}` }}>
+                    <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>ATHLETE NAME</th>
+                    <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>SCHOOL & SQUAD</th>
+                    <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>PRIMARY ROLE</th>
+                    <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>STYLE (BAT / BOWL)</th>
+                    <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>GRADE / AGE</th>
+                    <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>FITNESS CLEARANCE</th>
+                    <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>STATS (AVG / WKTS)</th>
+                    <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted, textAlign: 'right' }}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAthletes.map(player => {
+                    const canEdit = canEditItem('athletes', player);
+                    const schoolObj = SCHOOLS_REGISTRY.find(s => s.id === player.school);
+                    return (
+                      <tr
+                        key={player.id}
+                        style={{
+                          borderBottom: `1px solid ${D.border}`,
+                          transition: 'background 0.15s ease',
+                        }}
+                      >
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '15px' }}>{schoolObj?.crestIcon || '🏏'}</span>
+                            <div>
+                              <div style={{ fontFamily: D.body, fontSize: '13px', fontWeight: 700, color: D.textPrimary }}>
+                                {player.name}
+                                {player.cap && (
+                                  <span style={{ marginLeft: '6px', color: D.amber, fontSize: '11px', fontWeight: 800 }}>
+                                    ({player.cap.toUpperCase()})
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontFamily: D.mono, fontSize: '10px', color: D.textMuted }}>
+                                ID: {player.id} · House: {player.houseAtSchool || 'N/A'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontFamily: D.head, fontSize: '12px', fontWeight: 700, color: schoolObj?.colors[0] || D.textPrimary }}>
+                            {schoolObj?.shortName || player.school}
+                          </div>
+                          <span
+                            style={{
+                              fontFamily: D.mono,
+                              fontSize: '10px',
+                              padding: '1px 6px',
+                              borderRadius: D.pill,
+                              background: D.surf2,
+                              color: D.textMuted,
+                              border: `1px solid ${D.border}`,
+                            }}
+                          >
+                            {player.team}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '12px 16px' }}>
+                          <span
+                            style={{
+                              fontFamily: D.mono,
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: D.pill,
+                              background:
+                                player.role === 'BAT' ? `${D.sky}22` :
+                                player.role === 'BOWL' ? `${D.emerald}22` :
+                                player.role === 'ALL' ? `${D.violet}22` : `${D.amber}22`,
+                              color:
+                                player.role === 'BAT' ? D.sky :
+                                player.role === 'BOWL' ? D.emerald :
+                                player.role === 'ALL' ? D.violet : D.amber,
+                              border: `1px solid ${
+                                player.role === 'BAT' ? D.sky :
+                                player.role === 'BOWL' ? D.emerald :
+                                player.role === 'ALL' ? D.violet : D.amber
+                              }44`,
+                            }}
+                          >
+                            {player.role === 'BAT' ? '🏏 Batter' :
+                             player.role === 'BOWL' ? '🎯 Bowler' :
+                             player.role === 'ALL' ? '⚡ All-Rounder' : '🧤 Keeper'}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '11px', color: D.textSecondary }}>
+                          <div>{player.batHand}HB · {player.bowlArm}A {player.bowlStyle}</div>
+                        </td>
+
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textPrimary }}>
+                            {player.age} yrs
+                          </div>
+                          <div style={{ fontFamily: D.mono, fontSize: '10px', color: D.textMuted }}>
+                            Grade {player.age <= 14 ? '8' : player.age === 15 ? '9' : player.age === 16 ? '10' : player.age === 17 ? '11' : '12'}
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '12px 16px' }}>
+                          <span
+                            style={{
+                              fontFamily: D.mono,
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: D.pill,
+                              background:
+                                player.fitness === 'fit' ? `${D.emerald}22` :
+                                player.fitness === 'rehab' ? `${D.amber}22` : `${D.rose}22`,
+                              color:
+                                player.fitness === 'fit' ? D.emerald :
+                                player.fitness === 'rehab' ? D.amber : D.rose,
+                              border: `1px solid ${
+                                player.fitness === 'fit' ? D.emerald :
+                                player.fitness === 'rehab' ? D.amber : D.rose
+                              }44`,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: player.fitness === 'fit' ? D.emerald : player.fitness === 'rehab' ? D.amber : D.rose }} />
+                            {player.fitness === 'fit' ? 'Cleared (Fit)' : player.fitness === 'rehab' ? 'In Rehab' : 'Injured (Locked)'}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '11px' }}>
+                          <span style={{ color: D.textPrimary, fontWeight: 700 }}>{player.avg}</span> avg · <span style={{ color: D.emerald, fontWeight: 700 }}>{player.wkts}</span> wkts
+                        </td>
+
+                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            {onSelectPlayerProfile && (
+                              <button
+                                onClick={() => onSelectPlayerProfile(player)}
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: D.sm,
+                                  background: D.surf2,
+                                  border: `1px solid ${D.border}`,
+                                  color: D.textPrimary,
+                                  cursor: 'pointer',
+                                  fontSize: '11px',
+                                }}
+                                title="View Full Profile Dossier"
+                              >
+                                <Eye size={12} />
+                              </button>
+                            )}
+
+                            {onNavigateToH2H && (
+                              <button
+                                onClick={() => onNavigateToH2H(player.id)}
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: D.sm,
+                                  background: D.surf2,
+                                  border: `1px solid ${D.border}`,
+                                  color: D.textPrimary,
+                                  cursor: 'pointer',
+                                  fontSize: '11px',
+                                }}
+                                title="Compare in Head-to-Head"
+                              >
+                                ⚔️
+                              </button>
+                            )}
+
+                            {canEdit ? (
+                              <button
+                                onClick={() => handleOpenEdit('athletes', player)}
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: D.sm,
+                                  background: `${D.emerald}20`,
+                                  border: `1px solid ${D.emerald}44`,
+                                  color: D.emerald,
+                                  cursor: 'pointer',
+                                  fontFamily: D.head,
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                                title="Edit Athlete Registration"
+                              >
+                                <Edit2 size={12} />
+                                <span>Edit</span>
+                              </button>
+                            ) : (
+                              <span style={{ color: D.textMuted, fontSize: '11px' }}>
+                                <Lock size={12} />
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+            {filteredAthletes.map(player => {
+              const canEdit = canEditItem('athletes', player);
+              const schoolObj = SCHOOLS_REGISTRY.find(s => s.id === player.school);
+              return (
+                <div
+                  key={player.id}
+                  style={{
+                    background: D.surf1,
+                    border: `1px solid ${D.border}`,
+                    borderRadius: D.lg,
+                    padding: '18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: D.md,
+                          background: schoolObj?.colors[0] || D.surf2,
+                          border: `1px solid ${schoolObj?.colors[1] || D.border}44`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '20px',
+                        }}
+                      >
+                        {schoolObj?.crestIcon || '🏏'}
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: D.head, fontSize: '15px', fontWeight: 700, color: D.textPrimary }}>
+                          {player.name}
+                          {player.cap && (
+                            <span style={{ marginLeft: '6px', color: D.amber, fontSize: '10px', fontWeight: 800 }}>
+                              ★ {player.cap.toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
+                          {schoolObj?.shortName || player.school} · {player.team} · Grade {player.age <= 14 ? '8' : player.age === 15 ? '9' : player.age === 16 ? '10' : player.age === 17 ? '11' : '12'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <span
+                      style={{
+                        fontFamily: D.mono,
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: D.pill,
+                        background:
+                          player.role === 'BAT' ? `${D.sky}22` :
+                          player.role === 'BOWL' ? `${D.emerald}22` :
+                          player.role === 'ALL' ? `${D.violet}22` : `${D.amber}22`,
+                        color:
+                          player.role === 'BAT' ? D.sky :
+                          player.role === 'BOWL' ? D.emerald :
+                          player.role === 'ALL' ? D.violet : D.amber,
+                        border: `1px solid ${
+                          player.role === 'BAT' ? D.sky :
+                          player.role === 'BOWL' ? D.emerald :
+                          player.role === 'ALL' ? D.violet : D.amber
+                        }44`,
+                      }}
+                    >
+                      {player.role === 'BAT' ? '🏏 BAT' : player.role === 'BOWL' ? '🎯 BOWL' : player.role === 'ALL' ? '⚡ ALL' : '🧤 WK'}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      background: D.surf0,
+                      padding: '10px 12px',
+                      borderRadius: D.sm,
+                      border: `1px solid ${D.border}`,
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '8px',
+                      fontFamily: D.body,
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Batting & Bowling</span>
+                      <strong style={{ color: D.textPrimary }}>{player.batHand}HB · {player.bowlArm}A</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Medical Clearance</span>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          color: player.fitness === 'fit' ? D.emerald : player.fitness === 'rehab' ? D.amber : D.rose,
+                          fontWeight: 700,
+                          fontSize: '11px',
+                        }}
+                      >
+                        ● {player.fitness === 'fit' ? 'Fit' : player.fitness === 'rehab' ? 'Rehab' : 'Injured'}
+                      </span>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Batting Avg</span>
+                      <strong style={{ color: D.textPrimary }}>{player.avg} runs</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Wickets Taken</span>
+                      <strong style={{ color: D.emerald }}>{player.wkts} wkts</strong>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '4px' }}>
+                    <div style={{ fontFamily: D.mono, fontSize: '10px', color: D.textMuted }}>
+                      ID: {player.id}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {onSelectPlayerProfile && (
+                        <button
+                          onClick={() => onSelectPlayerProfile(player)}
+                          style={{
+                            padding: '5px 10px',
+                            borderRadius: D.sm,
+                            background: D.surf2,
+                            border: `1px solid ${D.border}`,
+                            color: D.textPrimary,
+                            cursor: 'pointer',
+                            fontFamily: D.head,
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                          title="View Profile"
+                        >
+                          <Eye size={12} />
+                          <span>Dossier</span>
+                        </button>
+                      )}
+
+                      {onNavigateToH2H && (
+                        <button
+                          onClick={() => onNavigateToH2H(player.id)}
+                          style={{
+                            padding: '5px 8px',
+                            borderRadius: D.sm,
+                            background: D.surf2,
+                            border: `1px solid ${D.border}`,
+                            color: D.textPrimary,
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                          }}
+                          title="Compare Head-to-Head"
+                        >
+                          ⚔️
+                        </button>
+                      )}
+
+                      {canEdit && (
+                        <button
+                          onClick={() => handleOpenEdit('athletes', player)}
+                          style={{
+                            padding: '5px 8px',
+                            borderRadius: D.sm,
+                            background: `${D.emerald}20`,
+                            border: `1px solid ${D.emerald}44`,
+                            color: D.emerald,
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                          }}
+                          title="Edit Athlete"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
       )}
 
       {/* TAB CONTENT: 3. UMPIRES & MATCH OFFICIALS */}
       {activeTab === 'umpires' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '16px' }}>
-          {filteredUmpires.map(umpire => {
-            const canEdit = canEditItem('umpires', umpire);
-            return (
-              <div
-                key={umpire.id}
-                style={{
-                  background: D.surf1,
-                  border: `1px solid ${D.border}`,
-                  borderRadius: D.lg,
-                  padding: '18px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div
-                      style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: D.md,
-                        background: `${D.cyan}20`,
-                        border: `1px solid ${D.cyan}44`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '20px',
-                      }}
-                    >
-                      ⚖️
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: D.head, fontSize: '15px', fontWeight: 700, color: D.textPrimary }}>
-                        {umpire.name}
-                      </div>
-                      <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
-                        Badge: <strong>{umpire.badgeNumber}</strong> · {umpire.region}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span
-                      style={{
-                        fontFamily: D.mono,
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: D.pill,
-                        background: umpire.status === 'Available' ? `${D.emerald}22` : umpire.status === 'Appointed' ? `${D.sky}22` : `${D.amber}22`,
-                        color: umpire.status === 'Available' ? D.emerald : umpire.status === 'Appointed' ? D.sky : D.amber,
-                        border: `1px solid ${umpire.status === 'Available' ? D.emerald : umpire.status === 'Appointed' ? D.sky : D.amber}44`,
-                      }}
-                    >
-                      {umpire.status}
-                    </span>
-
-                    {canEdit && (
-                      <button
-                        onClick={() => handleOpenEdit('umpires', umpire)}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: D.sm,
-                          background: D.surf2,
-                          border: `1px solid ${D.border}`,
-                          color: D.textPrimary,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <Edit2 size={12} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
+        viewMode === 'card' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '16px' }}>
+            {filteredUmpires.map(umpire => {
+              const canEdit = canEditItem('umpires', umpire);
+              return (
                 <div
+                  key={umpire.id}
                   style={{
-                    background: D.surf0,
-                    padding: '10px 12px',
-                    borderRadius: D.sm,
+                    background: D.surf1,
                     border: `1px solid ${D.border}`,
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '8px',
-                    fontFamily: D.body,
-                    fontSize: '12px',
+                    borderRadius: D.lg,
+                    padding: '18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
                   }}
                 >
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>CSA Accreditation</span>
-                    <strong style={{ color: D.cyan }}>{umpire.csaLevel}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Matches Officiated</span>
-                    <strong style={{ color: D.textPrimary }}>{umpire.matchesOfficiated} Fixtures</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Certification Expiry</span>
-                    <strong style={{ color: D.textPrimary }}>{umpire.expiryDate}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Disciplinary Reports</span>
-                    <strong style={{ color: umpire.disciplinaryReports > 0 ? D.amber : D.emerald }}>{umpire.disciplinaryReports} Lodged</strong>
-                  </div>
-                </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: D.md,
+                          background: `${D.cyan}20`,
+                          border: `1px solid ${D.cyan}44`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '20px',
+                        }}
+                      >
+                        ⚖️
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: D.head, fontSize: '15px', fontWeight: 700, color: D.textPrimary }}>
+                          {umpire.name}
+                        </div>
+                        <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
+                          Badge: <strong>{umpire.badgeNumber}</strong> · {umpire.region}
+                        </div>
+                      </div>
+                    </div>
 
-                <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Mail size={12} />
-                    <span>{umpire.email}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Phone size={12} />
-                    <span>{umpire.phone}</span>
-                  </div>
-                </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span
+                        style={{
+                          fontFamily: D.mono,
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: D.pill,
+                          background: umpire.status === 'Available' ? `${D.emerald}22` : umpire.status === 'Appointed' ? `${D.sky}22` : `${D.amber}22`,
+                          color: umpire.status === 'Available' ? D.emerald : umpire.status === 'Appointed' ? D.sky : D.amber,
+                          border: `1px solid ${umpire.status === 'Available' ? D.emerald : umpire.status === 'Appointed' ? D.sky : D.amber}44`,
+                        }}
+                      >
+                        {umpire.status}
+                      </span>
 
-                {umpire.lastAssignedFixture && (
-                  <div style={{ fontFamily: D.body, fontSize: '11px', color: D.textSecondary, background: D.surf2, padding: '6px 10px', borderRadius: D.sm }}>
-                    Last Assigned: <strong>{umpire.lastAssignedFixture}</strong>
+                      {canEdit && (
+                        <button
+                          onClick={() => handleOpenEdit('umpires', umpire)}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: D.sm,
+                            background: D.surf2,
+                            border: `1px solid ${D.border}`,
+                            color: D.textPrimary,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+
+                  <div
+                    style={{
+                      background: D.surf0,
+                      padding: '10px 12px',
+                      borderRadius: D.sm,
+                      border: `1px solid ${D.border}`,
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '8px',
+                      fontFamily: D.body,
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>CSA Accreditation</span>
+                      <strong style={{ color: D.cyan }}>{umpire.csaLevel}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Matches Officiated</span>
+                      <strong style={{ color: D.textPrimary }}>{umpire.matchesOfficiated} Fixtures</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Certification Expiry</span>
+                      <strong style={{ color: D.textPrimary }}>{umpire.expiryDate}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Disciplinary Reports</span>
+                      <strong style={{ color: umpire.disciplinaryReports > 0 ? D.amber : D.emerald }}>{umpire.disciplinaryReports} Lodged</strong>
+                    </div>
+                  </div>
+
+                  <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Mail size={12} />
+                      <span>{umpire.email}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Phone size={12} />
+                      <span>{umpire.phone}</span>
+                    </div>
+                  </div>
+
+                  {umpire.lastAssignedFixture && (
+                    <div style={{ fontFamily: D.body, fontSize: '11px', color: D.textSecondary, background: D.surf2, padding: '6px 10px', borderRadius: D.sm }}>
+                      Last Assigned: <strong>{umpire.lastAssignedFixture}</strong>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div
+            style={{
+              background: D.surf1,
+              border: `1px solid ${D.border}`,
+              borderRadius: D.lg,
+              overflowX: 'auto',
+            }}
+          >
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
+              <thead>
+                <tr style={{ background: D.surf0, borderBottom: `1px solid ${D.border}` }}>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>OFFICIAL NAME & BADGE</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>REGION / ASSOCIATION</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>CSA LEVEL</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>MATCHES</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>DISCIPLINARY</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>EXPIRY DATE</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>STATUS</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>CONTACT (POPIA)</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted, textAlign: 'right' }}>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUmpires.map(umpire => {
+                  const canEdit = canEditItem('umpires', umpire);
+                  return (
+                    <tr
+                      key={umpire.id}
+                      style={{
+                        borderBottom: `1px solid ${D.border}`,
+                        transition: 'background 0.15s ease',
+                      }}
+                    >
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '16px' }}>⚖️</span>
+                          <div>
+                            <div style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 700, color: D.textPrimary }}>
+                              {umpire.name}
+                            </div>
+                            <div style={{ fontFamily: D.mono, fontSize: '10px', color: D.cyan }}>
+                              Badge: {umpire.badgeNumber}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.body, fontSize: '12px', color: D.textSecondary }}>
+                        {umpire.region} · {umpire.association}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span
+                          style={{
+                            fontFamily: D.mono,
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '2px 7px',
+                            borderRadius: D.pill,
+                            background: `${D.cyan}20`,
+                            color: D.cyan,
+                            border: `1px solid ${D.cyan}40`,
+                          }}
+                        >
+                          {umpire.csaLevel}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '12px', color: D.textPrimary, fontWeight: 700 }}>
+                        {umpire.matchesOfficiated}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '12px', color: umpire.disciplinaryReports > 0 ? D.amber : D.emerald }}>
+                        {umpire.disciplinaryReports}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
+                        {umpire.expiryDate}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span
+                          style={{
+                            fontFamily: D.mono,
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: D.pill,
+                            background: umpire.status === 'Available' ? `${D.emerald}22` : umpire.status === 'Appointed' ? `${D.sky}22` : `${D.amber}22`,
+                            color: umpire.status === 'Available' ? D.emerald : umpire.status === 'Appointed' ? D.sky : D.amber,
+                          }}
+                        >
+                          {umpire.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
+                        <div>{umpire.email}</div>
+                        <div>{umpire.phone}</div>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                        {canEdit ? (
+                          <button
+                            onClick={() => handleOpenEdit('umpires', umpire)}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: D.sm,
+                              background: D.surf2,
+                              border: `1px solid ${D.border}`,
+                              color: D.textPrimary,
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                            }}
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                        ) : (
+                          <Lock size={12} color={D.textMuted} />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
 
       {/* TAB CONTENT: 4. OFFICIAL SCORERS */}
       {activeTab === 'scorers' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
-          {filteredScorers.map(scorer => {
-            const canEdit = canEditItem('scorers', scorer);
-            const schoolObj = SCHOOLS_REGISTRY.find(s => s.id === scorer.schoolId);
-            return (
-              <div
-                key={scorer.id}
-                style={{
-                  background: D.surf1,
-                  border: `1px solid ${D.border}`,
-                  borderRadius: D.lg,
-                  padding: '18px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div
-                      style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: D.md,
-                        background: `${D.amber}20`,
-                        border: `1px solid ${D.amber}44`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '20px',
-                      }}
-                    >
-                      📝
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: D.head, fontSize: '15px', fontWeight: 700, color: D.textPrimary }}>
-                        {scorer.name}
-                      </div>
-                      <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
-                        {schoolObj?.shortName || scorer.schoolId} · Token: <strong>{scorer.tokenCode}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span
-                      style={{
-                        fontFamily: D.mono,
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: D.pill,
-                        background: scorer.status === 'Active' ? `${D.emerald}22` : `${D.amber}22`,
-                        color: scorer.status === 'Active' ? D.emerald : D.amber,
-                        border: `1px solid ${scorer.status === 'Active' ? D.emerald : D.amber}44`,
-                      }}
-                    >
-                      {scorer.status}
-                    </span>
-
-                    {canEdit && (
-                      <button
-                        onClick={() => handleOpenEdit('scorers', scorer)}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: D.sm,
-                          background: D.surf2,
-                          border: `1px solid ${D.border}`,
-                          color: D.textPrimary,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <Edit2 size={12} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
+        viewMode === 'card' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
+            {filteredScorers.map(scorer => {
+              const canEdit = canEditItem('scorers', scorer);
+              const schoolObj = SCHOOLS_REGISTRY.find(s => s.id === scorer.schoolId);
+              return (
                 <div
+                  key={scorer.id}
                   style={{
-                    background: D.surf0,
-                    padding: '10px 12px',
-                    borderRadius: D.sm,
+                    background: D.surf1,
                     border: `1px solid ${D.border}`,
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '8px',
-                    fontFamily: D.body,
-                    fontSize: '12px',
+                    borderRadius: D.lg,
+                    padding: '18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
                   }}
                 >
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Certification</span>
-                    <strong style={{ color: D.amber }}>{scorer.certification}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Preferred Terminal</span>
-                    <strong style={{ color: D.textPrimary }}>💻 {scorer.preferredTerminal}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Matches Logged</span>
-                    <strong style={{ color: D.textPrimary }}>{scorer.matchesLogged} Fixtures</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Appointed Squads</span>
-                    <strong style={{ color: D.sky }}>{scorer.appointedSquads.join(', ')}</strong>
-                  </div>
-                </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: D.md,
+                          background: `${D.amber}20`,
+                          border: `1px solid ${D.amber}44`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '20px',
+                        }}
+                      >
+                        📝
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: D.head, fontSize: '15px', fontWeight: 700, color: D.textPrimary }}>
+                          {scorer.name}
+                        </div>
+                        <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
+                          {schoolObj?.shortName || scorer.schoolId} · Token: <strong>{scorer.tokenCode}</strong>
+                        </div>
+                      </div>
+                    </div>
 
-                <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Mail size={12} />
-                    <span>{scorer.email}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span
+                        style={{
+                          fontFamily: D.mono,
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: D.pill,
+                          background: scorer.status === 'Active' ? `${D.emerald}22` : `${D.amber}22`,
+                          color: scorer.status === 'Active' ? D.emerald : D.amber,
+                          border: `1px solid ${scorer.status === 'Active' ? D.emerald : D.amber}44`,
+                        }}
+                      >
+                        {scorer.status}
+                      </span>
+
+                      {canEdit && (
+                        <button
+                          onClick={() => handleOpenEdit('scorers', scorer)}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: D.sm,
+                            background: D.surf2,
+                            border: `1px solid ${D.border}`,
+                            color: D.textPrimary,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Phone size={12} />
-                    <span>{scorer.phone}</span>
+
+                  <div
+                    style={{
+                      background: D.surf0,
+                      padding: '10px 12px',
+                      borderRadius: D.sm,
+                      border: `1px solid ${D.border}`,
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '8px',
+                      fontFamily: D.body,
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Certification</span>
+                      <strong style={{ color: D.amber }}>{scorer.certification}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Preferred Terminal</span>
+                      <strong style={{ color: D.textPrimary }}>💻 {scorer.preferredTerminal}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Matches Logged</span>
+                      <strong style={{ color: D.textPrimary }}>{scorer.matchesLogged} Fixtures</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Appointed Squads</span>
+                      <strong style={{ color: D.sky }}>{scorer.appointedSquads.join(', ')}</strong>
+                    </div>
+                  </div>
+
+                  <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Mail size={12} />
+                      <span>{scorer.email}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Phone size={12} />
+                      <span>{scorer.phone}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div
+            style={{
+              background: D.surf1,
+              border: `1px solid ${D.border}`,
+              borderRadius: D.lg,
+              overflowX: 'auto',
+            }}
+          >
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
+              <thead>
+                <tr style={{ background: D.surf0, borderBottom: `1px solid ${D.border}` }}>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>SCORER & TOKEN</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>SCHOOL AFFILIATION</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>CERTIFICATION</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>TERMINAL</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>MATCHES</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>APPOINTED SQUADS</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>STATUS</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>CONTACT</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted, textAlign: 'right' }}>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredScorers.map(scorer => {
+                  const canEdit = canEditItem('scorers', scorer);
+                  const schoolObj = SCHOOLS_REGISTRY.find(s => s.id === scorer.schoolId);
+                  return (
+                    <tr
+                      key={scorer.id}
+                      style={{
+                        borderBottom: `1px solid ${D.border}`,
+                        transition: 'background 0.15s ease',
+                      }}
+                    >
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '16px' }}>📝</span>
+                          <div>
+                            <div style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 700, color: D.textPrimary }}>
+                              {scorer.name}
+                            </div>
+                            <div style={{ fontFamily: D.mono, fontSize: '10px', color: D.amber }}>
+                              Token: {scorer.tokenCode}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.body, fontSize: '12px', fontWeight: 600, color: D.textPrimary }}>
+                        {schoolObj?.shortName || scorer.schoolId}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span
+                          style={{
+                            fontFamily: D.mono,
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '2px 7px',
+                            borderRadius: D.pill,
+                            background: `${D.amber}20`,
+                            color: D.amber,
+                            border: `1px solid ${D.amber}40`,
+                          }}
+                        >
+                          {scorer.certification}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '11px', color: D.textSecondary }}>
+                        💻 {scorer.preferredTerminal}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '12px', color: D.textPrimary, fontWeight: 700 }}>
+                        {scorer.matchesLogged}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.body, fontSize: '11px', color: D.sky }}>
+                        {scorer.appointedSquads.join(', ')}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span
+                          style={{
+                            fontFamily: D.mono,
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: D.pill,
+                            background: scorer.status === 'Active' ? `${D.emerald}22` : `${D.amber}22`,
+                            color: scorer.status === 'Active' ? D.emerald : D.amber,
+                          }}
+                        >
+                          {scorer.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
+                        <div>{scorer.email}</div>
+                        <div>{scorer.phone}</div>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                        {canEdit ? (
+                          <button
+                            onClick={() => handleOpenEdit('scorers', scorer)}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: D.sm,
+                              background: D.surf2,
+                              border: `1px solid ${D.border}`,
+                              color: D.textPrimary,
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                            }}
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                        ) : (
+                          <Lock size={12} color={D.textMuted} />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
 
       {/* TAB CONTENT: 5. COACHES & TECHNICAL STAFF */}
       {activeTab === 'coaches' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '16px' }}>
-          {filteredCoaches.map(coach => {
-            const canEdit = canEditItem('coaches', coach);
-            const schoolObj = SCHOOLS_REGISTRY.find(s => s.id === coach.schoolId);
-            return (
-              <div
-                key={coach.id}
-                style={{
-                  background: D.surf1,
-                  border: `1px solid ${D.border}`,
-                  borderRadius: D.lg,
-                  padding: '18px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div
-                      style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: D.md,
-                        background: `${D.emerald}20`,
-                        border: `1px solid ${D.emerald}44`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '20px',
-                      }}
-                    >
-                      🧢
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: D.head, fontSize: '15px', fontWeight: 700, color: D.textPrimary }}>
-                        {coach.name}
-                      </div>
-                      <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textSecondary }}>
-                        {coach.roleTitle} · <strong>{schoolObj?.shortName || coach.schoolId}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span
-                      style={{
-                        fontFamily: D.mono,
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: D.pill,
-                        background: `${D.violet}22`,
-                        color: D.violet,
-                        border: `1px solid ${D.violet}44`,
-                      }}
-                    >
-                      {coach.csaLevel}
-                    </span>
-
-                    {canEdit && (
-                      <button
-                        onClick={() => handleOpenEdit('coaches', coach)}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: D.sm,
-                          background: D.surf2,
-                          border: `1px solid ${D.border}`,
-                          color: D.textPrimary,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <Edit2 size={12} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
+        viewMode === 'card' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '16px' }}>
+            {filteredCoaches.map(coach => {
+              const canEdit = canEditItem('coaches', coach);
+              const schoolObj = SCHOOLS_REGISTRY.find(s => s.id === coach.schoolId);
+              return (
                 <div
+                  key={coach.id}
                   style={{
-                    background: D.surf0,
-                    padding: '10px 12px',
-                    borderRadius: D.sm,
+                    background: D.surf1,
                     border: `1px solid ${D.border}`,
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '8px',
-                    fontFamily: D.body,
-                    fontSize: '12px',
+                    borderRadius: D.lg,
+                    padding: '18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
                   }}
                 >
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Specialization</span>
-                    <strong style={{ color: D.emerald }}>{coach.specialization}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Assigned Squad</span>
-                    <strong style={{ color: D.textPrimary }}>{coach.assignedSquad}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Child Protection Clearance</span>
-                    <strong style={{ color: D.emerald }}>🛡️ {coach.sapsClearance}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>BokSmart / First Aid</span>
-                    <strong style={{ color: D.textPrimary }}>Exp: {coach.bokSmartExpiry}</strong>
-                  </div>
-                </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: D.md,
+                          background: `${D.emerald}20`,
+                          border: `1px solid ${D.emerald}44`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '20px',
+                        }}
+                      >
+                        🧢
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: D.head, fontSize: '15px', fontWeight: 700, color: D.textPrimary }}>
+                          {coach.name}
+                        </div>
+                        <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textSecondary }}>
+                          {coach.roleTitle} · <strong>{schoolObj?.shortName || coach.schoolId}</strong>
+                        </div>
+                      </div>
+                    </div>
 
-                <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Mail size={12} />
-                    <span>{coach.email}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span
+                        style={{
+                          fontFamily: D.mono,
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: D.pill,
+                          background: `${D.violet}22`,
+                          color: D.violet,
+                          border: `1px solid ${D.violet}44`,
+                        }}
+                      >
+                        {coach.csaLevel}
+                      </span>
+
+                      {canEdit && (
+                        <button
+                          onClick={() => handleOpenEdit('coaches', coach)}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: D.sm,
+                            background: D.surf2,
+                            border: `1px solid ${D.border}`,
+                            color: D.textPrimary,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Phone size={12} />
-                    <span>{coach.phone}</span>
+
+                  <div
+                    style={{
+                      background: D.surf0,
+                      padding: '10px 12px',
+                      borderRadius: D.sm,
+                      border: `1px solid ${D.border}`,
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '8px',
+                      fontFamily: D.body,
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Specialization</span>
+                      <strong style={{ color: D.emerald }}>{coach.specialization}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Assigned Squad</span>
+                      <strong style={{ color: D.textPrimary }}>{coach.assignedSquad}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>Child Protection Clearance</span>
+                      <strong style={{ color: D.emerald }}>🛡️ {coach.sapsClearance}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: D.textMuted, fontSize: '10px', display: 'block' }}>BokSmart / First Aid</span>
+                      <strong style={{ color: D.textPrimary }}>Exp: {coach.bokSmartExpiry}</strong>
+                    </div>
+                  </div>
+
+                  <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Mail size={12} />
+                      <span>{coach.email}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Phone size={12} />
+                      <span>{coach.phone}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div
+            style={{
+              background: D.surf1,
+              border: `1px solid ${D.border}`,
+              borderRadius: D.lg,
+              overflowX: 'auto',
+            }}
+          >
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '920px' }}>
+              <thead>
+                <tr style={{ background: D.surf0, borderBottom: `1px solid ${D.border}` }}>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>COACH & ROLE</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>SCHOOL</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>CSA LEVEL</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>SPECIALIZATION</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>ASSIGNED SQUAD</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>CHILD PROTECTION</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>BOKSMART EXPIRY</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>CONTACT</th>
+                  <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted, textAlign: 'right' }}>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCoaches.map(coach => {
+                  const canEdit = canEditItem('coaches', coach);
+                  const schoolObj = SCHOOLS_REGISTRY.find(s => s.id === coach.schoolId);
+                  return (
+                    <tr
+                      key={coach.id}
+                      style={{
+                        borderBottom: `1px solid ${D.border}`,
+                        transition: 'background 0.15s ease',
+                      }}
+                    >
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '16px' }}>🧢</span>
+                          <div>
+                            <div style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 700, color: D.textPrimary }}>
+                              {coach.name}
+                            </div>
+                            <div style={{ fontFamily: D.body, fontSize: '11px', color: D.textSecondary }}>
+                              {coach.roleTitle}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.body, fontSize: '12px', fontWeight: 600, color: D.textPrimary }}>
+                        {schoolObj?.shortName || coach.schoolId}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span
+                          style={{
+                            fontFamily: D.mono,
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '2px 7px',
+                            borderRadius: D.pill,
+                            background: `${D.violet}20`,
+                            color: D.violet,
+                            border: `1px solid ${D.violet}40`,
+                          }}
+                        >
+                          {coach.csaLevel}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.body, fontSize: '12px', color: D.emerald, fontWeight: 600 }}>
+                        {coach.specialization}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.body, fontSize: '12px', color: D.textPrimary }}>
+                        {coach.assignedSquad}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '11px', color: D.emerald }}>
+                        🛡️ {coach.sapsClearance}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
+                        {coach.bokSmartExpiry}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
+                        <div>{coach.email}</div>
+                        <div>{coach.phone}</div>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                        {canEdit ? (
+                          <button
+                            onClick={() => handleOpenEdit('coaches', coach)}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: D.sm,
+                              background: D.surf2,
+                              border: `1px solid ${D.border}`,
+                              color: D.textPrimary,
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                            }}
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                        ) : (
+                          <Lock size={12} color={D.textMuted} />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
 
       {/* RBAC MODAL (ADD / EDIT RECORD) */}
