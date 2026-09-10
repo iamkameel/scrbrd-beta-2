@@ -5,6 +5,7 @@ import { Theme, Player, SchoolRegistryItem } from './types';
 import { SCHOOLS_REGISTRY, PLAYERS } from './data';
 import PlayerSearchFilterSelect from './PlayerSearchFilterSelect';
 import {
+  ArrowLeft,
   ArrowLeftRight,
   Sparkles,
   Award,
@@ -38,6 +39,7 @@ interface HeadToHeadComparisonViewProps {
   activeSchoolId?: string;
   initialPlayerAId?: string;
   initialPlayerBId?: string;
+  onBack?: () => void;
   onNavigateToScouting?: () => void;
   onNavigateToSkills?: () => void;
   onSelectPlayerProfile?: (player: Player) => void;
@@ -71,8 +73,10 @@ function computeSkillProfile(p: Player) {
   const bowlBase = Math.min(95, Math.max(48, Math.round(100 - (p.econ || 6) * 6 + (p.wkts > 15 ? 14 : 5))));
   const fieldBase = isWK ? 92 : 75 + ((p.name.length * 3) % 18);
   const mentalBase = isCaptain ? 93 : 76 + ((p.name.length * 5) % 16);
+  const overallGrade = Math.min(98, Math.max(68, Math.round(isBat ? (batBase * 0.75 + (p.sr > 120 ? 10 : 4)) : (bowlBase * 0.75 + (p.wkts > 15 ? 10 : 4)))));
 
   return {
+    overallGrade,
     // 6 Core Radar axes
     radarAxes: isBat
       ? [
@@ -151,6 +155,7 @@ export default function HeadToHeadComparisonView({
   activeSchoolId,
   initialPlayerAId = 'w1',
   initialPlayerBId = 'm1_p',
+  onBack,
   onNavigateToScouting,
   onNavigateToSkills,
   onSelectPlayerProfile,
@@ -173,14 +178,51 @@ export default function HeadToHeadComparisonView({
   // Compute filtered players based on POPIA intra-school boundary mode
   const filteredPlayersList = useMemo(() => {
     if (!schoolBoundaryOnly) return players;
-    const coachSchool = activeSchoolId || 'WBHS';
+    const coachSchool = activeSchoolId || 'WES';
     const schoolMatched = players.filter(p => p.school === coachSchool || p.team?.includes(coachSchool));
     return schoolMatched.length >= 2 ? schoolMatched : players;
   }, [players, schoolBoundaryOnly, activeSchoolId]);
 
-  // Player Objects
-  const playerA = useMemo(() => players.find(p => p.id === playerAId) || players[0], [players, playerAId]);
-  const playerB = useMemo(() => players.find(p => p.id === playerBId) || players[1] || players[0], [players, playerBId]);
+  // Safe Player Objects with guaranteed fallbacks
+  const playerA = useMemo(() => {
+    const found = players.find(p => p.id === playerAId);
+    if (found) return found;
+    return players[0] || ({
+      id: 'fallback_a',
+      name: 'James Whitfield',
+      school: 'WES',
+      role: 'BAT',
+      avg: 48.2,
+      sr: 135.4,
+      wkts: 8,
+      econ: 7.2,
+      cap: 'c',
+      batHand: 'R',
+      bowlStyle: 'M',
+      bowlArm: 'R',
+      age: 17,
+    } as unknown as Player);
+  }, [players, playerAId]);
+
+  const playerB = useMemo(() => {
+    const found = players.find(p => p.id === playerBId && p.id !== playerA.id);
+    if (found) return found;
+    const secondary = players.find(p => p.id !== playerA.id);
+    return secondary || players[1] || players[0] || ({
+      id: 'fallback_b',
+      name: 'Murray Baker',
+      school: 'MIC',
+      role: 'BAT',
+      avg: 51.2,
+      sr: 128.5,
+      wkts: 0,
+      econ: 0.0,
+      batHand: 'L',
+      bowlStyle: 'M',
+      bowlArm: 'R',
+      age: 17,
+    } as unknown as Player);
+  }, [players, playerBId, playerA.id]);
 
   // School Registries
   const schoolA = useMemo(() => getSchool(playerA.school), [playerA.school]);
@@ -199,15 +241,15 @@ export default function HeadToHeadComparisonView({
 
   // Curated Preset Matchups (including Intra-School Coach H2H)
   const curatedMatchups = [
-    { title: '🏫 Westville Intra-H2H', a: 'w1', b: 'w2', label: 'Whitfield vs Solomons (Same School)' },
-    { title: '🏫 Hilton Intra-H2H', a: 'h1', b: 'h2', label: 'Stewart vs Campbell (Same School)' },
-    { title: '🏫 Michaelhouse Intra-H2H', a: 'm1_p', b: 'm2', label: 'Higgs vs Baker (Same School)' },
+    { title: '🏫 Westville Intra-H2H', a: 'w1', b: 'w4', label: 'Whitfield vs Solomons (Same School)' },
+    { title: '🏫 Hilton Intra-H2H', a: 'h1', b: 'h4', label: 'Stewart vs Campbell (Same School)' },
+    { title: '🏫 Michaelhouse Intra-H2H', a: 'm1_p', b: 'm4_p', label: 'Baker vs Higgs (Same School)' },
     { title: 'Derby Openers', a: 'w1', b: 'm1_p', label: 'Whitfield vs Baker (Premier Batsmen)' },
-    { title: 'Express Pace', a: 'no8', b: 'h8', label: 'Henderson vs Dyer (135+ km/h Heat)' },
-    { title: '🇿🇦 Quota Pathway', a: 'w6', b: 'd_u16_2', label: 'Ngcobo (Sunfoil) vs Chetty (DHS)' },
+    { title: 'Express Pace', a: 'w8', b: 'h8', label: 'De Villiers vs Dyer (135+ km/h Heat)' },
     { title: 'Spin Wizards', a: 'w9', b: 'h4', label: 'Petersen (Leggie) vs Campbell' },
-    { title: '🌟 U16 Grant Khomo', a: 'd_u16_1', b: 'w_u16_1', label: 'Sithole (Express) vs Van Schalkwyk' },
-    { title: 'Elite All-Rounders', a: 'w4', b: 'no4', label: 'Solomons vs Brand (Knights Cpt)' },
+    { title: 'Wicketkeepers', a: 'w6', b: 'h3', label: 'Ngcobo vs Van Zyl' },
+    { title: 'Captains Derby', a: 'w1', b: 'c3', label: 'Whitfield vs Chad Mason (College Cpt)' },
+    { title: 'Elite All-Rounders', a: 'w4', b: 'm4_p', label: 'Solomons vs Higgs (KZN Inland)' },
   ];
 
   // Career Runs estimation
@@ -412,6 +454,35 @@ export default function HeadToHeadComparisonView({
       {/* ── HEADER & BREADCRUMBS ────────────────────────── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         <div>
+          {/* Breadcrumb row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '11px', fontFamily: D.mono, color: D.textMuted }}>
+            {onBack && (
+              <button
+                onClick={onBack}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: D.surf2,
+                  border: `1px solid ${D.border}`,
+                  borderRadius: D.sm,
+                  padding: '3px 8px',
+                  color: D.textPrimary,
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontFamily: D.mono,
+                  marginRight: '6px',
+                }}
+              >
+                <ArrowLeft size={12} />
+                <span>Back</span>
+              </button>
+            )}
+            <span>Scouting & Analytics</span>
+            <ChevronRight size={12} color={D.textMuted} />
+            <span style={{ color: D.indigo, fontWeight: 700 }}>Head-to-Head Comparison</span>
+          </div>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ width: '4px', height: '22px', borderRadius: '2px', background: D.indigo }} />
             <h1 style={{ fontFamily: D.head, fontSize: '20px', fontWeight: 800, color: D.textPrimary, letterSpacing: '-0.02em', margin: 0 }}>

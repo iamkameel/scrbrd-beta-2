@@ -60,7 +60,7 @@ export const ROLE_LAYERS = [
 export const ROLES: Record<string, { label: string; layer: string; color: string; icon: string; scope: string; sensitivity: number; nav: string[]; purpose: string }> = {
   superadmin: {
     label: "Super Admin", layer: "platform", color: "#8b5cf6", icon: "⚡", scope: "platform", sensitivity: 4,
-    nav: ["dashboard", "notifications", "matches", "competitions", "leagues", "squad", "profiles", "analytics", "skills", "scouting", "compare", "statsguru", "sponsorship", "training", "injuries", "logistics", "fields", "staff", "calendar", "governance", "rulebook", "pitchdeck", "settings"],
+    nav: ["dashboard", "notifications", "matches", "competitions", "promotion_demotion", "leagues", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "scouting", "compare", "statsguru", "sponsorship", "broadcast", "training", "injuries", "logistics", "fields", "staff", "calendar", "governance", "rulebook", "pitchdeck", "settings"],
     purpose: "Full platform governance across all school tenants, competitions, and security policies",
   },
   platformsupport: {
@@ -70,37 +70,37 @@ export const ROLES: Record<string, { label: string; layer: string; color: string
   },
   headmaster: {
     label: "Headmaster / Executive", layer: "school", color: "#4338ca", icon: "🏛️", scope: "school", sensitivity: 3,
-    nav: ["dashboard", "notifications", "matches", "competitions", "leagues", "squad", "profiles", "compare", "sponsorship", "logistics", "fields", "calendar"],
+    nav: ["dashboard", "notifications", "matches", "competitions", "promotion_demotion", "leagues", "squad", "profiles", "compare", "sponsorship", "broadcast", "logistics", "fields", "calendar"],
     purpose: "Institutional executive oversight — fixtures, prestige, honors, commercial rights",
   },
   schooladmin: {
     label: "School Admin", layer: "school", color: "#6366f1", icon: "🏫", scope: "school", sensitivity: 3,
-    nav: ["dashboard", "notifications", "matches", "competitions", "squad", "profiles", "analytics", "compare", "sponsorship", "logistics", "fields", "staff", "calendar", "settings"],
+    nav: ["dashboard", "notifications", "matches", "competitions", "promotion_demotion", "squad", "profiles", "analytics", "compare", "sponsorship", "broadcast", "logistics", "fields", "staff", "calendar", "settings"],
     purpose: "Main school-level controller — teams, staff, registrations, fixture scheduling",
   },
   financeadmin: {
     label: "Finance Admin", layer: "school", color: "#10b981", icon: "💳", scope: "school", sensitivity: 3,
-    nav: ["dashboard", "notifications", "sponsorship", "logistics", "calendar", "settings"],
+    nav: ["dashboard", "notifications", "sponsorship", "broadcast", "logistics", "calendar", "settings"],
     purpose: "Commercial sponsorship accounting, invoices, and billing reconciliation — zero minor PII",
   },
   sportsmaster: {
     label: "Sportsmaster", layer: "sporting", color: "#f59e0b", icon: "🏅", scope: "school", sensitivity: 2,
-    nav: ["dashboard", "notifications", "matches", "competitions", "leagues", "squad", "profiles", "analytics", "skills", "compare", "calendar", "settings"],
+    nav: ["dashboard", "notifications", "matches", "competitions", "promotion_demotion", "leagues", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "compare", "calendar", "settings"],
     purpose: "High-level school sports programme oversight across all codes and fixtures",
   },
   doc: {
     label: "Director of Cricket", layer: "sporting", color: "#0d9488", icon: "🏆", scope: "school", sensitivity: 2,
-    nav: ["dashboard", "notifications", "matches", "competitions", "leagues", "squad", "profiles", "analytics", "skills", "scouting", "compare", "training", "injuries", "logistics", "fields", "staff", "calendar", "settings"],
+    nav: ["dashboard", "notifications", "matches", "competitions", "promotion_demotion", "leagues", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "scouting", "compare", "training", "injuries", "logistics", "fields", "staff", "calendar", "settings"],
     purpose: "Institutional Director of Cricket — oversight of all 23 squads (1st-7th XI, U16A-D, U15A-E, U14A-G), coach assignments, and talent pipeline",
   },
   headcoach: {
     label: "1st XI Head Coach", layer: "sporting", color: "#059669", icon: "⭐", scope: "team", sensitivity: 2,
-    nav: ["dashboard", "notifications", "matches", "squad", "profiles", "analytics", "skills", "scouting", "compare", "training", "injuries", "logistics", "fields", "calendar"],
+    nav: ["dashboard", "notifications", "matches", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "scouting", "compare", "training", "injuries", "logistics", "fields", "calendar"],
     purpose: "Elite 1st XI leadership — selection, match plans, skills matrices, opposition scouting",
   },
   coach: {
     label: "Coach", layer: "sporting", color: "#10b981", icon: "🎯", scope: "team", sensitivity: 2,
-    nav: ["dashboard", "notifications", "matches", "squad", "profiles", "analytics", "skills", "compare", "training", "injuries", "logistics", "fields", "calendar"],
+    nav: ["dashboard", "notifications", "matches", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "compare", "training", "injuries", "logistics", "fields", "calendar"],
     purpose: "Age-group coaching — squad development, training drills, match preparation across junior and open tiers",
   },
   assistant: {
@@ -110,8 +110,8 @@ export const ROLES: Record<string, { label: string; layer: string; color: string
   },
   analyst: {
     label: "Performance Analyst", layer: "sporting", color: "#0284c7", icon: "📊", scope: "school", sensitivity: 1,
-    nav: ["dashboard", "notifications", "matches", "profiles", "analytics", "skills", "scouting", "compare", "calendar"],
-    purpose: "Match telemetry, 360° wagon wheels, Hawk-Eye DRS, video and ball-event metrics",
+    nav: ["dashboard", "notifications", "matches", "analyst_cockpit", "profiles", "analytics", "skills", "scouting", "compare", "statsguru", "calendar"],
+    purpose: "Match telemetry, 360° wagon wheels, Hawk-Eye DRS, pitch landing heatmaps, and opposition dossiers",
   },
   medical: {
     label: "Medical / Physio", layer: "school", color: "#f43f5e", icon: "⚕️", scope: "school", sensitivity: 4,
@@ -159,7 +159,9 @@ export const NAV_META: Record<string, { icon: string; label: string }> = {
   dashboard: { icon: "⚡", label: "Dashboard" },
   matches: { icon: "🏏", label: "Matches" },
   competitions: { icon: "🏆", label: "Competitions" },
+  promotion_demotion: { icon: "⚔️", label: "Promotion & Demotion" },
   leagues: { icon: "📋", label: "Leagues" },
+  analyst_cockpit: { icon: "🔬", label: "Analyst Cockpit" },
   squad: { icon: "👥", label: "Squad" },
   profiles: { icon: "👤", label: "Profiles" },
   analytics: { icon: "📊", label: "Analytics" },
@@ -167,6 +169,7 @@ export const NAV_META: Record<string, { icon: string; label: string }> = {
   scouting: { icon: "🔍", label: "Scouting Hub" },
   compare: { icon: "⚔️", label: "H2H Compare" },
   sponsorship: { icon: "💰", label: "Commercial Rights" },
+  broadcast: { icon: "📡", label: "Broadcast & Media" },
   training: { icon: "💪", label: "Training" },
   injuries: { icon: "🏥", label: "Injuries" },
   logistics: { icon: "🚌", label: "Logistics" },

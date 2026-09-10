@@ -173,6 +173,27 @@ export default function DRSReview({ theme: D }: DRSReviewProps) {
         </div>
       </div>
 
+      {/* Hardware & Optical Tech Stack Notice */}
+      <div
+        style={{
+          padding: '10px 14px',
+          borderRadius: D.md,
+          background: `${D.surf2}`,
+          border: `1px solid ${D.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontSize: '11px',
+          fontFamily: D.body,
+          color: D.textMuted,
+        }}
+      >
+        <span style={{ fontSize: '16px' }}>🎥</span>
+        <div>
+          <strong style={{ color: D.sky, fontFamily: D.head }}>Optical Hardware & Broadcast Tech Stack Dependency:</strong> Live ball-tracking trajectory and LBW predictive paths require an integrated venue hardware rig (such as a 360° high-speed camera array and low-latency broadcast ingest). This interactive module demonstrates the telemetry adjudicator and Law 36 rules engine.
+        </div>
+      </div>
+
       {/* Main Review Cockpit */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) 340px', gap: '16px' }}>
         {/* Left Side: Telemetry Stage */}

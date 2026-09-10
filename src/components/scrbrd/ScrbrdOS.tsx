@@ -42,18 +42,54 @@ import InjuriesView from "./InjuriesView";
 import CalendarView from "./CalendarView";
 import NotificationsView, { isRoleAuthorizedForNotification, NotificationCategory } from "./NotificationsView";
 import CommercialView from "./CommercialView";
+import PromotionDemotionView from "./PromotionDemotionView";
+import PerformanceAnalystCockpit from "./PerformanceAnalystCockpit";
 import GovernanceView from "./GovernanceView";
 import MultiSquadCoachView from "./MultiSquadCoachView";
 import StatsGuruQueryEngineView from "./StatsGuruQueryEngineView";
 import SettingsView from "./SettingsView";
 import UserProfilesView from "./UserProfilesView";
+import HeadToHeadComparisonView from "./HeadToHeadComparisonView";
+import RulebookView from "./RulebookView";
+import PitchDeckView from "./PitchDeckView";
 import { getSchoolSquads } from "./multiSquadData";
 import { ScrbrdLogo } from "./ScrbrdLogo";
 import Image from "next/image";
+import { ArrowLeft, ArrowRight, Home, ChevronRight, Swords, User, Users } from "lucide-react";
 
 export default function ScrbrdOS() {
   const [role, setRole] = useState<string>("superadmin");
   const [page, setPage] = useState<string>("dashboard");
+  const [navHistory, setNavHistory] = useState<string[]>(["dashboard"]);
+  const [navHistoryIdx, setNavHistoryIdx] = useState<number>(0);
+  const [comparePlayerAId, setComparePlayerAId] = useState<string>("w1");
+  const [comparePlayerBId, setComparePlayerBId] = useState<string>("m1_p");
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+
+  const navigateTo = (targetPage: string) => {
+    if (targetPage === page) return;
+    const updated = [...navHistory.slice(0, navHistoryIdx + 1), targetPage];
+    setNavHistory(updated);
+    setNavHistoryIdx(updated.length - 1);
+    setPage(targetPage);
+  };
+
+  const handleNavBack = () => {
+    if (navHistoryIdx > 0) {
+      const prev = navHistory[navHistoryIdx - 1];
+      setNavHistoryIdx(navHistoryIdx - 1);
+      setPage(prev);
+    }
+  };
+
+  const handleNavForward = () => {
+    if (navHistoryIdx < navHistory.length - 1) {
+      const next = navHistory[navHistoryIdx + 1];
+      setNavHistoryIdx(navHistoryIdx + 1);
+      setPage(next);
+    }
+  };
+
   const [activeSchoolId, setActiveSchoolId] = useState<string>("WES");
   const [selectedSquadId, setSelectedSquadId] = useState<string>("WES_1ST");
   const [isDark, setIsDark] = useState<boolean>(true);
@@ -75,7 +111,7 @@ export default function ScrbrdOS() {
   const [scorerOpen, setScorerOpen] = useState<boolean>(false);
   const [activeScorerMatch, setActiveScorerMatch] = useState<Match | undefined>(undefined);
   const [selectedPlayer, setSelectedPlayer] = useState<Player>(PLAYERS[0]);
-  const [analyticsSubTab, setAnalyticsSubTab] = useState<"analytics" | "phases" | "wagon" | "drs">("analytics");
+  const [analyticsSubTab, setAnalyticsSubTab] = useState<"analytics" | "phases" | "wagon" | "drs" | "cockpit">("analytics");
   const [scorecardModalOpen, setScorecardModalOpen] = useState<boolean>(false);
   const [activeScorecard, setActiveScorecard] = useState<MatchScorecard | null>(null);
   const [rbacNotice, setRbacNotice] = useState<string | null>(null);
@@ -612,10 +648,13 @@ export default function ScrbrdOS() {
           <select
             value={activeSchoolId}
             onChange={e => {
-              setActiveSchoolId(e.target.value);
+              const newSchoolId = e.target.value;
+              setActiveSchoolId(newSchoolId);
               // reset selected player to first player of that school
-              const newSchoolPlayers = PLAYERS.filter(p => p.school === e.target.value);
+              const newSchoolPlayers = PLAYERS.filter(p => p.school === newSchoolId);
               if (newSchoolPlayers.length > 0) setSelectedPlayer(newSchoolPlayers[0]);
+              const newSquads = getSchoolSquads(newSchoolId);
+              if (newSquads.length > 0) setSelectedSquadId(newSquads[0].id);
             }}
             style={{
               width: "100%", padding: "7px 9px", borderRadius: D.sm, background: D.surf2,
@@ -652,7 +691,7 @@ export default function ScrbrdOS() {
             return (
               <button
                 key={k}
-                onClick={() => setPage(k)}
+                onClick={() => navigateTo(k)}
                 style={{
                   width: "100%",
                   padding: "8px 16px",
@@ -739,6 +778,8 @@ export default function ScrbrdOS() {
                   setActiveSchoolId(s.id);
                   const newSchoolPlayers = PLAYERS.filter(p => p.school === s.id);
                   if (newSchoolPlayers.length > 0) setSelectedPlayer(newSchoolPlayers[0]);
+                  const newSquads = getSchoolSquads(s.id);
+                  if (newSquads.length > 0) setSelectedSquadId(newSquads[0].id);
                 }}
                 style={{
                   padding: "4px 8px", borderRadius: D.pill, border: `1px solid ${s.id === activeSchoolId ? schoolPrimary : D.border}`,
@@ -758,9 +799,18 @@ export default function ScrbrdOS() {
             <select
               value={selectedSquadId}
               onChange={e => {
-                setSelectedSquadId(e.target.value);
-                if (page !== "squad" && (role === "headcoach" || role === "coach" || role === "doc")) {
-                  // Keep user focused
+                const newSquadId = e.target.value;
+                setSelectedSquadId(newSquadId);
+                const allSquads = getSchoolSquads(activeSchoolId);
+                const targetSquad = allSquads.find(s => s.id === newSquadId);
+                if (targetSquad) {
+                  setToastNotification({
+                    id: `sq_${Date.now()}`,
+                    title: `Active Squad: ${targetSquad.name}`,
+                    body: `Coached by ${targetSquad.headCoachName} · Ground: ${targetSquad.assignedGround}`,
+                    category: "system",
+                    time: "Just now",
+                  });
                 }
               }}
               style={{
@@ -1094,6 +1144,185 @@ export default function ScrbrdOS() {
               </button>
             );
           })}
+        </div>
+
+        {/* Global Breadcrumb & History Navigation Bar */}
+        <div
+          style={{
+            background: D.surf0,
+            borderBottom: `1px solid ${D.border}`,
+            padding: "8px 20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "10px",
+            fontSize: "12px",
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            {/* Back button */}
+            <button
+              onClick={handleNavBack}
+              disabled={navHistoryIdx === 0}
+              title={navHistoryIdx > 0 ? `Back to ${NAV_META[navHistory[navHistoryIdx - 1]]?.label || navHistory[navHistoryIdx - 1]}` : 'No previous history'}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "4px 10px",
+                borderRadius: D.sm,
+                background: navHistoryIdx > 0 ? D.surf2 : "transparent",
+                border: `1px solid ${navHistoryIdx > 0 ? D.border : "transparent"}`,
+                color: navHistoryIdx > 0 ? D.textPrimary : D.textMuted,
+                cursor: navHistoryIdx > 0 ? "pointer" : "default",
+                opacity: navHistoryIdx > 0 ? 1 : 0.4,
+                fontFamily: D.head,
+                fontSize: "11px",
+                fontWeight: 700,
+              }}
+            >
+              <ArrowLeft size={13} />
+              <span>Back</span>
+            </button>
+
+            {/* Forward button */}
+            <button
+              onClick={handleNavForward}
+              disabled={navHistoryIdx >= navHistory.length - 1}
+              title={navHistoryIdx < navHistory.length - 1 ? `Forward to ${NAV_META[navHistory[navHistoryIdx + 1]]?.label || navHistory[navHistoryIdx + 1]}` : 'No forward history'}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "4px 10px",
+                borderRadius: D.sm,
+                background: navHistoryIdx < navHistory.length - 1 ? D.surf2 : "transparent",
+                border: `1px solid ${navHistoryIdx < navHistory.length - 1 ? D.border : "transparent"}`,
+                color: navHistoryIdx < navHistory.length - 1 ? D.textPrimary : D.textMuted,
+                cursor: navHistoryIdx < navHistory.length - 1 ? "pointer" : "default",
+                opacity: navHistoryIdx < navHistory.length - 1 ? 1 : 0.4,
+                fontFamily: D.head,
+                fontSize: "11px",
+                fontWeight: 700,
+              }}
+            >
+              <span>Forward</span>
+              <ArrowRight size={13} />
+            </button>
+
+            <div style={{ width: "1px", height: "16px", background: D.border, margin: "0 2px" }} />
+
+            {/* Breadcrumb Trail */}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontFamily: D.mono, fontSize: "11px" }}>
+              <button
+                onClick={() => navigateTo("dashboard")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: page === "dashboard" ? D.indigo : D.textMuted,
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  padding: 0,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <Home size={12} />
+                <span>Scrbrd OS</span>
+              </button>
+
+              <span style={{ color: D.textMuted }}>/</span>
+
+              <span style={{ color: D.textPrimary, fontWeight: 700 }}>
+                {NAV_META[page]?.icon || "📄"} {NAV_META[page]?.label || page}
+              </span>
+
+              {page === "profiles" && selectedProfileId && (
+                <>
+                  <span style={{ color: D.textMuted }}>/</span>
+                  <span style={{ color: D.indigo, fontWeight: 700 }}>
+                    {PLAYERS.find(p => p.id === selectedProfileId)?.name || users.find(u => u.id === selectedProfileId)?.name || selectedProfileId}
+                  </span>
+                </>
+              )}
+
+              {page === "compare" && (
+                <>
+                  <span style={{ color: D.textMuted }}>/</span>
+                  <span style={{ color: D.indigo, fontWeight: 700 }}>
+                    {PLAYERS.find(p => p.id === comparePlayerAId)?.name || 'Player A'} vs {PLAYERS.find(p => p.id === comparePlayerBId)?.name || 'Player B'}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Module Shortcuts */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <button
+              onClick={() => navigateTo("compare")}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "3px 9px",
+                borderRadius: D.pill,
+                background: page === "compare" ? `${D.indigo}25` : D.surf1,
+                border: `1px solid ${page === "compare" ? D.indigo : D.border}`,
+                color: page === "compare" ? D.indigo : D.textSecondary,
+                fontFamily: D.head,
+                fontSize: "10px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              <span>⚔️ H2H Compare</span>
+            </button>
+            <button
+              onClick={() => {
+                setSelectedProfileId(null);
+                navigateTo("profiles");
+              }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "3px 9px",
+                borderRadius: D.pill,
+                background: page === "profiles" ? `${D.indigo}25` : D.surf1,
+                border: `1px solid ${page === "profiles" ? D.indigo : D.border}`,
+                color: page === "profiles" ? D.indigo : D.textSecondary,
+                fontFamily: D.head,
+                fontSize: "10px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              <span>👤 Profiles (63)</span>
+            </button>
+            <button
+              onClick={() => navigateTo("scouting")}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "3px 9px",
+                borderRadius: D.pill,
+                background: page === "scouting" ? `${D.indigo}25` : D.surf1,
+                border: `1px solid ${page === "scouting" ? D.indigo : D.border}`,
+                color: page === "scouting" ? D.indigo : D.textSecondary,
+                fontFamily: D.head,
+                fontSize: "10px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              <span>🎯 AI Scouting</span>
+            </button>
+          </div>
         </div>
 
         {/* Content View Router */}
@@ -1680,7 +1909,16 @@ export default function ScrbrdOS() {
           {/* Competitions & Leagues View */}
           {(page === "competitions" || page === "leagues") && (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <SectionHeader title="Competitions & League Standings" sub="KZN Schools Tournaments and Official Standings" color={D.amber} />
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                <SectionHeader title="Competitions & League Standings" sub="KZN Schools Tournaments and Official Standings" color={D.amber} />
+                <Btn
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setPage("promotion_demotion")}
+                >
+                  ⚔️ Promotion & Demotion Control Room →
+                </Btn>
+              </div>
               <Card sx={{ padding: "16px" }}>
                 <div style={{ fontFamily: D.head, fontSize: "15px", fontWeight: 700, marginBottom: "12px" }}>{COMPETITIONS[0].name}</div>
                 <div style={{ overflowX: "auto" }}>
@@ -1720,6 +1958,15 @@ export default function ScrbrdOS() {
             </div>
           )}
 
+          {/* Dedicated Promotion & Demotion Control Room */}
+          {page === "promotion_demotion" && (
+            <PromotionDemotionView
+              theme={D}
+              activeSchoolId={activeSchool.id}
+              currentRole={role}
+            />
+          )}
+
           {/* Squad & Multi-Tier Coaching Management */}
           {page === "squad" && (
             <MultiSquadCoachView
@@ -1730,20 +1977,29 @@ export default function ScrbrdOS() {
               onSelectSquad={(squadId) => setSelectedSquadId(squadId)}
               onSelectPlayerProfile={(p) => {
                 setSelectedPlayer(p);
-                setPage("profiles");
+                setSelectedProfileId(p.id);
+                navigateTo("profiles");
               }}
-              onNavigateToSkills={() => setPage("skills")}
+              onNavigateToSkills={() => navigateTo("skills")}
             />
           )}
 
-          {/* Profiles View */}
+          {/* Profiles View: Complete Unified Directory of Student Athletes & Staff */}
           {page === "profiles" && (
             <UserProfilesView
               theme={D}
               users={users}
+              players={PLAYERS}
+              initialSelectedProfileId={selectedProfileId}
+              onClearSelectedProfile={() => setSelectedProfileId(null)}
               onUpdateUser={handleUpdateUser}
               currentRole={role}
               activeSchoolId={activeSchool.id}
+              onOpenH2H={(pAId, pBId) => {
+                setComparePlayerAId(pAId);
+                if (pBId) setComparePlayerBId(pBId);
+                navigateTo("compare");
+              }}
               onTriggerToast={(msg) => {
                 setToastNotification({
                   id: `toast_${Date.now()}`,
@@ -1751,6 +2007,25 @@ export default function ScrbrdOS() {
                   body: msg,
                   icon: '👤',
                 });
+              }}
+            />
+          )}
+
+          {/* Dedicated Head-to-Head Comparison View */}
+          {page === "compare" && (
+            <HeadToHeadComparisonView
+              theme={D}
+              players={PLAYERS}
+              currentRole={role}
+              activeSchoolId={activeSchool.id}
+              initialPlayerAId={comparePlayerAId}
+              initialPlayerBId={comparePlayerBId}
+              onBack={handleNavBack}
+              onNavigateToScouting={() => navigateTo("scouting")}
+              onNavigateToSkills={() => navigateTo("skills")}
+              onSelectPlayerProfile={(p) => {
+                setSelectedProfileId(p.id);
+                navigateTo("profiles");
               }}
             />
           )}
@@ -1789,6 +2064,13 @@ export default function ScrbrdOS() {
                   >
                     📺 Hawk-Eye DRS Review
                   </Btn>
+                  <Btn
+                    variant={analyticsSubTab === "cockpit" ? "primary" : "ghost"}
+                    size="sm"
+                    onClick={() => setAnalyticsSubTab("cockpit")}
+                  >
+                    🔬 Analyst Tactical Cockpit
+                  </Btn>
                 </div>
               </div>
 
@@ -1820,7 +2102,22 @@ export default function ScrbrdOS() {
               {analyticsSubTab === "drs" && (
                 <DRSReview theme={D} />
               )}
+
+              {analyticsSubTab === "cockpit" && (
+                <PerformanceAnalystCockpit
+                  theme={D}
+                  activeSchoolId={activeSchool.id}
+                />
+              )}
             </div>
+          )}
+
+          {/* Dedicated Performance Analyst Cockpit */}
+          {page === "analyst_cockpit" && (
+            <PerformanceAnalystCockpit
+              theme={D}
+              activeSchoolId={activeSchool.id}
+            />
           )}
 
           {/* Squad Skills Matrix & Player Development Passport */}
@@ -1831,10 +2128,11 @@ export default function ScrbrdOS() {
               currentRole={role}
               activeSchoolId={activeSchool.id}
               currentUser={role === "player" ? "James Whitfield" : role === "parent" ? "David Whitfield (Parent)" : "Wayne Scott (Coach)"}
-              onNavigateToScouting={() => setPage("scouting")}
+              onNavigateToScouting={() => navigateTo("scouting")}
               onSelectPlayerProfile={(p) => {
                 setSelectedPlayer(p);
-                setPage("profiles");
+                setSelectedProfileId(p.id);
+                navigateTo("profiles");
               }}
             />
           )}
@@ -1861,6 +2159,9 @@ export default function ScrbrdOS() {
           {/* Commercial & Sponsorship Management */}
           {page === "sponsorship" && <CommercialView theme={D} activeSchoolId={activeSchool.id} />}
 
+          {/* Dedicated Broadcast Rights & Syndication */}
+          {page === "broadcast" && <CommercialView theme={D} activeSchoolId={activeSchool.id} initialTab="broadcast" />}
+
           {/* POPIA Compliance & RBAC Governance */}
           {page === "governance" && <GovernanceView theme={D} activeSchoolId={activeSchool.id} />}
 
@@ -1874,7 +2175,14 @@ export default function ScrbrdOS() {
           {page === "logistics" && <LogisticsView theme={D} />}
 
           {/* Fields & Turfgrass Management */}
-          {page === "fields" && <FieldsView theme={D} />}
+          {page === "fields" && (
+            <FieldsView
+              theme={D}
+              activeSchoolId={activeSchool.id}
+              currentRole={role}
+              onSelectSchool={(sId) => setActiveSchool(SCHOOLS_REGISTRY.find((s) => s.id === sId) || activeSchool)}
+            />
+          )}
 
           {/* Master Strategic Calendar */}
           {page === "calendar" && <CalendarView theme={D} onOpenScorer={() => handleLaunchScorer()} />}
@@ -1929,30 +2237,11 @@ export default function ScrbrdOS() {
             />
           )}
 
-          {/* Rulebook & Documentation */}
-          {(page === "rulebook" || page === "pitchdeck") && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <SectionHeader title="SCRBRD OS Architecture & Rulebook" sub="Specifications for SA Schools Cricket Governance" color={D.sky} />
-              <Card sx={{ padding: "20px" }}>
-                <div style={{ fontFamily: D.head, fontSize: "16px", fontWeight: 700, marginBottom: "8px" }}>
-                  Six-Layer RBAC Security Model
-                </div>
-                <p style={{ fontFamily: D.body, fontSize: "13px", color: D.textSecondary, lineHeight: "1.6" }}>
-                  SCRBRD OS implements strict zero-trust data zoning between Platform Governance, Competition Councils, School Institutions, Sporting Leaders, Participants, and Public Spectators. Sensitive medical health records, bus driver GPS telemetry, and clinical Return-to-Play pipelines are protected under POPIA and child welfare safety standards.
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px", marginTop: "16px" }}>
-                  {ROLE_LAYERS.map(l => (
-                    <div key={l.id} style={{ padding: "12px", background: D.surf2, borderRadius: D.md, borderLeft: `3px solid ${l.color}` }}>
-                      <div style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 700, color: l.color }}>{l.label}</div>
-                      <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, marginTop: "4px" }}>
-                        Governs {Object.values(ROLES).filter(r => r.layer === l.id).length} dedicated operational roles.
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
-          )}
+          {/* Rulebook: Official Regulations & Code */}
+          {page === "rulebook" && <RulebookView theme={D} />}
+
+          {/* Pitch Deck: Executive Strategic Presentation */}
+          {page === "pitchdeck" && <PitchDeckView theme={D} />}
         </main>
       </div>
     </div>

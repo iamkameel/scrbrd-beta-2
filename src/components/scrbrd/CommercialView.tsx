@@ -7,13 +7,20 @@ import { SPONSORSHIP_CAMPAIGNS, SCHOOLS_REGISTRY } from './data';
 interface CommercialViewProps {
   theme: Theme;
   activeSchoolId: string;
+  initialTab?: "portfolio" | "exclusivity" | "inventory_simulator" | "rate_card" | "contract_vault" | "revenue_ledger" | "broadcast";
 }
 
-export default function CommercialView({ theme: D, activeSchoolId }: CommercialViewProps) {
-  const [activeTab, setActiveTab] = useState<"portfolio" | "exclusivity" | "inventory_simulator" | "rate_card" | "contract_vault" | "revenue_ledger">("portfolio");
+export default function CommercialView({ theme: D, activeSchoolId, initialTab = "portfolio" }: CommercialViewProps) {
+  const [activeTab, setActiveTab] = useState<"portfolio" | "exclusivity" | "inventory_simulator" | "rate_card" | "contract_vault" | "revenue_ledger" | "broadcast">(initialTab);
   const [campaigns, setCampaigns] = useState(SPONSORSHIP_CAMPAIGNS);
   const [scopeFilter, setScopeFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+
+  // Broadcast & Syndication State
+  const [scteTriggered, setScteTriggered] = useState<boolean>(false);
+  const [cleanFeedActive, setCleanFeedActive] = useState<boolean>(false);
+  const [selectedTerritory, setSelectedTerritory] = useState<"RSA" | "UK_CW" | "GLOBAL">("RSA");
+  const [broadcastNotice, setBroadcastNotice] = useState<string | null>(null);
 
   // Rate Card Calculator State
   const [fixturePrestige, setFixturePrestige] = useState<number>(2.2); // 2.2x Marquee Derby
@@ -128,6 +135,7 @@ export default function CommercialView({ theme: D, activeSchoolId }: CommercialV
         <div style={{ display: "flex", gap: "6px", background: D.surf2, padding: "4px", borderRadius: D.pill, border: `1px solid ${D.border}`, flexWrap: "wrap" }}>
           {[
             { id: "portfolio", label: "📊 Portfolio & Governance" },
+            { id: "broadcast", label: "📡 Broadcast Rights & Syndication" },
             { id: "exclusivity", label: "⚡ Exclusivity Matrix" },
             { id: "inventory_simulator", label: "📺 Overlay Slot Simulator" },
             { id: "rate_card", label: "💎 Rate Card & Yield Pricing" },
@@ -950,6 +958,309 @@ export default function CommercialView({ theme: D, activeSchoolId }: CommercialV
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SUB-TAB 7: BROADCAST RIGHTS & SYNDICATION CONSOLE ── */}
+      {activeTab === "broadcast" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+          {broadcastNotice && (
+            <div
+              style={{
+                padding: "12px 18px",
+                borderRadius: D.md,
+                background: `${D.sky}25`,
+                border: `1px solid ${D.sky}`,
+                color: D.sky,
+                fontFamily: D.head,
+                fontSize: "13px",
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <span>{broadcastNotice}</span>
+              <button
+                onClick={() => setBroadcastNotice(null)}
+                style={{ background: "none", border: "none", color: D.sky, cursor: "pointer", fontSize: "14px", fontWeight: 800 }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Broadcast Ingest & Live Encoder Banner */}
+          <div
+            style={{
+              padding: "20px",
+              background: D.surf1,
+              borderRadius: D.lg,
+              border: `1px solid ${D.border}`,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
+            }}
+          >
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ display: "inline-block", width: "10px", height: "10px", borderRadius: "50%", background: "#ef4444", animation: "pulse 1.5s infinite" }} />
+                <span style={{ fontFamily: D.head, fontSize: "15px", fontWeight: 800, color: D.textPrimary }}>
+                  LIVE 1080P60 BROADCAST INGEST & MASTER CONTROL ROOM
+                </span>
+                <span style={{ padding: "2px 8px", borderRadius: D.pill, background: `${D.emerald}20`, color: D.emerald, fontFamily: D.mono, fontSize: "10px", fontWeight: 800 }}>
+                  SRT / RTMP STABLE
+                </span>
+              </div>
+              <div style={{ fontFamily: D.body, fontSize: "12px", color: D.textMuted, marginTop: "4px" }}>
+                Active Broadcast: Westville 1st XI vs Hilton College (Bowden&apos;s Field Oval) · Bitrate: 6,420 kbps · 0 dropped frames
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <button
+                onClick={() => setCleanFeedActive(!cleanFeedActive)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: D.pill,
+                  background: cleanFeedActive ? D.amber : D.surf2,
+                  border: `1px solid ${cleanFeedActive ? D.amber : D.border}`,
+                  color: cleanFeedActive ? "#000" : D.textPrimary,
+                  fontFamily: D.head,
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                {cleanFeedActive ? "⚡ Clean Feed (No Overlays)" : "🎨 Dirty Feed (Sponsor Overlays Active)"}
+              </button>
+
+              <button
+                onClick={() => {
+                  setScteTriggered(true);
+                  setBroadcastNotice("📡 SCTE-35 Marker Injected: 30-Second Commercial Sponsor Pod Triggered Across All Linear & OTT Feeds!");
+                  setTimeout(() => setScteTriggered(false), 5000);
+                  setTimeout(() => setBroadcastNotice(null), 6000);
+                }}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: D.pill,
+                  background: scteTriggered ? D.rose : D.indigo,
+                  border: "none",
+                  color: "#fff",
+                  fontFamily: D.head,
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  boxShadow: "0 2px 10px rgba(99, 102, 241, 0.3)",
+                }}
+              >
+                {scteTriggered ? "⏱️ Pod Running (30s)..." : "📢 Trigger Sponsor Break (SCTE-35)"}
+              </button>
+            </div>
+          </div>
+
+          {/* Syndication Partners & Rights Licensors */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+            {[
+              {
+                outlet: "SuperSport Schools",
+                channel: "DStv Ch 216 & Mobile App",
+                rightsTier: "Tier 1: Exclusive Linear & OTT",
+                feedType: cleanFeedActive ? "Clean SDI Feed" : "Branded Dirty Feed with Score Bugs",
+                status: "ACTIVE LIVE STREAM",
+                subscribers: "142,000 Reach",
+                badgeColor: D.sky,
+              },
+              {
+                outlet: "YouTube High School Cricket Live",
+                channel: "Public Free-to-Air HD",
+                rightsTier: "Tier 2: Non-Exclusive Global Webcast",
+                feedType: "Dirty Feed with Commercial Watermarks",
+                status: "STREAMING (1080p)",
+                subscribers: "28,400 Concurrent Viewers",
+                badgeColor: "#ef4444",
+              },
+              {
+                outlet: "School Trust Intranet Portal",
+                channel: "Low-Latency SRT Private Relay",
+                rightsTier: "Tier 3: Institutional Community Archive",
+                feedType: "Clean Master Archive Feed",
+                status: "INTERNAL ACCESS",
+                subscribers: "Verified Parents & Old Boys",
+                badgeColor: D.emerald,
+              },
+              {
+                outlet: "Pitchside LED Jumbotron System",
+                channel: "Stadium Venue Direct Fibre",
+                rightsTier: "Tier 4: In-Venue Big Screen",
+                feedType: "4K Replay + Hawk-Eye DRS Triggers",
+                status: "HARDWIRED SDI",
+                subscribers: "On-site Spectators (2,400)",
+                badgeColor: D.amber,
+              },
+            ].map((p, idx) => (
+              <div
+                key={idx}
+                style={{
+                  padding: "18px",
+                  background: D.surf1,
+                  borderRadius: D.lg,
+                  border: `1px solid ${D.border}`,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 800, color: D.textPrimary }}>
+                      {p.outlet}
+                    </div>
+                    <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
+                      {p.channel}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      padding: "2px 8px",
+                      borderRadius: D.pill,
+                      background: `${p.badgeColor}20`,
+                      color: p.badgeColor,
+                      fontFamily: D.mono,
+                      fontSize: "9px",
+                      fontWeight: 800,
+                    }}
+                  >
+                    {p.status}
+                  </span>
+                </div>
+
+                <div style={{ padding: "10px", background: D.surf2, borderRadius: D.md, display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
+                    RIGHTS TIER: <strong style={{ color: D.textPrimary }}>{p.rightsTier}</strong>
+                  </div>
+                  <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
+                    SIGNAL ROUTE: <strong style={{ color: D.emerald }}>{p.feedType}</strong>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${D.border}`, paddingTop: "8px" }}>
+                  <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.textSecondary }}>
+                    👥 {p.subscribers}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setBroadcastNotice(`Accreditation Certificate dispatched for ${p.outlet}!`);
+                      setTimeout(() => setBroadcastNotice(null), 3000);
+                    }}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: D.pill,
+                      background: "transparent",
+                      border: `1px solid ${D.border}`,
+                      color: D.textSecondary,
+                      fontFamily: D.head,
+                      fontSize: "10px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Audit Stream
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Broadcast Licensing & Territorial Protection */}
+          <div
+            style={{
+              padding: "20px",
+              background: D.surf1,
+              borderRadius: D.lg,
+              border: `1px solid ${D.border}`,
+              display: "flex",
+              flexDirection: "column",
+              gap: "14px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+              <div>
+                <div style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 800, color: D.textPrimary }}>
+                  TERRITORIAL GEO-BLOCKING & DIGITAL EMBARGO TIMERS
+                </div>
+                <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted }}>
+                  Enforce broadcast rights agreements across international territories and social video platforms.
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "6px" }}>
+                {[
+                  { id: "RSA", label: "🇿🇦 South Africa (Domestic)" },
+                  { id: "UK_CW", label: "🇬🇧 UK & Commonwealth" },
+                  { id: "GLOBAL", label: "🌍 Global Worldwide" },
+                ].map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTerritory(t.id as any)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: D.pill,
+                      background: selectedTerritory === t.id ? D.indigo : D.surf2,
+                      border: `1px solid ${selectedTerritory === t.id ? D.indigo : D.border}`,
+                      color: selectedTerritory === t.id ? "#fff" : D.textMuted,
+                      fontFamily: D.head,
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "12px" }}>
+              <div style={{ padding: "14px", background: D.surf2, borderRadius: D.md, display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 700, color: D.textPrimary }}>
+                  15-Minute Short-Form Clip Embargo
+                </div>
+                <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, lineHeight: 1.5 }}>
+                  Third-party social channels cannot publish wickets or milestone sixes until 15 minutes post-live ball, protecting live broadcast value.
+                </div>
+                <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.emerald, fontWeight: 700 }}>
+                  ACTIVE (SLA Enforced)
+                </span>
+              </div>
+
+              <div style={{ padding: "14px", background: D.surf2, borderRadius: D.md, display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 700, color: D.textPrimary }}>
+                  High-Performance Analyst Feed
+                </div>
+                <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, lineHeight: 1.5 }}>
+                  Uncompressed 4K wide-angle tactical footage transmitted directly to team analyst laptops for real-time DRS and Hawk-Eye trajectory analysis.
+                </div>
+                <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.sky, fontWeight: 700 }}>
+                  SRT SECURE (AES-128)
+                </span>
+              </div>
+
+              <div style={{ padding: "14px", background: D.surf2, borderRadius: D.md, display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 700, color: D.textPrimary }}>
+                  Automated Sponsor Attribution
+                </div>
+                <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, lineHeight: 1.5 }}>
+                  Every boundary and wicket clip automatically generates a 3-second animated sponsor lower third before social export.
+                </div>
+                <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.amber, fontWeight: 700 }}>
+                  SUNFOIL & DISCOVERY SPONSORED
+                </span>
+              </div>
             </div>
           </div>
         </div>

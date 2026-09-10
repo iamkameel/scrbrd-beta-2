@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Theme, Player, SchoolSquad, CoachingStaffMember, PlayerMovementRecord, SquadDivision } from './types';
 import { SQUAD_TEMPLATES, getSchoolSquads, COACHING_STAFF_REGISTRY, INITIAL_PLAYER_MOVEMENTS, generateFullSchoolRoster } from './multiSquadData';
 import { SCHOOLS_REGISTRY } from './data';
@@ -50,6 +50,20 @@ export default function MultiSquadCoachView({
     }
     return schoolSquads[0]; // Default 1st XI
   });
+
+  // Synchronize activeSquad whenever selectedSquadId or schoolSquads change
+  useEffect(() => {
+    if (selectedSquadId) {
+      const found = schoolSquads.find(s => s.id === selectedSquadId);
+      if (found) {
+        setActiveSquad(found);
+        return;
+      }
+    }
+    if (schoolSquads.length > 0) {
+      setActiveSquad(schoolSquads[0]);
+    }
+  }, [selectedSquadId, schoolSquads]);
 
   // Division filter
   const [selectedDivision, setSelectedDivision] = useState<SquadDivision | "All">("All");
