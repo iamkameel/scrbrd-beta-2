@@ -11,8 +11,8 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import { Theme, Player } from './types';
-import { getLatestCommittedAssessment, SkillAssessmentRecord } from './skillsAssessmentData';
+import { Theme, Player, SkillAssessmentRecord } from './types';
+import { getLatestCommittedAssessment } from './skillsAssessmentData';
 import { SKILLS_MATRIX } from './data';
 
 interface PlayerSkillRadarChartProps {

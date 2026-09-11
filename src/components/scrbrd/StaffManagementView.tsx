@@ -31,7 +31,7 @@ interface StaffManagementViewProps {
   theme: Theme;
   activeSchoolId: string;
   currentRole: string;
-  onTriggerToast: (msg: string) => void;
+  onTriggerToast: (title: string, body?: string, category?: string, targetPage?: string) => void;
 }
 
 export type StaffViewMode = 'directory' | 'compliance' | 'rota';

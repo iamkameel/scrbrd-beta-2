@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Theme } from './types';
 import { BatterProfile, BowlerProfile } from './LineupsBowlersModal';
+import { getBatterScoreStyle } from './runColors';
 
 const DEFAULT_MODAL_THEME: Theme = {
   bg: "#0b0f19",
@@ -309,6 +310,8 @@ export default function FullScorecardView({
                 {safeBatting.map((batter, idx) => {
                   const sr = batter.balls > 0 ? ((batter.runs / batter.balls) * 100).toFixed(1) : '-';
                   const isBatting = batter.status === 'batting';
+                  const isDuck = batter.status === 'out' && batter.runs === 0;
+                  const scoreStyle = getBatterScoreStyle(batter.runs, batter.balls, isBatting, isDuck);
 
                   return (
                     <tr
@@ -341,23 +344,55 @@ export default function FullScorecardView({
                         {batter.dismissal || (isBatting ? 'not out' : batter.status === 'did_not_bat' ? 'did not bat' : 'retired hurt')}
                       </td>
 
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily: D.mono, fontWeight: 800, color: D.textPrimary }}>
-                        {batter.status === 'did_not_bat' ? '-' : batter.runs}
+                      <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                        {batter.status === 'did_not_bat' ? (
+                          <span style={{ fontFamily: D.mono, color: D.textMuted }}>-</span>
+                        ) : (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
+                            {scoreStyle.badge && <span style={{ fontSize: '11px' }}>{scoreStyle.badge}</span>}
+                            <span
+                              style={{
+                                fontFamily: D.mono,
+                                fontSize: '13px',
+                                fontWeight: 800,
+                                color: scoreStyle.color,
+                                background: scoreStyle.background,
+                                border: scoreStyle.border,
+                                padding: scoreStyle.isMilestone ? '2px 6px' : '0',
+                                borderRadius: D.sm,
+                              }}
+                            >
+                              {batter.runs}
+                            </span>
+                          </div>
+                        )}
                       </td>
 
                       <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily: D.mono, color: D.textMuted }}>
                         {batter.status === 'did_not_bat' ? '-' : batter.balls}
                       </td>
 
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily: D.mono, color: D.textMuted }}>
-                        {batter.status === 'did_not_bat' ? '-' : batter.fours}
+                      <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                        {batter.status === 'did_not_bat' ? '-' : batter.fours > 0 ? (
+                          <span style={{ fontFamily: D.mono, fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.15)', padding: '2px 6px', borderRadius: D.sm }}>
+                            {batter.fours}
+                          </span>
+                        ) : (
+                          <span style={{ fontFamily: D.mono, color: D.textMuted }}>0</span>
+                        )}
                       </td>
 
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily: D.mono, color: D.textMuted }}>
-                        {batter.status === 'did_not_bat' ? '-' : batter.sixes}
+                      <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                        {batter.status === 'did_not_bat' ? '-' : batter.sixes > 0 ? (
+                          <span style={{ fontFamily: D.mono, fontSize: '12px', fontWeight: 700, color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.18)', padding: '2px 6px', borderRadius: D.sm }}>
+                            {batter.sixes}
+                          </span>
+                        ) : (
+                          <span style={{ fontFamily: D.mono, color: D.textMuted }}>0</span>
+                        )}
                       </td>
 
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily: D.mono, fontWeight: 700, color: Number(sr) > 130 ? D.sky : D.textPrimary }}>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily: D.mono, fontWeight: 700, color: Number(sr) > 130 ? D.emerald : Number(sr) > 100 ? D.sky : D.textPrimary }}>
                         {sr}
                       </td>
                     </tr>

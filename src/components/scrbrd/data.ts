@@ -60,7 +60,7 @@ export const ROLE_LAYERS = [
 export const ROLES: Record<string, { label: string; layer: string; color: string; icon: string; scope: string; sensitivity: number; nav: string[]; purpose: string }> = {
   superadmin: {
     label: "Super Admin", layer: "platform", color: "#8b5cf6", icon: "⚡", scope: "platform", sensitivity: 4,
-    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "competitions", "promotion_demotion", "leagues", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "scouting", "compare", "statsguru", "sponsorship", "broadcast", "training", "injuries", "logistics", "fields", "staff", "calendar", "governance", "rulebook", "pitchdeck", "settings"],
+    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "coach_cockpit", "captain_cockpit", "competitions", "promotion_demotion", "leagues", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "scouting", "compare", "statsguru", "sponsorship", "broadcast", "training", "injuries", "logistics", "fields", "staff", "calendar", "governance", "rulebook", "pitchdeck", "settings"],
     purpose: "Full platform governance across all school tenants, competitions, and security policies",
   },
   platformsupport: {
@@ -70,12 +70,12 @@ export const ROLES: Record<string, { label: string; layer: string; color: string
   },
   headmaster: {
     label: "Headmaster / Executive", layer: "school", color: "#4338ca", icon: "🏛️", scope: "school", sensitivity: 3,
-    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "competitions", "promotion_demotion", "leagues", "squad", "profiles", "compare", "sponsorship", "broadcast", "logistics", "fields", "calendar"],
+    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "coach_cockpit", "captain_cockpit", "competitions", "promotion_demotion", "leagues", "squad", "profiles", "compare", "sponsorship", "broadcast", "logistics", "fields", "calendar"],
     purpose: "Institutional executive oversight — fixtures, prestige, honors, commercial rights",
   },
   schooladmin: {
     label: "School Admin", layer: "school", color: "#6366f1", icon: "🏫", scope: "school", sensitivity: 3,
-    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "competitions", "promotion_demotion", "squad", "profiles", "analytics", "compare", "sponsorship", "broadcast", "logistics", "fields", "staff", "calendar", "settings"],
+    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "coach_cockpit", "captain_cockpit", "competitions", "promotion_demotion", "squad", "profiles", "analytics", "compare", "sponsorship", "broadcast", "logistics", "fields", "staff", "calendar", "settings"],
     purpose: "Main school-level controller — teams, staff, registrations, fixture scheduling",
   },
   financeadmin: {
@@ -85,32 +85,32 @@ export const ROLES: Record<string, { label: string; layer: string; color: string
   },
   sportsmaster: {
     label: "Sportsmaster", layer: "sporting", color: "#f59e0b", icon: "🏅", scope: "school", sensitivity: 2,
-    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "competitions", "promotion_demotion", "leagues", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "compare", "calendar", "settings"],
+    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "coach_cockpit", "captain_cockpit", "competitions", "promotion_demotion", "leagues", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "compare", "calendar", "settings"],
     purpose: "High-level school sports programme oversight across all codes and fixtures",
   },
   doc: {
     label: "Director of Cricket", layer: "sporting", color: "#0d9488", icon: "🏆", scope: "school", sensitivity: 2,
-    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "competitions", "promotion_demotion", "leagues", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "scouting", "compare", "training", "injuries", "logistics", "fields", "staff", "calendar", "settings"],
+    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "coach_cockpit", "captain_cockpit", "competitions", "promotion_demotion", "leagues", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "scouting", "compare", "training", "injuries", "logistics", "fields", "staff", "calendar", "settings"],
     purpose: "Institutional Director of Cricket — oversight of all 23 squads (1st-7th XI, U16A-D, U15A-E, U14A-G), coach assignments, and talent pipeline",
   },
   headcoach: {
     label: "1st XI Head Coach", layer: "sporting", color: "#059669", icon: "⭐", scope: "team", sensitivity: 2,
-    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "scouting", "compare", "training", "injuries", "logistics", "fields", "calendar"],
+    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "coach_cockpit", "captain_cockpit", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "scouting", "compare", "training", "injuries", "logistics", "fields", "calendar"],
     purpose: "Elite 1st XI leadership — selection, match plans, skills matrices, opposition scouting",
   },
   coach: {
     label: "Coach", layer: "sporting", color: "#10b981", icon: "🎯", scope: "team", sensitivity: 2,
-    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "compare", "training", "injuries", "logistics", "fields", "calendar"],
+    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "coach_cockpit", "captain_cockpit", "analyst_cockpit", "squad", "profiles", "analytics", "skills", "compare", "training", "injuries", "logistics", "fields", "calendar"],
     purpose: "Age-group coaching — squad development, training drills, match preparation across junior and open tiers",
   },
   assistant: {
     label: "Coaching Assistant", layer: "sporting", color: "#22d3ee", icon: "🤝", scope: "team", sensitivity: 2,
-    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "squad", "profiles", "skills", "training", "injuries", "calendar"],
+    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "coach_cockpit", "captain_cockpit", "squad", "profiles", "skills", "training", "injuries", "calendar"],
     purpose: "Team sporting support — attendance logging, skill ratings, drill execution",
   },
   analyst: {
     label: "Performance Analyst", layer: "sporting", color: "#0284c7", icon: "📊", scope: "school", sensitivity: 1,
-    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "analyst_cockpit", "profiles", "analytics", "skills", "scouting", "compare", "statsguru", "calendar"],
+    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "coach_cockpit", "captain_cockpit", "analyst_cockpit", "profiles", "analytics", "skills", "scouting", "compare", "statsguru", "calendar"],
     purpose: "Match telemetry, 360° wagon wheels, Hawk-Eye DRS, pitch landing heatmaps, and opposition dossiers",
   },
   medical: {
@@ -135,7 +135,7 @@ export const ROLES: Record<string, { label: string; layer: string; color: string
   },
   player: {
     label: "Student Athlete", layer: "participant", color: "#0ea5e9", icon: "🏏", scope: "self", sensitivity: 1,
-    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "profiles", "analytics", "skills", "compare", "training", "injuries", "calendar"],
+    nav: ["dashboard", "school_profile", "register", "notifications", "matches", "captain_cockpit", "profiles", "analytics", "skills", "compare", "training", "injuries", "calendar"],
     purpose: "Participant self-management — personal stats, skills trajectory, training logs",
   },
   parent: {
@@ -160,6 +160,8 @@ export const NAV_META: Record<string, { icon: string; label: string }> = {
   school_profile: { icon: "🏛️", label: "School Profile" },
   register: { icon: "📑", label: "Master Register" },
   matches: { icon: "🏏", label: "Matches" },
+  coach_cockpit: { icon: "🧭", label: "Coach Cockpit" },
+  captain_cockpit: { icon: "⚡", label: "Captain Cockpit" },
   competitions: { icon: "🏆", label: "Competitions" },
   promotion_demotion: { icon: "⚔️", label: "Promotion & Demotion" },
   leagues: { icon: "📋", label: "Leagues" },

@@ -6,12 +6,25 @@ import { fetchGoogleWeather, GoogleWeatherData } from './googleWeatherApi';
 
 interface GoogleWeatherWidgetProps {
   theme: Theme;
-  venue: string;
+  venue?: string;
+  locationName?: string;
+  latitude?: number;
+  longitude?: number;
+  matchDate?: string;
   compact?: boolean;
 }
 
-export default function GoogleWeatherWidget({ theme: D, venue, compact = false }: GoogleWeatherWidgetProps) {
-  const wx = fetchGoogleWeather(venue);
+export default function GoogleWeatherWidget({
+  theme: D,
+  venue,
+  locationName,
+  latitude,
+  longitude,
+  matchDate,
+  compact = false,
+}: GoogleWeatherWidgetProps) {
+  const effectiveVenue = venue || locationName || "Bowden's Field";
+  const wx = fetchGoogleWeather(effectiveVenue);
 
   if (compact) {
     return (

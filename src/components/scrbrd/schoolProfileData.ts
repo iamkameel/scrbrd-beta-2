@@ -168,10 +168,10 @@ export interface SchoolSponsor {
   id: string;
   schoolId: string;
   brandName: string;
-  category: 'Principal' | 'Kit Supplier' | 'Equipment' | 'Hydration & Nutrition' | 'Medical Partner';
+  category: string;
   logoUrl?: string;
-  tier: 'Platinum' | 'Gold' | 'Silver' | 'Official Supplier';
-  scope: 'School Cricket Programme' | '1st XI Exclusive' | 'Junior Academy';
+  tier: string;
+  scope: string;
   verifiedCompliance: boolean;
 }
 

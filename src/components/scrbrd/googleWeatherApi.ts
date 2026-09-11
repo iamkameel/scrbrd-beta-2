@@ -147,7 +147,8 @@ const VENUE_WEATHER_DATABASE: Record<string, GoogleWeatherData> = {
   },
 };
 
-export function fetchGoogleWeather(venue: string): GoogleWeatherData {
-  const match = Object.keys(VENUE_WEATHER_DATABASE).find(k => venue.toLowerCase().includes(k.toLowerCase())) || "Bowden's Field";
+export function fetchGoogleWeather(venue?: string): GoogleWeatherData {
+  const safeVenue = (venue || "").toLowerCase();
+  const match = Object.keys(VENUE_WEATHER_DATABASE).find(k => safeVenue.includes(k.toLowerCase())) || "Bowden's Field";
   return VENUE_WEATHER_DATABASE[match] || VENUE_WEATHER_DATABASE["Bowden's Field"];
 }

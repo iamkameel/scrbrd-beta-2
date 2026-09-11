@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Theme, Player, Match } from "./types";
 import {
   makeTheme,
@@ -56,8 +56,16 @@ import StaffManagementView from "./StaffManagementView";
 import HeadToHeadComparisonView from "./HeadToHeadComparisonView";
 import RegisterHubView from "./RegisterHubView";
 import { SchoolProfileView } from "./SchoolProfileView";
+import CoachCockpitView, { TacticalPlanDirective } from "./CoachCockpitView";
+import CaptainCockpitView from "./CaptainCockpitView";
 import { getSchoolSquads } from "./multiSquadData";
 import { ScrbrdLogo } from "./ScrbrdLogo";
+import MaterialNav from "./MaterialNav";
+import MaterialTopBar from "./MaterialTopBar";
+import CommandPaletteModal from "./CommandPaletteModal";
+import IntelligenceDrawer from "./IntelligenceDrawer";
+import DashboardIntelligenceView from "./DashboardIntelligenceView";
+import ReviewConfirmModal from "../scoring/ReviewConfirmModal";
 import Image from "next/image";
 
 export default function ScrbrdOS() {
@@ -68,8 +76,14 @@ export default function ScrbrdOS() {
   const [activeSchoolId, setActiveSchoolId] = useState<string>("WES");
   const [selectedSquadId, setSelectedSquadId] = useState<string>("WES_1ST");
   const [isDark, setIsDark] = useState<boolean>(true);
+  const [isRailNav, setIsRailNav] = useState<boolean>(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState<boolean>(false);
+  const [intelligenceDrawerOpen, setIntelligenceDrawerOpen] = useState<boolean>(false);
+  const [isCompactDensity, setIsCompactDensity] = useState<boolean>(false);
+  const [reviewConfirmOpen, setReviewConfirmOpen] = useState<boolean>(false);
   const [matchesList, setMatchesList] = useState<Match[]>(MATCHES);
   const [h2hPlayers, setH2hPlayers] = useState<{ p1?: string; p2?: string }>({ p1: undefined, p2: undefined });
+  const [tacticalPlanDirective, setTacticalPlanDirective] = useState<TacticalPlanDirective | null>(null);
   const [users, setUsers] = useState(() => USERS_INITIAL.map(u => ({
     ...u,
     roles: [u.role || 'coach'],
@@ -83,6 +97,17 @@ export default function ScrbrdOS() {
     }
     setMobileMenuOpen(false);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleGoBack = () => {
     if (historyStack.length > 1) {
@@ -692,6 +717,52 @@ export default function ScrbrdOS() {
         />
       )}
 
+      {/* Global Command Palette (⌘K / Ctrl+K) */}
+      <CommandPaletteModal
+        theme={D}
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        onNavigate={navigateToPage}
+        onLaunchScorer={handleLaunchScorer}
+        activeSchool={activeSchool}
+      />
+
+      {/* Material 3 Intelligence Signals Drawer */}
+      <IntelligenceDrawer
+        theme={D}
+        isOpen={intelligenceDrawerOpen}
+        onClose={() => setIntelligenceDrawerOpen(false)}
+        activeSchool={activeSchool}
+        currentRole={role}
+        onNavigate={navigateToPage}
+      />
+
+      {/* Innings & Session Gated Verification Modal */}
+      {reviewConfirmOpen && (
+        <ReviewConfirmModal
+          theme={D}
+          isOpen={reviewConfirmOpen}
+          onClose={() => setReviewConfirmOpen(false)}
+          onConfirm={(summary) => {
+            setReviewConfirmOpen(false);
+            triggerToast(
+              "Innings Verified",
+              `Innings certified with status: ${summary.status}. Ready for next phase.`,
+              "match",
+              "matches"
+            );
+          }}
+          matchData={{
+            homeTeam: activeHeroMatch?.homeTeam || "Westville Boys' High",
+            awayTeam: activeHeroMatch?.awayTeam || "Durban High School",
+            currentInnings: 1,
+            runs: liveScores[activeHeroMatch?.id || "m1"]?.runs || 248,
+            wickets: liveScores[activeHeroMatch?.id || "m1"]?.wkts || 6,
+            overs: liveScores[activeHeroMatch?.id || "m1"]?.overStr || "50.0",
+          }}
+        />
+      )}
+
       {/* RBAC Security / POPIA Policy Enforcement Toast */}
       {rbacNotice && (
         <div
@@ -773,1346 +844,70 @@ export default function ScrbrdOS() {
         />
       )}
 
-      {/* Global Sidebar (Responsive) */}
-      <aside
-        style={{
-          width: "240px",
-          background: D.surf0,
-          borderRight: `1px solid ${D.border}`,
-          display: "flex",
-          flexDirection: "column",
-          height: "100vh",
-          position: "sticky",
-          top: 0,
-          flexShrink: 0,
-          zIndex: 150,
-          transition: "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
-        }}
-        className={`sidebar-nav ${mobileMenuOpen ? "mobile-drawer-open" : "mobile-drawer-closed"}`}
-      >
-        {/* Brand Header */}
-        <div style={{ padding: "14px 16px", borderBottom: `1px solid ${D.border}` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
-            <ScrbrdLogo height={24} isDark={isDark} />
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span
-                style={{
-                  fontFamily: D.mono,
-                  fontSize: "10px",
-                  fontWeight: 800,
-                  padding: "2px 6px",
-                  borderRadius: "4px",
-                  background: `${schoolPrimary}22`,
-                  color: schoolPrimary,
-                  border: `1px solid ${schoolPrimary}44`,
-                  letterSpacing: "0.05em",
-                }}
-              >
-                OS
-              </span>
-              {/* Close Button for mobile drawer */}
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="md:hidden"
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: D.textMuted,
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  padding: "2px 6px",
-                }}
-                aria-label="Close Navigation Drawer"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-          <div style={{ fontFamily: D.mono, fontSize: "9px", color: D.textMuted, letterSpacing: "0.02em" }}>
-            KZN School Intelligence
-          </div>
-        </div>
-
-        {/* Active School Selector with Crest Badge */}
-        <div style={{ padding: "12px 14px", borderBottom: `1px solid ${D.border}`, background: `linear-gradient(180deg, ${schoolPrimary}0a, transparent)` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-            <span style={{ fontFamily: D.head, fontSize: "9px", fontWeight: 700, color: D.textMuted, letterSpacing: "0.1em", textTransform: "uppercase" }}>Selected School</span>
-            <span style={{ fontSize: "14px" }}>{activeSchool.crestIcon}</span>
-          </div>
-          <select
-            value={activeSchoolId}
-            onChange={e => {
-              const newSchoolId = e.target.value;
-              setActiveSchoolId(newSchoolId);
-              // reset selected player to first player of that school
-              const newSchoolPlayers = PLAYERS.filter(p => p.school === newSchoolId);
-              if (newSchoolPlayers.length > 0) setSelectedPlayer(newSchoolPlayers[0]);
-              const newSquads = getSchoolSquads(newSchoolId);
-              if (newSquads.length > 0) setSelectedSquadId(newSquads[0].id);
-            }}
-            style={{
-              width: "100%", padding: "7px 9px", borderRadius: D.sm, background: D.surf2,
-              border: `1px solid ${D.borderMed}`, color: D.textPrimary, fontFamily: D.head,
-              fontSize: "12px", fontWeight: 700, outline: "none", cursor: "pointer",
-            }}
-          >
-            {SCHOOLS_REGISTRY.map(s => (
-              <option key={s.id} value={s.id}>{s.crestIcon} {s.shortName}</option>
-            ))}
-          </select>
-          <div style={{ fontFamily: D.body, fontSize: "10px", color: D.textMuted, fontStyle: "italic", marginTop: "5px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            &ldquo;{activeSchool.motto}&rdquo;
-          </div>
-        </div>
-
-        {/* Role Pill */}
-        <div style={{ padding: "8px 14px", borderBottom: `1px solid ${D.border}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 8px", borderRadius: D.md, background: (ROLES[role]?.color || D.indigo) + "15", border: `1px solid ${(ROLES[role]?.color || D.indigo)}33` }}>
-            <span>{ROLES[role]?.icon}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: ROLES[role]?.color || D.indigo, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ROLES[role]?.label}</div>
-              <div style={{ fontFamily: D.mono, fontSize: "8px", color: D.textMuted }}>POPIA Level: {POPIA_POLICIES[role]?.sensitivityMax || 1}/4</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation items */}
-        <nav style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
-          {currentNav.map((k: string) => {
-            const meta = NAV_META[k];
-            if (!meta) return null;
-            const isActive = page === k;
-            return (
-              <button
-                key={k}
-                onClick={() => navigateToPage(k)}
-                style={{
-                  width: "100%",
-                  padding: "8px 16px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  background: isActive ? `${schoolPrimary}18` : "transparent",
-                  borderLeft: isActive ? `3px solid ${schoolPrimary}` : "3px solid transparent",
-                  borderTop: "none",
-                  borderRight: "none",
-                  borderBottom: "none",
-                  color: isActive ? D.textPrimary : D.textSecondary,
-                  fontFamily: D.head,
-                  fontSize: "12px",
-                  fontWeight: isActive ? 700 : 500,
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                <span style={{ fontSize: "14px" }}>{meta.icon}</span>
-                <span style={{ flex: 1 }}>{meta.label}</span>
-                {(k === "notifications" || k === "inbox") && unreadAlertsCount > 0 && (
-                  <span
-                    style={{
-                      background: D.rose,
-                      color: "#fff",
-                      fontFamily: D.mono,
-                      fontSize: "10px",
-                      fontWeight: 800,
-                      padding: "1px 6px",
-                      borderRadius: D.pill,
-                      lineHeight: "1.2",
-                    }}
-                  >
-                    {unreadAlertsCount}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Scorer Trigger CTA */}
-        <div style={{ padding: "12px 14px", borderTop: `1px solid ${D.border}` }}>
-          <button
-            onClick={() => handleLaunchScorer(activeHeroMatch)}
-            className="pressBtn"
-            style={{
-              width: "100%", padding: "8px 12px", borderRadius: D.pill, cursor: "pointer",
-              background: D.gradLive, border: "none", color: "#fff", fontFamily: D.head,
-              fontSize: "11px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-              boxShadow: `0 4px 14px ${D.emerald}33`,
-            }}
-          >
-            <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#fff" }} />
-            Open Scorer ↗
-          </button>
-        </div>
-      </aside>
+      {/* Material 3 Responsive Navigation Rail / Drawer */}
+      <div className={`${mobileMenuOpen ? "block fixed inset-y-0 left-0 z-[150]" : "hidden md:block"}`}>
+        <MaterialNav
+          theme={D}
+          currentPage={page}
+          onNavigate={navigateToPage}
+          isRail={isRailNav}
+          onToggleRail={() => setIsRailNav((prev) => !prev)}
+          activeSchool={activeSchool}
+          currentRole={role}
+          liveMatchCount={matchesList.filter((m) => m.status === "live").length}
+          unreadAlertCount={3}
+          onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+          onLaunchScorer={() => handleLaunchScorer(activeHeroMatch)}
+        />
+      </div>
 
       {/* Main Layout Area */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
-        {/* Top Navbar */}
-        <header style={{ minHeight: "54px", background: D.surf0, borderBottom: `1px solid ${D.border}`, display: "flex", alignItems: "center", padding: "0 16px", gap: "10px", position: "sticky", top: 0, zIndex: 100, flexWrap: "wrap" }}>
-          {/* Mobile Hamburger Drawer Toggle */}
-          <button
-            onClick={() => setMobileMenuOpen(prev => !prev)}
-            className="md:hidden"
-            style={{
-              padding: "6px 9px",
-              borderRadius: D.sm,
-              background: mobileMenuOpen ? `${schoolPrimary}25` : D.surf2,
-              border: `1px solid ${mobileMenuOpen ? schoolPrimary : D.border}`,
-              color: D.textPrimary,
-              fontFamily: D.head,
-              fontSize: "13px",
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-            }}
-            aria-label="Toggle navigation drawer"
-            title="Toggle Navigation Menu"
-          >
-            <span>{mobileMenuOpen ? "✕" : "☰"}</span>
-          </button>
-
-          {/* Quick Active School Indicator & Colors */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "16px" }}>{activeSchool.crestIcon}</span>
-            <span style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 800 }}>{activeSchool.name}</span>
-            <div style={{ display: "flex", gap: "3px", marginLeft: "4px" }}>
-              <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: schoolPrimary, border: "1px solid rgba(255,255,255,0.2)" }} title="Primary color" />
-              <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: schoolSecondary, border: "1px solid rgba(255,255,255,0.2)" }} title="Secondary color" />
-            </div>
-          </div>
-
-          <div style={{ flex: 1 }} />
-
-          {/* Quick Switch School Pills (Desktop) */}
-          <div style={{ display: "none", alignItems: "center", gap: "4px" }} className="xl:flex">
-            {SCHOOLS_REGISTRY.map(s => (
-              <button
-                key={s.id}
-                onClick={() => {
-                  setActiveSchoolId(s.id);
-                  const newSchoolPlayers = PLAYERS.filter(p => p.school === s.id);
-                  if (newSchoolPlayers.length > 0) setSelectedPlayer(newSchoolPlayers[0]);
-                  const newSquads = getSchoolSquads(s.id);
-                  if (newSquads.length > 0) setSelectedSquadId(newSquads[0].id);
-                }}
-                style={{
-                  padding: "4px 8px", borderRadius: D.pill, border: `1px solid ${s.id === activeSchoolId ? schoolPrimary : D.border}`,
-                  background: s.id === activeSchoolId ? `${schoolPrimary}20` : "transparent",
-                  color: s.id === activeSchoolId ? D.textPrimary : D.textMuted,
-                  fontFamily: D.mono, fontSize: "10px", fontWeight: 700, cursor: "pointer",
-                }}
-              >
-                {s.shortName}
-              </button>
-            ))}
-          </div>
-
-          {/* Active Squad Switcher */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>Squad:</span>
-            <select
-              value={selectedSquadId}
-              onChange={e => {
-                const newSquadId = e.target.value;
-                setSelectedSquadId(newSquadId);
-                const allSquads = getSchoolSquads(activeSchoolId);
-                const targetSquad = allSquads.find(s => s.id === newSquadId);
-                if (targetSquad) {
-                  setToastNotification({
-                    id: `sq_${Date.now()}`,
-                    title: `Active Squad: ${targetSquad.name}`,
-                    body: `Coached by ${targetSquad.headCoachName} · Ground: ${targetSquad.assignedGround}`,
-                    category: "system",
-                    time: "Just now",
-                  });
-                }
-              }}
-              style={{
-                padding: "5px 10px",
-                borderRadius: D.pill,
-                background: D.surf2,
-                border: `1px solid ${D.border}`,
-                color: D.sky || D.indigo,
-                fontFamily: D.head,
-                fontSize: "11px",
-                fontWeight: 700,
-                cursor: "pointer",
-                outline: "none",
-              }}
-            >
-              <optgroup label="Open Division (1st - 7th XI)">
-                {getSchoolSquads(activeSchoolId).filter(s => s.division === "Open").map(s => (
-                  <option key={s.id} value={s.id}>{s.name} · {s.headCoachName}</option>
-                ))}
-              </optgroup>
-              <optgroup label="U16 Age Division (U16A - U16D)">
-                {getSchoolSquads(activeSchoolId).filter(s => s.division === "U16").map(s => (
-                  <option key={s.id} value={s.id}>{s.name} · {s.headCoachName}</option>
-                ))}
-              </optgroup>
-              <optgroup label="U15 Age Division (U15A - U15E)">
-                {getSchoolSquads(activeSchoolId).filter(s => s.division === "U15").map(s => (
-                  <option key={s.id} value={s.id}>{s.name} · {s.headCoachName}</option>
-                ))}
-              </optgroup>
-              <optgroup label="U14 Age Division (U14A - U14G)">
-                {getSchoolSquads(activeSchoolId).filter(s => s.division === "U14").map(s => (
-                  <option key={s.id} value={s.id}>{s.name} · {s.headCoachName}</option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
-
-          {/* Role switcher */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>Role:</span>
-            <select
-              value={role}
-              onChange={e => {
-                const newRole = e.target.value;
-                setRole(newRole);
-                const newNav = ROLES[newRole]?.nav || ROLES.superadmin.nav;
-                if (!newNav.includes(page)) {
-                  setPage("dashboard");
-                }
-              }}
-              style={{ padding: "5px 10px", borderRadius: D.pill, background: D.surf2, border: `1px solid ${D.border}`, color: D.textPrimary, fontFamily: D.body, fontSize: "11px", cursor: "pointer", outline: "none" }}
-            >
-              {Object.entries(ROLES).map(([key, r]) => (
-                <option key={key} value={key}>{r.icon} {r.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Top Navbar Notification Icon with Dropdown */}
-          <div style={{ position: "relative" }}>
-            <button
-              onClick={() => setNotifDropdownOpen(prev => !prev)}
-              className="pressBtn"
-              style={{
-                position: "relative",
-                width: "34px",
-                height: "34px",
-                borderRadius: "50%",
-                background: notifDropdownOpen ? `${D.indigo}25` : D.surf2,
-                border: `1px solid ${notifDropdownOpen ? D.indigo : D.border}`,
-                color: D.textPrimary,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                fontSize: "14px",
-              }}
-              title="Notifications & Live Alerts"
-            >
-              <span>🔔</span>
-              {unreadAlertsCount > 0 && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: "-2px",
-                    right: "-2px",
-                    padding: "1px 5px",
-                    borderRadius: D.pill,
-                    background: D.rose,
-                    color: "#fff",
-                    fontFamily: D.mono,
-                    fontSize: "9px",
-                    fontWeight: 800,
-                    border: `2px solid ${D.surf0}`,
-                    minWidth: "16px",
-                    textAlign: "center",
-                    lineHeight: "12px",
-                  }}
-                >
-                  {unreadAlertsCount}
-                </span>
-              )}
-            </button>
-
-            {/* Notification Flyout Dropdown */}
-            {notifDropdownOpen && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "42px",
-                  right: 0,
-                  width: "340px",
-                  background: D.surf0,
-                  border: `1px solid ${D.borderMed}`,
-                  borderRadius: D.lg,
-                  boxShadow: "0 12px 35px rgba(0,0,0,0.45)",
-                  zIndex: 1000,
-                  overflow: "hidden",
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
-                <div style={{ padding: "12px 14px", borderBottom: `1px solid ${D.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: D.surf1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    <span style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 800, color: D.textPrimary }}>
-                      Live Alerts & Feed
-                    </span>
-                    <span style={{ fontFamily: D.mono, fontSize: "9px", padding: "1px 5px", borderRadius: D.pill, background: `${D.indigo}25`, color: D.indigo, fontWeight: 700 }}>
-                      {unreadAlertsCount} unread
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setNavAlerts(prev => prev.map(a => ({ ...a, read: true })));
-                    }}
-                    style={{ background: "none", border: "none", color: D.textMuted, fontFamily: D.head, fontSize: "10px", fontWeight: 700, cursor: "pointer" }}
-                  >
-                    Mark all read
-                  </button>
-                </div>
-
-                <div style={{ maxHeight: "280px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
-                  {authorizedNavAlerts.length === 0 ? (
-                    <div style={{ padding: "20px 14px", textAlign: "center", color: D.textMuted, fontFamily: D.body, fontSize: "11px" }}>
-                      No active alerts for {ROLES[role]?.label || role}
-                    </div>
-                  ) : (
-                    authorizedNavAlerts.map(item => (
-                      <div
-                        key={item.id}
-                        onClick={() => {
-                          if (item.targetPage) setPage(item.targetPage);
-                          setNavAlerts(prev => prev.map(a => a.id === item.id ? { ...a, read: true } : a));
-                          setNotifDropdownOpen(false);
-                        }}
-                        style={{
-                          padding: "10px 14px",
-                          borderBottom: `1px solid ${D.border}33`,
-                          background: !item.read ? `${D.indigo}0c` : "transparent",
-                          cursor: "pointer",
-                          display: "flex",
-                          gap: "10px",
-                          alignItems: "flex-start",
-                        }}
-                      >
-                        <div style={{ fontSize: "16px", marginTop: "2px" }}>{item.icon}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 700, color: D.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {item.title}
-                            </span>
-                            <span style={{ fontFamily: D.mono, fontSize: "9px", color: D.textMuted, flexShrink: 0 }}>
-                              {item.time}
-                            </span>
-                          </div>
-                          <div style={{ fontFamily: D.body, fontSize: "10px", color: D.textSecondary, marginTop: "2px", lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                            {item.body}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <div style={{ padding: "8px 12px", borderTop: `1px solid ${D.border}`, background: D.surf1, textAlign: "center" }}>
-                  <button
-                    onClick={() => {
-                      setPage("notifications");
-                      setNotifDropdownOpen(false);
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "6px 0",
-                      background: "transparent",
-                      border: "none",
-                      color: D.sky || D.indigo,
-                      fontFamily: D.head,
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Open Unified Inbox & Alerts →
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Theme switcher */}
-          <button
-            onClick={() => setIsDark(prev => !prev)}
-            className="pressBtn"
-            style={{ width: "32px", height: "32px", borderRadius: "50%", background: D.surf2, border: `1px solid ${D.border}`, color: D.textPrimary, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-          >
-            {isDark ? "☀️" : "🌙"}
-          </button>
-        </header>
-
-        {/* Floating Top Toast Notification Banner */}
-        {toastNotification && (
-          <div
-            style={{
-              position: "fixed",
-              top: "64px",
-              right: "24px",
-              zIndex: 9999,
-              maxWidth: "400px",
-              width: "calc(100vw - 48px)",
-              background: D.surf0,
-              border: `1px solid ${D.indigo}66`,
-              borderRadius: D.lg,
-              boxShadow: `0 12px 36px rgba(0,0,0,0.5), 0 0 16px ${D.indigo}30`,
-              padding: "12px 16px",
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "12px",
-            }}
-          >
-            <div style={{ fontSize: "22px", flexShrink: 0, marginTop: "2px" }}>
-              {toastNotification.icon || "🔔"}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-                <span style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 800, color: D.textPrimary }}>
-                  {toastNotification.title}
-                </span>
-                <span style={{ fontFamily: D.mono, fontSize: "9px", color: D.textMuted }}>
-                  Just now
-                </span>
-              </div>
-              <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textSecondary, marginTop: "2px", lineHeight: 1.4 }}>
-                {toastNotification.body}
-              </div>
-              {toastNotification.targetPage && (
-                <button
-                  onClick={() => {
-                    setPage(toastNotification.targetPage!);
-                    setToastNotification(null);
-                  }}
-                  style={{
-                    marginTop: "6px",
-                    padding: "3px 8px",
-                    borderRadius: D.sm,
-                    background: `${D.indigo}20`,
-                    border: `1px solid ${D.indigo}44`,
-                    color: D.sky || D.indigo,
-                    fontFamily: D.head,
-                    fontSize: "10px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  View in {NAV_META[toastNotification.targetPage]?.label || "Module"} →
-                </button>
-              )}
-            </div>
-            <button
-              onClick={() => setToastNotification(null)}
-              style={{
-                background: "none",
-                border: "none",
-                color: D.textMuted,
-                cursor: "pointer",
-                fontSize: "14px",
-                padding: "0 2px",
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* Saturday Circuit Live Matches Ticker */}
-        <div
-          style={{
-            background: D.surf2, borderBottom: `1px solid ${D.border}`,
-            padding: "8px 20px", display: "flex", alignItems: "center", gap: "12px",
-            overflowX: "auto", whiteSpace: "nowrap", flexShrink: 0,
+        {/* Material 3 Dynamic Top App Bar */}
+        <MaterialTopBar
+          theme={D}
+          currentPage={page}
+          activeSchool={activeSchool}
+          onSelectSchool={(schoolId) => {
+            setActiveSchoolId(schoolId);
+            const newSchoolPlayers = PLAYERS.filter((p) => p.school === schoolId);
+            if (newSchoolPlayers.length > 0) setSelectedPlayer(newSchoolPlayers[0]);
+            const newSquads = getSchoolSquads(schoolId);
+            if (newSquads.length > 0) setSelectedSquadId(newSquads[0].id);
           }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-            <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: D.emerald }} />
-            <span style={{ fontFamily: D.mono, fontSize: "10px", fontWeight: 700, color: D.emerald, textTransform: "uppercase" }}>KZN Circuit Live</span>
-          </div>
-          {liveMatches.map(m => {
-            const sc = liveScores[m.id] || { runs: 140, wkts: 3, overStr: "14.0" };
-            const isMatchOfActiveSchool = m.schoolId === activeSchool.id;
-            return (
-              <button
-                key={m.id}
-                onClick={() => {
-                  if (m.schoolId) setActiveSchoolId(m.schoolId);
-                  setActiveScorerMatch(m);
-                }}
-                className="pressBtn"
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: "8px", padding: "4px 12px",
-                  borderRadius: D.pill, background: isMatchOfActiveSchool ? `${schoolPrimary}22` : D.surf1,
-                  border: `1px solid ${isMatchOfActiveSchool ? schoolPrimary : D.border}`,
-                  cursor: "pointer", flexShrink: 0,
-                }}
-              >
-                <span style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 700, color: D.textPrimary }}>
-                  {m.homeTeam.split(" ")[0]} vs {m.awayTeam.split(" ")[0]}
-                </span>
-                <span style={{ fontFamily: D.mono, fontSize: "11px", fontWeight: 700, color: D.emerald }}>
-                  {sc.runs}/{sc.wkts} ({sc.overStr} ov)
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Global Breadcrumb Navigation Bar & History Stack */}
-        <div
-          style={{
-            padding: "8px 20px",
-            background: D.surf1,
-            borderBottom: `1px solid ${D.border}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "8px",
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontFamily: D.mono, fontSize: "11px", flexWrap: "wrap" }}>
-            <button
-              onClick={handleGoBack}
-              disabled={historyStack.length <= 1}
-              style={{
-                padding: "3px 8px",
-                borderRadius: D.sm,
-                background: historyStack.length > 1 ? D.surf2 : "transparent",
-                border: `1px solid ${historyStack.length > 1 ? D.border : "transparent"}`,
-                color: historyStack.length > 1 ? D.textPrimary : D.textMuted,
-                cursor: historyStack.length > 1 ? "pointer" : "default",
-                fontFamily: D.head,
-                fontSize: "11px",
-                fontWeight: 700,
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                opacity: historyStack.length <= 1 ? 0.4 : 1,
-              }}
-              title="Return to previous screen"
-            >
-              <span>← Back</span>
-            </button>
-            <span style={{ color: D.textMuted }}>/</span>
-            <button
-              onClick={() => navigateToPage("dashboard")}
-              style={{ background: "none", border: "none", padding: 0, color: D.textMuted, cursor: "pointer", fontFamily: D.mono, fontSize: "11px" }}
-            >
-              SCRBRD OS
-            </button>
-            <span style={{ color: D.textMuted }}>/</span>
-            <span style={{ color: schoolPrimary, fontWeight: 700 }}>{activeSchool.shortName}</span>
-            <span style={{ color: D.textMuted }}>/</span>
-            <span style={{ color: D.textPrimary, fontWeight: 700 }}>{NAV_META[page]?.label || page}</span>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
-              Role: <strong style={{ color: ROLES[role]?.color || D.textPrimary }}>{ROLES[role]?.label || role}</strong>
-            </span>
-          </div>
-        </div>
-
-        {/* Global responsive drawer styles */}
-        <style jsx global>{`
-          @media (max-width: 768px) {
-            .mobile-drawer-closed {
-              position: fixed !important;
-              left: 0 !important;
-              top: 0 !important;
-              bottom: 0 !important;
-              transform: translateX(-100%) !important;
-            }
-            .mobile-drawer-open {
-              position: fixed !important;
-              left: 0 !important;
-              top: 0 !important;
-              bottom: 0 !important;
-              transform: translateX(0) !important;
-              box-shadow: 0 10px 40px rgba(0,0,0,0.65) !important;
-            }
-          }
-        `}</style>
+          selectedSquadId={selectedSquadId}
+          onSelectSquad={setSelectedSquadId}
+          currentRole={role}
+          onSelectRole={setRole}
+          isDark={isDark}
+          onToggleTheme={() => setIsDark((prev) => !prev)}
+          isCompactDensity={isCompactDensity}
+          onToggleDensity={() => setIsCompactDensity((prev) => !prev)}
+          onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+          onOpenIntelligenceDrawer={() => setIntelligenceDrawerOpen(true)}
+          onOpenNotifications={() => navigateToPage("inbox")}
+          onLaunchScorer={() => handleLaunchScorer(activeHeroMatch)}
+          onToggleMobileNav={() => setMobileMenuOpen((prev) => !prev)}
+          liveMatchCount={matchesList.filter((m) => m.status === "live").length}
+          unreadNotificationsCount={3}
+        />
 
         {/* Content View Router */}
-        <main style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
+        <main style={{ flex: 1, overflowY: "auto", padding: isCompactDensity ? "14px" : "20px" }}>
+          {/* Dashboard Intelligence (Material 3 Overhaul) */}
           {page === "dashboard" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
-              {/* School Championship Heritage Banner */}
-              <Card
-                sx={{
-                  padding: "22px 26px",
-                  background: `linear-gradient(135deg, ${schoolPrimary}28 0%, ${D.surf1} 100%)`,
-                  border: `1px solid ${schoolPrimary}48`,
-                  position: "relative",
-                  overflow: "hidden",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px", flexWrap: "wrap" }}>
-                      <span style={{ fontSize: "28px" }}>{activeSchool.crestIcon}</span>
-                      <Badge color={schoolPrimary}>{activeSchool.region} · Est. {activeSchool.founded}</Badge>
-                      <Badge color={D.sky}>Head of Cricket: {activeSchool.headOfCricket}</Badge>
-                      <span style={{ fontSize: "10px", fontFamily: D.mono, fontWeight: 700, padding: "3px 8px", borderRadius: D.pill, background: `${D.amber}22`, color: D.amber, border: `1px solid ${D.amber}44` }}>
-                        🔥 4-0 Win Streak
-                      </span>
-                    </div>
-                    <h1 style={{ fontFamily: D.head, fontSize: "24px", fontWeight: 800, color: D.textPrimary, margin: "4px 0", letterSpacing: "-0.01em" }}>
-                      {activeSchool.name}
-                    </h1>
-                    <div style={{ fontFamily: D.body, fontSize: "13px", color: D.textSecondary }}>
-                      &ldquo;{activeSchool.motto}&rdquo; · Home Oval: <strong style={{ color: D.textPrimary }}>{activeSchool.mainOval}</strong>
-                    </div>
-                  </div>
-
-                  {/* Quick Action Deck */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    <Btn
-                      variant="success"
-                      size="sm"
-                      onClick={() => {
-                        setActiveScorerMatch(activeHeroMatch);
-                        setScorerOpen(true);
-                      }}
-                    >
-                      🏏 Launch Scorer
-                    </Btn>
-                    <Btn variant="tonal" size="sm" onClick={() => { setPage("analytics"); setAnalyticsSubTab("wagon"); }}>
-                      🎯 360° Wagon
-                    </Btn>
-                    <Btn variant="tonal" size="sm" onClick={() => setPage("fields")}>
-                      🌿 Turfgrass Telemetry
-                    </Btn>
-                    <Btn variant="primary" size="sm" onClick={() => setPage("register")}>
-                      📑 Master Register
-                    </Btn>
-                    <Btn variant="ghost" size="sm" onClick={() => setPage("scouting")}>
-                      🔍 AI Scouting
-                    </Btn>
-                  </div>
-                </div>
-
-                {/* Trophy & Honors Ticker */}
-                <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: `1px solid ${D.border}`, display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                  <span style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                    Honors Cabinet:
-                  </span>
-                  {activeSchool.trophies.map((t, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        fontFamily: D.mono,
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        padding: "3px 10px",
-                        borderRadius: D.pill,
-                        background: `${D.amber}14`,
-                        border: `1px solid ${D.amber}33`,
-                        color: D.textPrimary,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                      }}
-                    >
-                      🏆 {t}
-                    </span>
-                  ))}
-                </div>
-              </Card>
-
-              {/* Opta-Grade 5-KPI Bento Grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px" }}>
-                <KPICard
-                  label="Active Players"
-                  value={activeSchool.stats.activePlayers}
-                  sub="1st XI, U16A, U15A, U14A"
-                  icon="👥"
-                  color={D.sky}
-                  delta="▲ +12% YoY"
-                  badge="POPIA Valid"
-                />
-                <KPICard
-                  label="League Standing"
-                  value={activeSchool.stats.leaguePos}
-                  sub="28 Pts · 7 Wins / 1 Loss"
-                  icon="🏆"
-                  color={D.amber}
-                  delta="Rank #1 KZN"
-                  badge="Super League"
-                />
-                <KPICard
-                  label="5-Match Form"
-                  value={activeSchool.stats.winRate}
-                  sub="W · W · L · W · W"
-                  icon="📈"
-                  color={D.emerald}
-                  delta="▲ +4.8% Streak"
-                  badge="Form 9.2/10"
-                />
-                <KPICard
-                  label="Provincial Reps"
-                  value={activeSchool.stats.provincialReps}
-                  sub="SA Schools & KZN Inland"
-                  icon="🇿🇦"
-                  color={D.violet}
-                  delta="▲ 2 Selected"
-                  badge="Elite Pathway"
-                />
-                <KPICard
-                  label="Squad Availability"
-                  value={schoolInjuries.length === 0 ? "100%" : `${schoolInjuries.length} Restr.`}
-                  sub={schoolInjuries.length === 0 ? "Full Squad Match Fit" : "Under Medical RTP"}
-                  icon="🏥"
-                  color={schoolInjuries.length === 0 ? D.emerald : D.rose}
-                  delta={schoolInjuries.length === 0 ? "All Cleared" : "1 In Rehab"}
-                  badge="Medical"
-                />
-              </div>
-
-              {/* Broadcast-Grade Live Match Telemetry Hub */}
-              {activeHeroMatch && (() => {
-                const curScore = liveScores[activeHeroMatch.id] || { runs: 146, wkts: 3, balls: 88, overStr: "14.4" };
-                const crr = curScore.balls > 0 ? ((curScore.runs / curScore.balls) * 6).toFixed(2) : "0.00";
-                const targetNum = parseInt(activeHeroMatch.target || "245", 10);
-                const runsNeeded = Math.max(0, targetNum - curScore.runs);
-                const ballsLeft = Math.max(1, 300 - curScore.balls);
-                const rrr = ((runsNeeded / ballsLeft) * 6).toFixed(2);
-                const winProbA = Math.min(92, Math.max(8, Math.round(55 + (curScore.runs - 130) * 0.35 - curScore.wkts * 5)));
-                const winProbB = 100 - winProbA;
-
-                return (
-                  <Card
-                    sx={{
-                      padding: "22px",
-                      background: isDark
-                        ? `linear-gradient(135deg, ${D.emerald}14 0%, ${D.surf1} 60%, ${schoolPrimary}10 100%)`
-                        : `linear-gradient(135deg, ${D.emerald}0e 0%, #ffffff 60%, ${schoolPrimary}08 100%)`,
-                      border: `1px solid ${D.emerald}44`,
-                      position: "relative",
-                    }}
-                  >
-                    {/* Top Broadcast Bar */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", paddingBottom: "14px", borderBottom: `1px solid ${D.border}` }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            padding: "4px 10px",
-                            borderRadius: D.pill,
-                            background: `${D.emerald}20`,
-                            border: `1px solid ${D.emerald}55`,
-                            color: D.emerald,
-                            fontFamily: D.mono,
-                            fontSize: "11px",
-                            fontWeight: 800,
-                            letterSpacing: "0.05em",
-                          }}
-                        >
-                          <span className="live-beacon" style={{ width: "8px", height: "8px", borderRadius: "50%", background: D.emerald, display: "inline-block" }} />
-                          LIVE ON CIRCUIT
-                        </span>
-                        <span style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 700, color: D.textSecondary }}>
-                          {activeHeroMatch.format} DERBY · {activeHeroMatch.venue}
-                        </span>
-                      </div>
-
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px", fontFamily: D.mono, fontSize: "11px", color: D.textMuted }}>
-                        <span>⛅ 24°C · Wind 14km/h SSE · Hum 62%</span>
-                        <span style={{ padding: "2px 8px", borderRadius: D.sm, background: D.surf2, border: `1px solid ${D.border}`, color: D.textSecondary }}>
-                          DLS Par: {Math.round(curScore.runs * 0.95)}/{curScore.wkts}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Main Score & Teams Duel Grid */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", marginTop: "16px", alignItems: "center" }}>
-                      <div>
-                        {/* Team Names */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <span style={{ fontFamily: D.head, fontSize: "22px", fontWeight: 800, color: D.textPrimary }}>
-                            {activeHeroMatch.homeTeam}
-                          </span>
-                          <span style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 600, color: D.textMuted }}>vs</span>
-                          <span style={{ fontFamily: D.head, fontSize: "20px", fontWeight: 700, color: D.textSecondary }}>
-                            {activeHeroMatch.awayTeam}
-                          </span>
-                        </div>
-
-                        {/* Large Athletic Score & Equation */}
-                        <div style={{ display: "flex", alignItems: "baseline", gap: "14px", marginTop: "6px", flexWrap: "wrap" }}>
-                          <div style={{ fontFamily: D.mono, fontSize: "40px", fontWeight: 800, color: D.emerald, lineHeight: 1 }}>
-                            {curScore.runs}/{curScore.wkts}
-                          </div>
-                          <div style={{ fontFamily: D.mono, fontSize: "18px", color: D.textSecondary, fontWeight: 700 }}>
-                            ({curScore.overStr} ov)
-                          </div>
-                          <div style={{ fontFamily: D.mono, fontSize: "12px", padding: "4px 8px", borderRadius: D.md, background: D.surf2, border: `1px solid ${D.border}`, color: D.textMuted }}>
-                            Target: <strong style={{ color: D.textPrimary }}>{activeHeroMatch.target || "245"}</strong> ({runsNeeded} off {ballsLeft}b)
-                          </div>
-                        </div>
-
-                        {/* Run Rates & Match State */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
-                          <span style={{ fontFamily: D.mono, fontSize: "11px", padding: "3px 8px", borderRadius: D.pill, background: `${D.sky}18`, color: D.sky, border: `1px solid ${D.sky}33`, fontWeight: 700 }}>
-                            CRR: {crr} rpo
-                          </span>
-                          <span style={{ fontFamily: D.mono, fontSize: "11px", padding: "3px 8px", borderRadius: D.pill, background: `${D.amber}18`, color: D.amber, border: `1px solid ${D.amber}33`, fontWeight: 700 }}>
-                            RRR: {rrr} rpo
-                          </span>
-                          <span style={{ fontFamily: D.body, fontSize: "12px", color: D.textSecondary }}>
-                            {activeHeroMatch.battingTeam} batting · <strong style={{ color: D.textPrimary }}>{activeHeroMatch.strikerSummary}</strong>
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Win Probability & Match Control Bar */}
-                      <div style={{ padding: "14px", background: D.surf2, borderRadius: D.md, border: `1px solid ${D.border}` }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: D.head, fontSize: "11px", fontWeight: 700, marginBottom: "6px" }}>
-                          <span style={{ color: schoolPrimary }}>{activeHeroMatch.homeTeam} {winProbA}%</span>
-                          <span style={{ color: D.textMuted, textTransform: "uppercase", fontSize: "10px" }}>Win Probability Model</span>
-                          <span style={{ color: D.textSecondary }}>{activeHeroMatch.awayTeam} {winProbB}%</span>
-                        </div>
-                        {/* Split Bar */}
-                        <div style={{ width: "100%", height: "8px", background: D.surf3, borderRadius: D.pill, overflow: "hidden", display: "flex" }}>
-                          <div style={{ width: `${winProbA}%`, background: `linear-gradient(90deg, ${D.emerald}, ${schoolPrimary})`, transition: "width 0.4s ease" }} />
-                          <div style={{ width: `${winProbB}%`, background: D.surf3 }} />
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontFamily: D.mono, fontSize: "10px", color: D.textMuted, marginTop: "6px" }}>
-                          <span>Projected: {Math.round(curScore.runs + (300 - curScore.balls) * (parseFloat(crr) / 6))} runs</span>
-                          <span>Par Score: 245</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Active Pitch Battlers: Strikers & Bowler Bento */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px", marginTop: "16px" }}>
-                      {/* Striker Box */}
-                      <div style={{ padding: "10px 14px", background: `${D.emerald}10`, border: `1px solid ${D.emerald}33`, borderRadius: D.md, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 800, color: D.textPrimary }}>
-                              ⚡ {liveStriker.name}*
-                            </span>
-                            <span style={{ fontSize: "9px", fontFamily: D.mono, background: D.emerald, color: "#fff", padding: "1px 5px", borderRadius: D.pill, fontWeight: 700 }}>
-                              ON STRIKE
-                            </span>
-                          </div>
-                          <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>
-                            {liveStriker.fours}x4 · {liveStriker.sixes}x6 · SR {liveStriker.balls > 0 ? ((liveStriker.runs / liveStriker.balls) * 100).toFixed(1) : "0.0"}
-                          </div>
-                        </div>
-                        <div style={{ fontFamily: D.mono, fontSize: "20px", fontWeight: 800, color: D.emerald }}>
-                          {liveStriker.runs} <span style={{ fontSize: "12px", color: D.textMuted }}>({liveStriker.balls})</span>
-                        </div>
-                      </div>
-
-                      {/* Non-Striker Box */}
-                      <div style={{ padding: "10px 14px", background: D.surf2, border: `1px solid ${D.border}`, borderRadius: D.md, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 700, color: D.textPrimary }}>
-                            {liveNonStriker.name}
-                          </div>
-                          <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>
-                            {liveNonStriker.fours}x4 · {liveNonStriker.sixes}x6 · SR {liveNonStriker.balls > 0 ? ((liveNonStriker.runs / liveNonStriker.balls) * 100).toFixed(1) : "0.0"}
-                          </div>
-                        </div>
-                        <div style={{ fontFamily: D.mono, fontSize: "18px", fontWeight: 700, color: D.textSecondary }}>
-                          {liveNonStriker.runs} <span style={{ fontSize: "12px", color: D.textMuted }}>({liveNonStriker.balls})</span>
-                        </div>
-                      </div>
-
-                      {/* Current Bowler Box */}
-                      <div style={{ padding: "10px 14px", background: D.surf2, border: `1px solid ${D.border}`, borderRadius: D.md, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 700, color: D.textPrimary }}>
-                            🎯 {liveBowler.name}
-                          </div>
-                          <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>
-                            Econ: {liveBowler.econ} rpo
-                          </div>
-                        </div>
-                        <div style={{ fontFamily: D.mono, fontSize: "16px", fontWeight: 800, color: D.rose }}>
-                          {liveBowler.wkts}/{liveBowler.runs} <span style={{ fontSize: "11px", color: D.textMuted }}>({liveBowler.overs} ov)</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Delivery Trajectory Strip */}
-                    <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: `1px solid ${D.border}`, display: "flex", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-                      {/* Recent Deliveries Strip */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                        <span style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.textMuted, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                          Recent Balls:
-                        </span>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          {recentBalls.map(ball => {
-                            const bg = ball.isWkt
-                              ? D.rose
-                              : ball.isSix
-                              ? D.violet
-                              : ball.isFour
-                              ? D.emerald
-                              : ball.run === 0
-                              ? D.surf3
-                              : D.sky;
-                            const textCol = ball.run === 0 ? D.textMuted : "#fff";
-                            return (
-                              <span
-                                key={ball.id}
-                                className="ball-pop"
-                                style={{
-                                  width: "26px",
-                                  height: "26px",
-                                  borderRadius: "50%",
-                                  background: bg,
-                                  color: textCol,
-                                  fontFamily: D.mono,
-                                  fontSize: "11px",
-                                  fontWeight: 800,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  boxShadow: ball.isWkt ? "0 0 8px rgba(244,63,94,0.5)" : ball.isSix ? "0 0 8px rgba(168,85,247,0.5)" : "none",
-                                }}
-                              >
-                                {ball.label}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Quick Tools Action Bar */}
-                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "14px", paddingTop: "12px", borderTop: `1px solid ${D.border}`, flexWrap: "wrap" }}>
-                      <Btn variant="success" size="sm" onClick={() => handleLaunchScorer(activeHeroMatch)}>
-                        🏏 Open Live Scorer →
-                      </Btn>
-                      <Btn variant="primary" size="sm" onClick={() => handleOpenScorecard(activeHeroMatch.id)}>
-                        📊 Full Scorecard & Phases
-                      </Btn>
-                      <Btn variant="tonal" size="sm" onClick={() => { setPage("analytics"); setAnalyticsSubTab("analytics"); }}>
-                        📈 Worm & Over Graphs
-                      </Btn>
-                      <Btn variant="ghost" size="sm" onClick={() => { setPage("analytics"); setAnalyticsSubTab("wagon"); }}>
-                        🎯 360° Wagon Wheel
-                      </Btn>
-                    </div>
-                  </Card>
-                );
-              })()}
-
-              {/* Derby Day Matrix & AI Simulator Module */}
-              <Card sx={{ padding: "22px" }}>
-                <SectionHeader
-                  title={`${activeDerby.derbyTitle}`}
-                  sub={`${activeDerby.schoolA} vs ${activeDerby.schoolB} · Contested since ${activeDerby.sinceYear} · ${activeDerby.trophyName}`}
-                  color={D.amber}
-                  actions={
-                    <Btn
-                      variant="primary"
-                      size="sm"
-                      onClick={runDerbySimulator}
-                      disabled={derbySimRunning}
-                    >
-                      {derbySimRunning ? "Simulating Match Model..." : "⚡ Simulate Derby Clash"}
-                    </Btn>
-                  }
-                />
-
-                {/* Head to Head Visual Record */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "18px", marginTop: "12px" }}>
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontFamily: D.head, fontSize: "12px", fontWeight: 700, marginBottom: "8px" }}>
-                      <span style={{ color: schoolPrimary }}>{activeDerby.schoolA}: {activeDerby.winsA} Wins ({Math.round((activeDerby.winsA / activeDerby.totalClashes) * 100)}%)</span>
-                      <span style={{ color: D.textMuted }}>Draws: {activeDerby.draws}</span>
-                      <span style={{ color: schoolSecondary }}>{activeDerby.schoolB}: {activeDerby.winsB} Wins ({Math.round((activeDerby.winsB / activeDerby.totalClashes) * 100)}%)</span>
-                    </div>
-                    {/* Visual bar */}
-                    <div style={{ width: "100%", height: "12px", background: D.surf3, borderRadius: D.pill, overflow: "hidden", display: "flex" }}>
-                      <div style={{ width: `${(activeDerby.winsA / activeDerby.totalClashes) * 100}%`, background: schoolPrimary }} />
-                      <div style={{ width: `${(activeDerby.draws / activeDerby.totalClashes) * 100}%`, background: D.borderMed }} />
-                      <div style={{ width: `${(activeDerby.winsB / activeDerby.totalClashes) * 100}%`, background: schoolSecondary }} />
-                    </div>
-
-                    <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted, marginTop: "10px" }}>
-                      Total Official Encounters: <strong>{activeDerby.totalClashes}</strong> matches recorded in historical archives since {activeDerby.sinceYear}.
-                    </div>
-                  </div>
-
-                  {/* Recent Clashes Table */}
-                  <div>
-                    <div style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 700, color: D.textMuted, textTransform: "uppercase", marginBottom: "8px" }}>
-                      Recent Clashes on Record
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      {activeDerby.recentEncounters.map((enc, i) => (
-                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: D.surf2, borderRadius: D.md, fontSize: "11px" }}>
-                          <div>
-                            <strong>{enc.year} ({enc.venue})</strong>: <span style={{ color: D.emerald, fontWeight: 700 }}>{enc.winner} won by {enc.margin}</span>
-                          </div>
-                          <span style={{ fontFamily: D.mono, color: D.textMuted }}>{enc.starPerformer}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Derby Simulation Result Banner */}
-                {derbySimResult && (
-                  <div style={{ marginTop: "18px", padding: "14px 18px", borderRadius: D.md, background: `${D.amber}18`, border: `1px solid ${D.amber}44`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-                    <div>
-                      <Badge color={D.amber}>Derby AI Projection Engine</Badge>
-                      <div style={{ fontFamily: D.head, fontSize: "15px", fontWeight: 800, color: D.textPrimary, marginTop: "4px" }}>
-                        Projected Winner: <span style={{ color: D.amber }}>{derbySimResult.projectedWinner}</span> ({derbySimResult.probA}% vs {derbySimResult.probB}%)
-                      </div>
-                      <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.textSecondary, marginTop: "2px" }}>
-                        Scoreline: {derbySimResult.predictedScore} · Key Tactical Clash: {derbySimResult.keyMatchup}
-                      </div>
-                    </div>
-                    <Btn
-                      variant="tonal"
-                      size="sm"
-                      onClick={() => setPage("scouting")}
-                    >
-                      Open AI Scouting Suite →
-                    </Btn>
-                  </div>
-                )}
-              </Card>
-
-              {/* Pitch Conditions & Home Ground Curator Telemetry */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "18px" }}>
-                <Card sx={{ padding: "20px" }}>
-                  <SectionHeader
-                    title={`Venue Conditions: ${schoolPitch.name}`}
-                    sub={`${activeSchool.shortName} · Field ${currentPitchIdx + 1} of ${schoolPitches.length}`}
-                    color={D.teal}
-                    actions={
-                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                        <button
-                          disabled={schoolPitches.length <= 1}
-                          onClick={() => setActivePitchIndex(prev => (prev - 1 + schoolPitches.length) % schoolPitches.length)}
-                          title="Previous Field"
-                          style={{
-                            padding: "4px 10px",
-                            borderRadius: D.sm,
-                            border: `1px solid ${D.border}`,
-                            background: D.surf2,
-                            color: D.textPrimary,
-                            fontSize: "11px",
-                            fontFamily: D.mono,
-                            fontWeight: 700,
-                            cursor: schoolPitches.length <= 1 ? "not-allowed" : "pointer",
-                            opacity: schoolPitches.length <= 1 ? 0.5 : 1,
-                          }}
-                        >
-                          ←
-                        </button>
-                        <span style={{ fontFamily: D.mono, fontSize: "11px", color: D.textMuted, padding: "0 2px" }}>
-                          {currentPitchIdx + 1}/{schoolPitches.length}
-                        </span>
-                        <button
-                          disabled={schoolPitches.length <= 1}
-                          onClick={() => setActivePitchIndex(prev => (prev + 1) % schoolPitches.length)}
-                          title="Next Field"
-                          style={{
-                            padding: "4px 10px",
-                            borderRadius: D.sm,
-                            border: `1px solid ${D.border}`,
-                            background: D.surf2,
-                            color: D.textPrimary,
-                            fontSize: "11px",
-                            fontFamily: D.mono,
-                            fontWeight: 700,
-                            cursor: schoolPitches.length <= 1 ? "not-allowed" : "pointer",
-                            opacity: schoolPitches.length <= 1 ? 0.5 : 1,
-                          }}
-                        >
-                          →
-                        </button>
-                      </div>
-                    }
-                  />
-
-                  {/* Horizontal Scrollable Field Pill Selector */}
-                  <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "8px", marginTop: "10px", marginBottom: "12px", scrollbarWidth: "thin" }}>
-                    {schoolPitches.map((pitch, idx) => {
-                      const isSelected = idx === currentPitchIdx;
-                      return (
-                        <button
-                          key={pitch.groundId || pitch.name}
-                          onClick={() => setActivePitchIndex(idx)}
-                          style={{
-                            padding: "6px 12px",
-                            borderRadius: D.pill,
-                            border: isSelected ? `1px solid ${D.teal}` : `1px solid ${D.border}`,
-                            background: isSelected ? `${D.teal}22` : D.surf2,
-                            color: isSelected ? D.teal : D.textSecondary,
-                            fontFamily: D.head,
-                            fontSize: "11px",
-                            fontWeight: isSelected ? 800 : 600,
-                            cursor: "pointer",
-                            whiteSpace: "nowrap",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            transition: "all 0.15s ease",
-                            flexShrink: 0,
-                          }}
-                        >
-                          <span>{idx === 0 ? "🏟️" : "🏏"}</span>
-                          <span>{pitch.name}</span>
-                          {idx === 0 && (
-                            <span style={{ fontSize: "9px", padding: "1px 5px", borderRadius: D.pill, background: `${D.teal}33`, color: D.teal, fontWeight: 700 }}>
-                              MAIN
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: D.body, fontSize: "12px" }}>
-                        <span>Pitch Surface:</span>
-                        <strong style={{ color: D.textPrimary }}>{schoolPitch.surface}</strong>
-                      </div>
-                    </div>
-
-                    {/* Sensor Meters */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                      <div style={{ padding: "10px", background: D.surf2, borderRadius: D.md }}>
-                        <div style={{ fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>SOIL MOISTURE</div>
-                        <div style={{ fontFamily: D.mono, fontSize: "20px", fontWeight: 700, color: D.sky }}>{schoolPitch.moisturePct}%</div>
-                        <div style={{ fontFamily: D.body, fontSize: "10px", color: D.textMuted }}>Target: 22-26%</div>
-                      </div>
-                      <div style={{ padding: "10px", background: D.surf2, borderRadius: D.md }}>
-                        <div style={{ fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>GRASS CUT HEIGHT</div>
-                        <div style={{ fontFamily: D.mono, fontSize: "20px", fontWeight: 700, color: D.emerald }}>{schoolPitch.grassHeightMm} mm</div>
-                        <div style={{ fontFamily: D.body, fontSize: "10px", color: D.textMuted }}>Roller: {schoolPitch.rollerCompaction}</div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                      <div style={{ padding: "10px", background: D.surf2, borderRadius: D.md }}>
-                        <div style={{ fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>BOUNCE RATING</div>
-                        <div style={{ fontFamily: D.mono, fontSize: "18px", fontWeight: 700, color: D.amber }}>{schoolPitch.bounceRating} / 10</div>
-                      </div>
-                      <div style={{ padding: "10px", background: D.surf2, borderRadius: D.md }}>
-                        <div style={{ fontFamily: D.head, fontSize: "10px", color: D.textMuted }}>PACE RATING</div>
-                        <div style={{ fontFamily: D.mono, fontSize: "18px", fontWeight: 700, color: D.rose }}>{schoolPitch.paceRating} / 10</div>
-                      </div>
-                    </div>
-
-                    {/* Additional Metadata Badges */}
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-                      <div style={{ padding: "4px 8px", background: D.surf2, borderRadius: D.sm, fontFamily: D.mono, fontSize: "10px", color: D.textSecondary }}>
-                        ⚡ Outfield: <strong style={{ color: D.textPrimary }}>{schoolPitch.outfieldSpeed}</strong>
-                      </div>
-                      <div style={{ padding: "4px 8px", background: D.surf2, borderRadius: D.sm, fontFamily: D.mono, fontSize: "10px", color: D.textSecondary }}>
-                        🌧️ Drainage: <strong style={{ color: D.textPrimary }}>{schoolPitch.drainageTimeMin} min</strong>
-                      </div>
-                      <div style={{ padding: "4px 8px", background: D.surf2, borderRadius: D.sm, fontFamily: D.mono, fontSize: "10px", color: D.textSecondary }}>
-                        ☔ Covers: <strong style={{ color: schoolPitch.coversStatus === "on" ? D.rose : D.emerald }}>{schoolPitch.coversStatus === "on" ? "Deployed" : "Off"}</strong>
-                      </div>
-                    </div>
-
-                    <div style={{ padding: "10px", background: `${D.teal}12`, borderRadius: D.md, border: `1px solid ${D.teal}33` }}>
-                      <div style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.teal, textTransform: "uppercase" }}>Curator Match Morning Assessment</div>
-                      <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textSecondary, marginTop: "3px" }}>
-                        {schoolPitch.curatorNotes}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setPage("fields")}
-                      style={{
-                        padding: "8px 12px",
-                        borderRadius: D.md,
-                        background: `${D.teal}18`,
-                        border: `1px solid ${D.teal}44`,
-                        color: D.teal,
-                        fontFamily: D.head,
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "6px",
-                        marginTop: "4px",
-                      }}
-                    >
-                      <span>Manage All School Fields in Curator Suite →</span>
-                    </button>
-                  </div>
-                </Card>
-
-                {/* School Squad Health & RTP Medical Status */}
-                <Card sx={{ padding: "20px" }}>
-                  <SectionHeader title={`${activeSchool.shortName} Health & Physio Status`} color={D.rose} />
-                  {schoolInjuries.length > 0 ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                      {schoolInjuries.map(inj => {
-                        const pl = PLAYERS.find(p => p.id === inj.player);
-                        const pct = pctDays(inj.dateInj, inj.rtw);
-                        return (
-                          <div key={inj.id} style={{ padding: "12px", background: D.surf2, borderRadius: D.md, display: "flex", flexDirection: "column", gap: "6px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 700 }}>{pl?.name} ({pl?.team})</span>
-                              <Badge color={D.rose}>{inj.phase}</Badge>
-                            </div>
-                            <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted }}>{inj.type} · Target Return: {inj.rtw}</div>
-                            <div style={{ width: "100%", height: "5px", background: D.surf3, borderRadius: "3px", overflow: "hidden" }}>
-                              <div style={{ width: `${pct}%`, height: "100%", background: D.rose }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div style={{ padding: "24px 12px", textAlign: "center", color: D.textMuted }}>
-                      <span style={{ fontSize: "28px" }}>✅</span>
-                      <div style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 700, color: D.emerald, marginTop: "8px" }}>
-                        Full Squad Fit & Available
-                      </div>
-                      <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>
-                        No players currently on clinical RTP restriction at {activeSchool.shortName}.
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Upcoming school fixtures */}
-                  <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: `1px solid ${D.border}` }}>
-                    <div style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 700, color: D.textMuted, textTransform: "uppercase", marginBottom: "8px" }}>
-                      Next Scheduled Fixture
-                    </div>
-                    {allSchoolMatches.filter(m => m.status === "upcoming").slice(0, 1).map(m => (
-                      <div key={m.id} style={{ padding: "10px", background: D.surf2, borderRadius: D.md, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontFamily: D.body, fontSize: "12px", fontWeight: 600 }}>{m.homeTeam} vs {m.awayTeam}</div>
-                          <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>{m.date} · 📍 {m.venue}</div>
-                        </div>
-                        {m.transport && <Badge color={D.amber}>🚌 Bus {m.transport.depart}</Badge>}
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              </div>
-            </div>
+            <DashboardIntelligenceView
+              theme={D}
+              activeSchool={activeSchool}
+              currentRole={role}
+              matches={matchesList}
+              players={PLAYERS}
+              isCompactDensity={isCompactDensity}
+              onNavigate={navigateToPage}
+              onLaunchScorer={handleLaunchScorer}
+              onSelectPlayer={setSelectedPlayer}
+              onOpenIntelligenceDrawer={() => setIntelligenceDrawerOpen(true)}
+            />
           )}
 
           {/* Matches & Match Centre Multi-View (Cards, Table, Timeline, Live) */}
@@ -2194,6 +989,37 @@ export default function ScrbrdOS() {
             />
           )}
 
+          {/* Coach Cockpit & Tactical Match Command */}
+          {page === "coach_cockpit" && (
+            <CoachCockpitView
+              theme={D}
+              activeSchoolId={activeSchool.id}
+              currentRole={role}
+              onNavigateToCaptain={() => navigateToPage("captain_cockpit")}
+              onNavigateToSkills={() => navigateToPage("skills")}
+              onNavigateToProfiles={(p) => {
+                setSelectedPlayer(p);
+                navigateToPage("profiles");
+              }}
+              onPushTacticalPlan={(directive) => {
+                setTacticalPlanDirective(directive);
+                triggerToast("Coach Directive", `Transmitted "${directive.title}" to Captain Cockpit`, "coach_cockpit", "tactical");
+              }}
+            />
+          )}
+
+          {/* Captain Tactical Cockpit */}
+          {page === "captain_cockpit" && (
+            <CaptainCockpitView
+              theme={D}
+              activeSchoolId={activeSchool.id}
+              currentRole={role}
+              incomingTacticalPlan={tacticalPlanDirective}
+              onNavigateToCoach={() => navigateToPage("coach_cockpit")}
+              onTriggerToast={(msg) => triggerToast("Captain Decision", msg, "captain_cockpit", "captain")}
+            />
+          )}
+
           {/* Squad & Multi-Tier Coaching Management */}
           {page === "squad" && (
             <MultiSquadCoachView
@@ -2219,7 +1045,7 @@ export default function ScrbrdOS() {
               currentRole={role}
               activeSchoolId={activeSchool.id}
               onNavigateToH2H={(p1, p2) => {
-                setH2hPlayers({ player1: p1, player2: p2 });
+                setH2hPlayers({ p1, p2 });
                 navigateToPage("compare");
               }}
               onTriggerToast={(msg) => {
@@ -2238,8 +1064,8 @@ export default function ScrbrdOS() {
             <HeadToHeadComparisonView
               theme={D}
               activeSchoolId={activeSchool.id}
-              initialPlayerAId={h2hPlayers.player1?.id || 'w1'}
-              initialPlayerBId={h2hPlayers.player2?.id || 'm1_p'}
+              initialPlayerAId={h2hPlayers.p1 || 'w1'}
+              initialPlayerBId={h2hPlayers.p2 || 'm1_p'}
               currentRole={role}
               onNavigateToSkills={() => setPage("skills")}
               onNavigateToScouting={() => setPage("scouting")}

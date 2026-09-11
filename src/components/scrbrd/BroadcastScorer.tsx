@@ -14,6 +14,20 @@ import CaptainTacticalCockpit from "./CaptainTacticalCockpit";
 import FullScorecardView from "./FullScorecardView";
 import DeepMatchAnalyticsView from "./DeepMatchAnalyticsView";
 import { deriveInnings, BallEvent, describeDismissal } from "./scoringEngine";
+import { calculateDlsTarget, getDlsResourcePercentage, DlsCalculationResult } from "./dlsEngine";
+import { scorerAudio } from "./scorerAudioEngine";
+import {
+  ScorerSessionLease,
+  QuarantinedBallEvent,
+  generatePairingCode,
+  validateHandoverPreconditions,
+  verifyHandoverInput,
+  executeHandoverSession,
+  refreshLease,
+  isLeaseValid,
+  validateAndRouteEvent,
+  HandoverAuditLogRecord
+} from "./handoverProtocol";
 
 interface BroadcastScorerProps {
   theme: Theme;
@@ -500,30 +514,84 @@ export default function BroadcastScorer({
   const [isOfflineSimulated, setIsOfflineSimulated] = useState<boolean>(false);
   const [isSyncingQueue, setIsSyncingQueue] = useState<boolean>(false);
 
-  // Scorer Token Lease state (heartbeat TTL)
-  const [leaseSeconds, setLeaseSeconds] = useState<number>(42);
-  const [tokenLeaseId] = useState<string>("TKN-SCR-8849-KZN");
-  const [handoverModalOpen, setHandoverModalOpen] = useState<boolean>(false);
-  const [handoverTarget, setHandoverTarget] = useState<string>("Dale Benkenstein (Opposition Scorer)");
-  const [handoverStatus, setHandoverStatus] = useState<string | null>(null);
+  // ── PHASE 2: SESSION TOKEN LEASE & HANDOVER STATE ─────
+  const [activeSessionLease, setActiveSessionLease] = useState<ScorerSessionLease>(() => ({
+    matchId: activeMatch?.id || "m1",
+    sessionEpoch: 1,
+    leaseExpiry: Date.now() + 90 * 1000,
+    activeScorerToken: "TKN-SCR-8849-EP1",
+    scorerName: "Kameel (Primary Scorer)",
+    scorerRole: "primary",
+    scorerDeviceId: "DEV-MAV-99",
+    lastHeartbeat: Date.now(),
+  }));
 
-  // Heartbeat timer simulation
+  const [quarantineQueue, setQuarantineQueue] = useState<QuarantinedBallEvent[]>([
+    {
+      eventId: "EVT-QUAR-901",
+      seq: 14,
+      eventEpoch: 0,
+      expectedEpoch: 1,
+      scorerToken: "TKN-SCR-OLD-REVOKED",
+      quarantineReason: "STALE_EPOCH",
+      quarantinedAt: new Date(Date.now() - 300000).toISOString(),
+      ballData: { over: "2.1", runsOffBat: 4, extraType: "none", commentary: "Stale session late packet write" },
+      resolutionStatus: "pending_review",
+    },
+  ]);
+
+  const [handoverModalOpen, setHandoverModalOpen] = useState<boolean>(false);
+  const [handoverModalTab, setHandoverModalTab] = useState<"handover" | "quarantine" | "audit">("handover");
+
+  // Handover Verification Inputs
+  const [incomingScorerName, setIncomingScorerName] = useState<string>("Dale Benkenstein");
+  const [inputPairingPin, setInputPairingPin] = useState<string>("");
+  const [physicalBoardRuns, setPhysicalBoardRuns] = useState<number>(142);
+  const [physicalBoardWickets, setPhysicalBoardWickets] = useState<number>(3);
+  const [physicalBoardOvers, setPhysicalBoardOvers] = useState<string>("14.2");
+  const [handoverVerificationResult, setHandoverVerificationResult] = useState<any>(null);
+  const [handoverAuditLogs, setHandoverAuditLogs] = useState<HandoverAuditLogRecord[]>([]);
+
+  // Automatic Heartbeat Lease Renewal Timer
   useEffect(() => {
     const timer = setInterval(() => {
-      setLeaseSeconds(prev => (prev <= 1 ? 45 : prev - 1));
+      setActiveSessionLease(prev => {
+        const remainingMs = prev.leaseExpiry - Date.now();
+        // Keep lease active if window drops below 20s
+        if (remainingMs <= 20000) {
+          return refreshLease(prev, 90);
+        }
+        return prev;
+      });
     }, 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Modals
+  // Modals & Scorer Tools
   const [wicketModalOpen, setWicketModalOpen] = useState<boolean>(false);
   const [dlsModalOpen, setDlsModalOpen] = useState<boolean>(false);
+  const [penaltyModalOpen, setPenaltyModalOpen] = useState<boolean>(false);
   const [scorecardModalOpen, setScorecardModalOpen] = useState<boolean>(false);
   const [wagonWheelModalOpen, setWagonWheelModalOpen] = useState<boolean>(false);
-  const [dlsRevisedOvers, setDlsRevisedOvers] = useState<number>(18);
-  const [dlsTarget, setDlsTarget] = useState<number>(165);
   const [commentaryFilter, setCommentaryFilter] = useState<"broadcast" | "hype" | "technical">("broadcast");
   const [wagonFilterRuns, setWagonFilterRuns] = useState<number | "all">("all");
+
+  // Redo Stack & Audio / Speech FX Engine State
+  const [redoStack, setRedoStack] = useState<DeliveryRecord[]>([]);
+  const [soundFxEnabled, setSoundFxEnabled] = useState<boolean>(true);
+  const [ttsEnabled, setTtsEnabled] = useState<boolean>(false);
+
+  // Penalty Runs State
+  const [penaltyBeneficiary, setPenaltyBeneficiary] = useState<"batting" | "bowling">("batting");
+  const [penaltyReason, setPenaltyReason] = useState<string>("Ball struck helmet placed on field (Law 28.3)");
+
+  // DLS Recalculator State
+  const [dlsTeam1Runs, setDlsTeam1Runs] = useState<number>(186);
+  const [dlsTeam1Overs, setDlsTeam1Overs] = useState<number>(20);
+  const [dlsTeam1Wickets, setDlsTeam1Wickets] = useState<number>(4);
+  const [dlsRevisedOvers, setDlsRevisedOvers] = useState<number>(18);
+  const [dlsTarget, setDlsTarget] = useState<number>(168);
+  const [dlsFormatOvers, setDlsFormatOvers] = useState<number>(20);
 
   // ── 3-PHASE INTERACTIVE SCORING ENGINE STATE ─────
   // Phase 1: Enrich Delivery Context
@@ -701,6 +769,28 @@ export default function BroadcastScorer({
     };
   }, [strikerDeliveries]);
 
+  // Real-time Standard Edition DLS Target & Par Score Calculator
+  const dlsCalculation = useMemo<DlsCalculationResult>(() => {
+    return calculateDlsTarget({
+      matchFormatOvers: dlsFormatOvers,
+      team1Runs: dlsTeam1Runs,
+      team1OversBatted: dlsTeam1Overs,
+      team1WicketsLost: dlsTeam1Wickets,
+      team2RevisedOvers: dlsRevisedOvers,
+      team2CurrentWicketsLost: matchDerivedState.totalWickets,
+      team2CurrentOversBatted: Number(matchDerivedState.completedOvers) + Number(matchDerivedState.remainderBalls) / 6,
+    });
+  }, [
+    dlsFormatOvers,
+    dlsTeam1Runs,
+    dlsTeam1Overs,
+    dlsTeam1Wickets,
+    dlsRevisedOvers,
+    matchDerivedState.totalWickets,
+    matchDerivedState.completedOvers,
+    matchDerivedState.remainderBalls,
+  ]);
+
   // ── PHASE 1: SCORE BALL (RESULT-FIRST COMMIT) ─────
   const handleScoreBall = (
     runVal: number,
@@ -709,6 +799,29 @@ export default function BroadcastScorer({
     wktType?: string,
     customWagonShot?: WagonWheelShot
   ) => {
+    // ── LEASE & EPOCH VALIDATION BEFORE WRITE ──
+    const now = Date.now();
+    if (now > activeSessionLease.leaseExpiry) {
+      const quarantinedEvt: QuarantinedBallEvent = {
+        eventId: `EVT-QUAR-${now}`,
+        seq: deliveries.length + 1,
+        eventEpoch: activeSessionLease.sessionEpoch,
+        expectedEpoch: activeSessionLease.sessionEpoch,
+        scorerToken: activeSessionLease.activeScorerToken,
+        quarantineReason: "EXPIRED_LEASE",
+        quarantinedAt: new Date().toISOString(),
+        ballData: { runVal, extra, isWkt, wktType },
+        resolutionStatus: "pending_review",
+      };
+      setQuarantineQueue(prev => [quarantinedEvt, ...prev]);
+      setHandoverModalOpen(true);
+      setHandoverModalTab("quarantine");
+      return;
+    }
+
+    // Auto-refresh lease for 90 seconds on active scoring
+    setActiveSessionLease(prev => refreshLease(prev, 90));
+
     const isLegal = extra !== "wd" && extra !== "nb";
     const extraVal = extra === "wd" || extra === "nb" ? 1 : 0;
     const totalAdded = runVal + extraVal;
@@ -781,8 +894,23 @@ export default function BroadcastScorer({
       syncStatus: isOfflineSimulated ? "queued" : "synced",
     };
 
-    // Prepend to deliveries (latest first)
+    // Prepend to deliveries (latest first) & clear redo stack
+    setRedoStack([]);
     setDeliveries(prev => [newRecord, ...prev]);
+
+    // Audio SFX & Voice Synthesis
+    if (soundFxEnabled) {
+      if (isWkt) scorerAudio.playWicketSiren();
+      else if (runVal === 6) scorerAudio.playSixExplosion();
+      else if (runVal === 4) scorerAudio.playFourCheer();
+      else if (extra === "nb") scorerAudio.playNoBallBuzzer();
+      else if (extra === "pen") scorerAudio.playPenaltyChime();
+      else if (runVal === 0) scorerAudio.playDotTap();
+      else scorerAudio.playBatHit("solid");
+    }
+    if (ttsEnabled) {
+      scorerAudio.speakCommentary(comm);
+    }
 
     // If in STANDARD or FULL profile, open Phase 2 Wagon Wheel Enrichment HUD immediately
     if (captureProfile === "STANDARD" || captureProfile === "FULL") {
@@ -867,7 +995,22 @@ export default function BroadcastScorer({
       syncStatus: isOfflineSimulated ? "queued" : "synced",
     };
 
+    setRedoStack([]);
     setDeliveries(prev => [newRecord, ...prev]);
+
+    // Audio SFX & Voice Synthesis
+    if (soundFxEnabled) {
+      if (isWkt) scorerAudio.playWicketSiren();
+      else if (runVal === 6) scorerAudio.playSixExplosion();
+      else if (runVal === 4) scorerAudio.playFourCheer();
+      else if (extra === "nb") scorerAudio.playNoBallBuzzer();
+      else if (extra === "pen") scorerAudio.playPenaltyChime();
+      else if (runVal === 0) scorerAudio.playDotTap();
+      else scorerAudio.playBatHit(phase1Contact === "outside_edge" || phase1Contact === "inside_edge" ? "edge" : "solid");
+    }
+    if (ttsEnabled) {
+      scorerAudio.speakCommentary(comm);
+    }
 
     // Reset cleanly to Phase 1 ready for the next delivery
     setScoringPhase(1);
@@ -931,10 +1074,50 @@ export default function BroadcastScorer({
     setAmendingDelivery(null);
   };
 
-  // True Atomic Undo (Pop newest event atomically)
+  // True Atomic Undo & Redo (Pop and Push events across history)
   const handleUndoLastBall = () => {
     if (deliveries.length <= 2) return; // preserve initial baseline
+    const popped = deliveries[0];
+    setRedoStack(prev => [popped, ...prev]);
     setDeliveries(prev => prev.slice(1));
+    if (soundFxEnabled) scorerAudio.playDotTap();
+  };
+
+  const handleRedoLastBall = () => {
+    if (redoStack.length === 0) return;
+    const restored = redoStack[0];
+    setRedoStack(prev => prev.slice(1));
+    setDeliveries(prev => [restored, ...prev]);
+    if (soundFxEnabled) scorerAudio.playBatHit("solid");
+  };
+
+  // Umpire Penalty Runs Handler (Law 41 / Law 28.3)
+  const handleAwardPenaltyRuns = (beneficiary: "batting" | "bowling", reason: string) => {
+    const nextTimestamp = `${matchDerivedState.completedOvers}.${matchDerivedState.remainderBalls}`;
+    const penaltyRecord: DeliveryRecord = {
+      id: `del_pen_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      overIndex: matchDerivedState.completedOvers,
+      ballInOver: matchDerivedState.remainderBalls,
+      isLegalDelivery: false,
+      bowler: matchDerivedState.bowler.name,
+      batter: matchDerivedState.striker.name,
+      runsOffBat: 0,
+      extraType: "pen",
+      extraRuns: 5,
+      totalRuns: 5,
+      isWicket: false,
+      verificationStatus: "verified",
+      commentary: `[PENALTY +5 RUNS AWARDED TO ${beneficiary.toUpperCase()} TEAM]: ${reason}`,
+      timestamp: nextTimestamp,
+      syncStatus: isOfflineSimulated ? "queued" : "synced",
+    };
+
+    setRedoStack([]);
+    setDeliveries(prev => [penaltyRecord, ...prev]);
+    setPenaltyModalOpen(false);
+
+    if (soundFxEnabled) scorerAudio.playPenaltyChime();
+    if (ttsEnabled) scorerAudio.speakCommentary(`Five penalty runs awarded to ${beneficiary} team. ${reason}`);
   };
 
   // Offline Sync Replay Simulator
@@ -1079,6 +1262,45 @@ export default function BroadcastScorer({
 
           {/* Match Management & Resilience Toolbar */}
           <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+            {/* SESSION LEASE & HANDOVER CONTROL BUTTON */}
+            <button
+              onClick={() => {
+                setHandoverModalOpen(true);
+                setHandoverModalTab("handover");
+              }}
+              style={{
+                padding: "5px 11px",
+                borderRadius: D.pill,
+                background: isLeaseValid(activeSessionLease) ? `${D.emerald}18` : `${D.rose}25`,
+                border: `1px solid ${isLeaseValid(activeSessionLease) ? D.emerald : D.rose}`,
+                color: isLeaseValid(activeSessionLease) ? D.emerald : D.rose,
+                fontFamily: D.mono,
+                fontSize: "11px",
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                cursor: "pointer",
+              }}
+              title="Manage Scorer Session Token Lease, Authoritative Device Handover & Quarantined Logs"
+            >
+              🔑 Ep {activeSessionLease.sessionEpoch} ({Math.max(0, Math.ceil((activeSessionLease.leaseExpiry - Date.now()) / 1000))}s)
+              {quarantineQueue.length > 0 && (
+                <span
+                  style={{
+                    padding: "1px 6px",
+                    borderRadius: D.pill,
+                    background: D.rose,
+                    color: "#fff",
+                    fontSize: "9px",
+                    fontWeight: 900,
+                  }}
+                >
+                  {quarantineQueue.length} Q
+                </span>
+              )}
+            </button>
+
             {/* LIVE MATCH SETTINGS MODAL TRIGGER */}
             <button
               onClick={() => setMatchSettingsModalOpen(true)}
@@ -1435,27 +1657,169 @@ export default function BroadcastScorer({
                 </div>
               </div>
 
-              {/* Quick Undo Last Ball Button (Atomic Reducer) */}
-              <button
-                onClick={handleUndoLastBall}
-                className="pressBtn"
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: D.md,
-                  background: D.surf3,
-                  border: `1px solid ${D.border}`,
-                  color: D.textSecondary,
-                  fontFamily: D.head,
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  cursor: "pointer",
-                }}
-              >
-                ↩ Undo Last Ball
-              </button>
+              {/* Match Tools & Reducer Actions Toolbar */}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {/* Audio SFX Toggle */}
+                <button
+                  onClick={() => {
+                    const next = !soundFxEnabled;
+                    setSoundFxEnabled(next);
+                    scorerAudio.setMuted(!next);
+                    if (next) scorerAudio.playBatHit("solid");
+                  }}
+                  className="pressBtn"
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: D.md,
+                    background: soundFxEnabled ? `${D.emerald}20` : D.surf3,
+                    border: `1px solid ${soundFxEnabled ? D.emerald : D.border}`,
+                    color: soundFxEnabled ? D.emerald : D.textMuted,
+                    fontFamily: D.head,
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    cursor: "pointer",
+                  }}
+                  title="Toggle Real-Time Web Audio Synthesizer Sound FX (Bat Cracks, Boundary Celebrations, Wicket Sirens)"
+                >
+                  {soundFxEnabled ? "🔊 Sound FX" : "🔇 Muted"}
+                </button>
+
+                {/* Voice Commentary Toggle */}
+                <button
+                  onClick={() => {
+                    const next = !ttsEnabled;
+                    setTtsEnabled(next);
+                    scorerAudio.setTtsEnabled(next);
+                    if (next) scorerAudio.speakCommentary("Live match voice commentary enabled.");
+                    else scorerAudio.stopSpeech();
+                  }}
+                  className="pressBtn"
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: D.md,
+                    background: ttsEnabled ? `${D.sky}25` : D.surf3,
+                    border: `1px solid ${ttsEnabled ? D.sky : D.border}`,
+                    color: ttsEnabled ? D.sky : D.textMuted,
+                    fontFamily: D.head,
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    cursor: "pointer",
+                  }}
+                  title="Toggle Synthesized Live Text-to-Speech Commentary"
+                >
+                  {ttsEnabled ? "🎙️ Voice On" : "🎙️ Voice Off"}
+                </button>
+
+                {/* DLS Recalculator Button */}
+                <button
+                  onClick={() => setDlsModalOpen(true)}
+                  className="pressBtn"
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: D.md,
+                    background: dlsTarget !== 187 ? `${D.cyan}25` : D.surf3,
+                    border: `1px solid ${dlsTarget !== 187 ? D.cyan : D.border}`,
+                    color: dlsTarget !== 187 ? D.cyan : D.textSecondary,
+                    fontFamily: D.head,
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    cursor: "pointer",
+                  }}
+                  title="Open Duckworth-Lewis-Stern (DLS) Standard Resource Target Recalculator"
+                >
+                  <span>🌧️ DLS</span>
+                  <span style={{ fontFamily: D.mono, fontSize: "10px", background: "rgba(0,0,0,0.3)", padding: "1px 5px", borderRadius: D.sm }}>
+                    {dlsTarget}
+                  </span>
+                </button>
+
+                {/* +5 Penalty Runs Award Button */}
+                <button
+                  onClick={() => setPenaltyModalOpen(true)}
+                  className="pressBtn"
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: D.md,
+                    background: `${D.amber}18`,
+                    border: `1px solid ${D.amber}50`,
+                    color: D.amber,
+                    fontFamily: D.head,
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    cursor: "pointer",
+                  }}
+                  title="Award Official 5 Penalty Runs (Law 28.3 Helmet Strike, Law 41 Unfair Play, Slow Over Rate)"
+                >
+                  ⚖️ +5 Penalty
+                </button>
+
+                {/* Atomic Undo Button */}
+                <button
+                  onClick={handleUndoLastBall}
+                  disabled={deliveries.length <= 2}
+                  className="pressBtn"
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: D.md,
+                    background: D.surf3,
+                    border: `1px solid ${D.border}`,
+                    color: deliveries.length <= 2 ? D.textMuted : D.textSecondary,
+                    fontFamily: D.head,
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    cursor: deliveries.length <= 2 ? "not-allowed" : "pointer",
+                    opacity: deliveries.length <= 2 ? 0.5 : 1,
+                  }}
+                  title="Undo Last Recorded Delivery"
+                >
+                  ↩ Undo
+                </button>
+
+                {/* Atomic Redo Button */}
+                <button
+                  onClick={handleRedoLastBall}
+                  disabled={redoStack.length === 0}
+                  className="pressBtn"
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: D.md,
+                    background: redoStack.length > 0 ? `${D.sky}20` : D.surf3,
+                    border: `1px solid ${redoStack.length > 0 ? D.sky : D.border}`,
+                    color: redoStack.length > 0 ? D.sky : D.textMuted,
+                    fontFamily: D.head,
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    cursor: redoStack.length === 0 ? "not-allowed" : "pointer",
+                    opacity: redoStack.length === 0 ? 0.5 : 1,
+                  }}
+                  title="Redo Previously Undone Delivery"
+                >
+                  <span>↪ Redo</span>
+                  {redoStack.length > 0 && (
+                    <span style={{ background: D.sky, color: "#000", padding: "1px 5px", borderRadius: D.pill, fontSize: "9px", fontWeight: 900 }}>
+                      {redoStack.length}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Captain's Tactical Cockpit & Win Predictor */}
@@ -1751,7 +2115,7 @@ export default function BroadcastScorer({
                 </div>
 
                 {/* 1-Tap Fast Extras Row */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "6px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "6px" }}>
                   <button
                     onClick={() => handleScoreBall(0, "wd")}
                     style={{
@@ -1766,7 +2130,7 @@ export default function BroadcastScorer({
                       cursor: "pointer",
                     }}
                   >
-                    +1 Wide (wd)
+                    +1 Wd
                   </button>
                   <button
                     onClick={() => handleScoreBall(0, "nb")}
@@ -1782,7 +2146,7 @@ export default function BroadcastScorer({
                       cursor: "pointer",
                     }}
                   >
-                    +1 No Ball (nb)
+                    +1 Nb
                   </button>
                   <button
                     onClick={() => handleScoreBall(1, "b")}
@@ -1798,7 +2162,7 @@ export default function BroadcastScorer({
                       cursor: "pointer",
                     }}
                   >
-                    +1 Bye (b)
+                    +1 Bye
                   </button>
                   <button
                     onClick={() => handleScoreBall(1, "lb")}
@@ -1814,7 +2178,23 @@ export default function BroadcastScorer({
                       cursor: "pointer",
                     }}
                   >
-                    +1 Leg Bye (lb)
+                    +1 Lb
+                  </button>
+                  <button
+                    onClick={() => setPenaltyModalOpen(true)}
+                    style={{
+                      padding: "10px 0",
+                      borderRadius: D.md,
+                      border: `1px solid ${D.amber}60`,
+                      background: `${D.amber}22`,
+                      color: D.amber,
+                      fontFamily: D.head,
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    +5 Pen
                   </button>
                 </div>
 
@@ -4231,6 +4611,541 @@ export default function BroadcastScorer({
           </div>
         )}
 
+        {/* ── PHASE 2: GATED SESSION HANDOVER & QUARANTINE PROTOCOL MODAL ── */}
+        {handoverModalOpen && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.85)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px",
+              zIndex: 10006,
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                maxWidth: "680px",
+                maxHeight: "90vh",
+                overflowY: "auto",
+                background: D.surf1,
+                border: `1px solid ${D.borderMed}`,
+                borderRadius: D.xl,
+                padding: "24px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "18px",
+                boxShadow: "0 24px 48px rgba(0,0,0,0.8)",
+              }}
+            >
+              {/* Header & Tabs */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontFamily: D.head, fontSize: "18px", fontWeight: 800, color: D.textPrimary }}>
+                      🔑 SCORER TOKEN LEASE & HANDOVER PROTOCOL
+                    </span>
+                    <span
+                      style={{
+                        padding: "2px 8px",
+                        borderRadius: D.pill,
+                        background: `${D.emerald}20`,
+                        border: `1px solid ${D.emerald}`,
+                        color: D.emerald,
+                        fontFamily: D.mono,
+                        fontSize: "10px",
+                        fontWeight: 800,
+                      }}
+                    >
+                      EPOCH {activeSessionLease.sessionEpoch}
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: D.body, fontSize: "12px", color: D.textMuted, marginTop: "2px" }}>
+                    Single-authoritative scoring session lease, gated device takeover, and divergent event quarantine.
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setHandoverModalOpen(false)}
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "50%",
+                    background: D.surf2,
+                    border: `1px solid ${D.border}`,
+                    color: D.textMuted,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "14px",
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Navigation Sub-Tabs */}
+              <div style={{ display: "flex", background: D.surf2, borderRadius: D.pill, padding: "3px", border: `1px solid ${D.border}` }}>
+                {[
+                  { id: "handover", label: "🤝 Gated Handover" },
+                  { id: "quarantine", label: `🛡️ Quarantine Queue (${quarantineQueue.length})` },
+                  { id: "audit", label: `📜 Audit Trail (${handoverAuditLogs.length})` },
+                ].map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setHandoverModalTab(t.id as any)}
+                    style={{
+                      flex: 1,
+                      padding: "6px 12px",
+                      borderRadius: D.pill,
+                      border: "none",
+                      background: handoverModalTab === t.id ? D.sky : "transparent",
+                      color: handoverModalTab === t.id ? "#000" : D.textMuted,
+                      fontFamily: D.head,
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* TAB 1: GATED HANDOVER & TAKEOVER */}
+              {handoverModalTab === "handover" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {/* Current Active Scorer Card */}
+                  <div style={{ padding: "14px", borderRadius: D.lg, background: D.surf2, border: `1px solid ${D.border}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div>
+                      <div style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted }}>ACTIVE AUTHORITATIVE SCORER</div>
+                      <div style={{ fontFamily: D.head, fontSize: "14px", fontWeight: 800, color: D.textPrimary, marginTop: "2px" }}>
+                        {activeSessionLease.scorerName}
+                      </div>
+                      <div style={{ fontFamily: D.mono, fontSize: "11px", color: D.sky, marginTop: "2px" }}>
+                        Token: {activeSessionLease.activeScorerToken}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted }}>90S LEASE WINDOW HEARTBEAT</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                        <span style={{ fontFamily: D.mono, fontSize: "18px", fontWeight: 800, color: isLeaseValid(activeSessionLease) ? D.emerald : D.rose }}>
+                          {Math.max(0, Math.ceil((activeSessionLease.leaseExpiry - Date.now()) / 1000))}s remaining
+                        </span>
+                        <button
+                          onClick={() => setActiveSessionLease(prev => refreshLease(prev, 90))}
+                          style={{
+                            padding: "3px 8px",
+                            borderRadius: D.pill,
+                            background: D.surf3,
+                            border: `1px solid ${D.border}`,
+                            color: D.textPrimary,
+                            fontFamily: D.head,
+                            fontSize: "10px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          ↻ Refresh
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pairing Code Display */}
+                  <div style={{ padding: "14px", borderRadius: D.lg, background: `${D.amber}12`, border: `1px solid ${D.amber}40`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 800, color: D.amber }}>REQUIRED 6-DIGIT TAKEOVER PAIRING PIN</div>
+                      <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textSecondary, marginTop: "2px" }}>
+                        Hand this pairing PIN to the incoming scorer for device verification.
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: D.mono, fontSize: "24px", fontWeight: 900, color: D.amber, letterSpacing: "0.1em", background: "#000", padding: "6px 16px", borderRadius: D.md }}>
+                      {generatePairingCode(activeMatch?.id || "m1", activeSessionLease.sessionEpoch)}
+                    </div>
+                  </div>
+
+                  {/* Precondition Check Status */}
+                  {(() => {
+                    const check = validateHandoverPreconditions(matchDerivedState.queuedCount, scoringPhase);
+                    if (!check.allowed) {
+                      return (
+                        <div style={{ padding: "12px", borderRadius: D.md, background: `${D.rose}20`, border: `1px solid ${D.rose}`, color: D.rose, fontFamily: D.body, fontSize: "12px", fontWeight: 600 }}>
+                          🛑 <strong>Handover Blocked:</strong> {check.reason}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  {/* Incoming Scorer Form */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: D.surf0, padding: "16px", borderRadius: D.lg, border: `1px solid ${D.border}` }}>
+                    <div style={{ fontFamily: D.head, fontSize: "13px", fontWeight: 800, color: D.textPrimary }}>
+                      📋 Incoming Scorer & Physical Ground Board Verification
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      <div>
+                        <label style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                          INCOMING SCORER NAME
+                        </label>
+                        <input
+                          type="text"
+                          value={incomingScorerName}
+                          onChange={e => setIncomingScorerName(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "8px 10px",
+                            borderRadius: D.md,
+                            background: D.surf2,
+                            border: `1px solid ${D.border}`,
+                            color: D.textPrimary,
+                            fontFamily: D.body,
+                            fontSize: "12px",
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                          ENTER 6-DIGIT PAIRING PIN
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 102-849"
+                          value={inputPairingPin}
+                          onChange={e => setInputPairingPin(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "8px 10px",
+                            borderRadius: D.md,
+                            background: D.surf2,
+                            border: `1px solid ${D.border}`,
+                            color: D.textPrimary,
+                            fontFamily: D.mono,
+                            fontSize: "12px",
+                            fontWeight: 700,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Physical Ground Scoreboard Inputs */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginTop: "4px" }}>
+                      <div>
+                        <label style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                          GROUND BOARD RUNS
+                        </label>
+                        <input
+                          type="number"
+                          value={physicalBoardRuns}
+                          onChange={e => setPhysicalBoardRuns(Number(e.target.value))}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            borderRadius: D.md,
+                            background: D.surf2,
+                            border: `1px solid ${D.border}`,
+                            color: D.textPrimary,
+                            fontFamily: D.mono,
+                            fontSize: "13px",
+                            fontWeight: 800,
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                          GROUND WICKETS
+                        </label>
+                        <input
+                          type="number"
+                          value={physicalBoardWickets}
+                          onChange={e => setPhysicalBoardWickets(Number(e.target.value))}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            borderRadius: D.md,
+                            background: D.surf2,
+                            border: `1px solid ${D.border}`,
+                            color: D.textPrimary,
+                            fontFamily: D.mono,
+                            fontSize: "13px",
+                            fontWeight: 800,
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                          GROUND OVERS
+                        </label>
+                        <input
+                          type="text"
+                          value={physicalBoardOvers}
+                          onChange={e => setPhysicalBoardOvers(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            borderRadius: D.md,
+                            background: D.surf2,
+                            border: `1px solid ${D.border}`,
+                            color: D.textPrimary,
+                            fontFamily: D.mono,
+                            fontSize: "13px",
+                            fontWeight: 800,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        const expectedPin = generatePairingCode(activeMatch?.id || "m1", activeSessionLease.sessionEpoch);
+                        const result = verifyHandoverInput(
+                          {
+                            physicalBoardRuns,
+                            physicalBoardWickets,
+                            physicalBoardOvers,
+                            verificationPin: inputPairingPin,
+                            targetScorerName: incomingScorerName,
+                          },
+                          expectedPin,
+                          {
+                            totalRuns: matchDerivedState.totalRuns,
+                            totalWickets: matchDerivedState.totalWickets,
+                            oversStr: matchDerivedState.oversStr,
+                          }
+                        );
+                        setHandoverVerificationResult(result);
+                      }}
+                      style={{
+                        padding: "10px",
+                        borderRadius: D.pill,
+                        background: D.sky,
+                        border: "none",
+                        color: "#000",
+                        fontFamily: D.head,
+                        fontSize: "12px",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        marginTop: "6px",
+                      }}
+                    >
+                      🔍 VERIFY TAKEOVER HANDSHAKE & DIFF
+                    </button>
+                  </div>
+
+                  {/* Verification Diff Results Box */}
+                  {handoverVerificationResult && (
+                    <div
+                      style={{
+                        padding: "14px",
+                        borderRadius: D.lg,
+                        background: handoverVerificationResult.isVerified
+                          ? `${D.emerald}15`
+                          : `${D.rose}15`,
+                        border: `1px solid ${handoverVerificationResult.isVerified ? D.emerald : D.rose}`,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                      }}
+                    >
+                      <div style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 800, color: handoverVerificationResult.isVerified ? D.emerald : D.rose }}>
+                        {handoverVerificationResult.message}
+                      </div>
+
+                      {/* Diff Table */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", background: D.surf0, padding: "10px", borderRadius: D.md }}>
+                        {handoverVerificationResult.diffs.map((d: any) => (
+                          <div key={d.field} style={{ textAlign: "center" }}>
+                            <div style={{ fontFamily: D.head, fontSize: "9px", color: D.textMuted, textTransform: "uppercase" }}>{d.field}</div>
+                            <div style={{ fontFamily: D.mono, fontSize: "11px", color: d.discrepancy ? D.rose : D.emerald, fontWeight: 800 }}>
+                              Derived: {d.derivedValue} vs Board: {d.physicalValue}
+                            </div>
+                            {d.discrepancy && (
+                              <div style={{ fontFamily: D.mono, fontSize: "9px", color: D.amber }}>⚠️ Discrepancy</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Confirm Transfer Trigger */}
+                      {handoverVerificationResult.isVerified && (
+                        <button
+                          onClick={() => {
+                            const { newLease, auditRecord } = executeHandoverSession(
+                              activeSessionLease,
+                              incomingScorerName
+                            );
+                            auditRecord.physicalScoreSnapshot = {
+                              runs: physicalBoardRuns,
+                              wickets: physicalBoardWickets,
+                              overs: physicalBoardOvers,
+                            };
+                            auditRecord.derivedScoreSnapshot = {
+                              runs: matchDerivedState.totalRuns,
+                              wickets: matchDerivedState.totalWickets,
+                              overs: matchDerivedState.oversStr,
+                            };
+                            auditRecord.hasDiscrepancies = handoverVerificationResult.diffs.some((d: any) => d.discrepancy);
+
+                            setActiveSessionLease(newLease);
+                            setHandoverAuditLogs(prev => [auditRecord, ...prev]);
+                            setHandoverVerificationResult(null);
+                            setInputPairingPin("");
+                            alert(`✅ Token Handover Complete! Active Scorer set to ${newLease.scorerName} (Epoch ${newLease.sessionEpoch}).`);
+                            setHandoverModalOpen(false);
+                          }}
+                          style={{
+                            padding: "10px",
+                            borderRadius: D.pill,
+                            background: D.emerald,
+                            border: "none",
+                            color: "#000",
+                            fontFamily: D.head,
+                            fontSize: "12px",
+                            fontWeight: 900,
+                            cursor: "pointer",
+                          }}
+                        >
+                          ⚡ CONFIRM TRANSFER AUTHORITATIVE TOKEN TO EPOCH {activeSessionLease.sessionEpoch + 1}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 2: QUARANTINE QUEUE */}
+              {handoverModalTab === "quarantine" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ fontFamily: D.body, fontSize: "12px", color: D.textMuted }}>
+                    Ball events written with stale/revoked session epochs or expired leases are quarantined here to prevent scoring corruption.
+                  </div>
+
+                  {quarantineQueue.length === 0 ? (
+                    <div style={{ padding: "30px", textAlign: "center", color: D.emerald, fontFamily: D.head, fontSize: "13px", background: D.surf2, borderRadius: D.lg }}>
+                      🛡️ Quarantine queue is clean. Zero divergent event writes detected.
+                    </div>
+                  ) : (
+                    quarantineQueue.map(item => (
+                      <div
+                        key={item.eventId}
+                        style={{
+                          padding: "14px",
+                          borderRadius: D.lg,
+                          background: D.surf2,
+                          border: `1px solid ${D.rose}55`,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "8px",
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ padding: "2px 8px", borderRadius: D.pill, background: D.rose, color: "#fff", fontFamily: D.mono, fontSize: "10px", fontWeight: 800 }}>
+                            {item.quarantineReason}
+                          </span>
+                          <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
+                            Quarantined: {new Date(item.quarantinedAt).toLocaleTimeString()}
+                          </span>
+                        </div>
+
+                        <div style={{ fontFamily: D.mono, fontSize: "12px", color: D.textPrimary }}>
+                          Event Epoch: {item.eventEpoch} (Expected Active Epoch: {item.expectedEpoch})
+                        </div>
+                        <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textSecondary, background: D.surf0, padding: "8px", borderRadius: D.md }}>
+                          Ball Payload: {JSON.stringify(item.ballData)}
+                        </div>
+
+                        <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                          <button
+                            onClick={() => {
+                              setQuarantineQueue(prev => prev.filter(q => q.eventId !== item.eventId));
+                              alert(`Approved and merged quarantined event ${item.eventId} into live stream.`);
+                            }}
+                            style={{
+                              padding: "5px 12px",
+                              borderRadius: D.pill,
+                              background: `${D.emerald}20`,
+                              border: `1px solid ${D.emerald}`,
+                              color: D.emerald,
+                              fontFamily: D.head,
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            ✓ Approve & Merge
+                          </button>
+                          <button
+                            onClick={() => {
+                              setQuarantineQueue(prev => prev.filter(q => q.eventId !== item.eventId));
+                            }}
+                            style={{
+                              padding: "5px 12px",
+                              borderRadius: D.pill,
+                              background: `${D.rose}20`,
+                              border: `1px solid ${D.rose}`,
+                              color: D.rose,
+                              fontFamily: D.head,
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            ✕ Discard Event
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* TAB 3: AUDIT TRAIL */}
+              {handoverModalTab === "audit" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div style={{ fontFamily: D.body, fontSize: "12px", color: D.textMuted }}>
+                    Immutable historical record of session transfers and ground board checks.
+                  </div>
+
+                  {handoverAuditLogs.length === 0 ? (
+                    <div style={{ padding: "24px", textAlign: "center", color: D.textMuted, fontFamily: D.body, fontSize: "12px", background: D.surf2, borderRadius: D.lg }}>
+                      No handover transitions logged in current match session.
+                    </div>
+                  ) : (
+                    handoverAuditLogs.map(log => (
+                      <div key={log.id} style={{ padding: "12px", borderRadius: D.lg, background: D.surf2, border: `1px solid ${D.border}`, display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 800, color: D.sky }}>
+                            Epoch {log.oldEpoch} → Epoch {log.newEpoch}
+                          </span>
+                          <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
+                            {new Date(log.timestamp).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textPrimary }}>
+                          Transfer: <strong>{log.fromScorer}</strong> to <strong>{log.toScorer}</strong> (Pairing PIN: {log.pairingPin})
+                        </div>
+                        <div style={{ fontFamily: D.mono, fontSize: "10px", color: log.hasDiscrepancies ? D.amber : D.emerald }}>
+                          Derived Snapshot: {log.derivedScoreSnapshot.runs}/{log.derivedScoreSnapshot.wickets} ({log.derivedScoreSnapshot.overs} ov) | Board Snapshot: {log.physicalScoreSnapshot.runs}/{log.physicalScoreSnapshot.wickets} ({log.physicalScoreSnapshot.overs} ov)
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ── DISMISSAL MODAL ── */}
         {wicketModalOpen && (
           <div
@@ -4303,6 +5218,539 @@ export default function BroadcastScorer({
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── DLS (DUCKWORTH-LEWIS-STERN) TARGET RECALCULATOR MODAL ── */}
+        {dlsModalOpen && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.85)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px",
+              zIndex: 10004,
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                maxWidth: "760px",
+                maxHeight: "92vh",
+                overflowY: "auto",
+                background: D.surf1,
+                border: `1px solid ${D.borderMed}`,
+                borderRadius: D.xl,
+                padding: "24px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "18px",
+                boxShadow: "0 24px 48px rgba(0,0,0,0.8)",
+              }}
+            >
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontFamily: D.head, fontSize: "18px", fontWeight: 800, color: D.cyan }}>
+                      🌧️ DLS (DUCKWORTH-LEWIS-STERN) RECALCULATOR
+                    </span>
+                    <span
+                      style={{
+                        padding: "2px 8px",
+                        borderRadius: D.pill,
+                        background: `${D.cyan}20`,
+                        border: `1px solid ${D.cyan}`,
+                        color: D.cyan,
+                        fontFamily: D.mono,
+                        fontSize: "10px",
+                        fontWeight: 800,
+                      }}
+                    >
+                      STANDARD EDITION
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: D.body, fontSize: "12px", color: D.textMuted, marginTop: "2px" }}>
+                    Official ICC/CSA resource table target recalculation engine for rain-shortened and interrupted matches.
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setDlsModalOpen(false)}
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "50%",
+                    background: D.surf2,
+                    border: `1px solid ${D.border}`,
+                    color: D.textMuted,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "14px",
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Format Quick Selectors */}
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <span style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 700, color: D.textSecondary }}>
+                  MATCH FORMAT:
+                </span>
+                {[
+                  { label: "T20 (20 Overs)", val: 20 },
+                  { label: "ODI (50 Overs)", val: 50 },
+                  { label: "T10 (10 Overs)", val: 10 },
+                ].map(fmt => (
+                  <button
+                    key={fmt.val}
+                    onClick={() => {
+                      setDlsFormatOvers(fmt.val);
+                      if (dlsTeam1Overs > fmt.val) setDlsTeam1Overs(fmt.val);
+                      if (dlsRevisedOvers > fmt.val) setDlsRevisedOvers(fmt.val);
+                    }}
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: D.pill,
+                      background: dlsFormatOvers === fmt.val ? D.cyan : D.surf2,
+                      border: `1px solid ${dlsFormatOvers === fmt.val ? D.cyan : D.border}`,
+                      color: dlsFormatOvers === fmt.val ? "#000" : D.textPrimary,
+                      fontFamily: D.head,
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {fmt.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Input Configuration Grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                {/* Team 1 First Innings */}
+                <div style={{ padding: "14px", background: D.surf0, borderRadius: D.lg, border: `1px solid ${D.border}`, display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 800, color: D.textPrimary }}>
+                    1️⃣ TEAM 1 (FIRST INNINGS)
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                    <div>
+                      <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                        Runs Scored:
+                      </label>
+                      <input
+                        type="number"
+                        value={dlsTeam1Runs}
+                        onChange={e => setDlsTeam1Runs(Math.max(1, Number(e.target.value) || 0))}
+                        style={{
+                          width: "100%",
+                          padding: "8px",
+                          borderRadius: D.sm,
+                          background: D.surf2,
+                          border: `1px solid ${D.border}`,
+                          color: D.textPrimary,
+                          fontFamily: D.mono,
+                          fontSize: "14px",
+                          fontWeight: 700,
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                        Wickets Lost:
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        value={dlsTeam1Wickets}
+                        onChange={e => setDlsTeam1Wickets(Math.max(0, Math.min(10, Number(e.target.value) || 0)))}
+                        style={{
+                          width: "100%",
+                          padding: "8px",
+                          borderRadius: D.sm,
+                          background: D.surf2,
+                          border: `1px solid ${D.border}`,
+                          color: D.textPrimary,
+                          fontFamily: D.mono,
+                          fontSize: "14px",
+                          fontWeight: 700,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, display: "block", marginBottom: "4px" }}>
+                      Overs Batted by Team 1: {dlsTeam1Overs} / {dlsFormatOvers} ov
+                    </label>
+                    <input
+                      type="range"
+                      min="5"
+                      max={dlsFormatOvers}
+                      value={dlsTeam1Overs}
+                      onChange={e => setDlsTeam1Overs(Number(e.target.value))}
+                      style={{ width: "100%", accentColor: D.cyan }}
+                    />
+                  </div>
+                </div>
+
+                {/* Team 2 Second Innings (Shortened Target) */}
+                <div style={{ padding: "14px", background: D.surf0, borderRadius: D.lg, border: `1px solid ${D.cyan}44`, display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div style={{ fontFamily: D.head, fontSize: "12px", fontWeight: 800, color: D.cyan }}>
+                    2️⃣ TEAM 2 (REVISED ALLOCATION)
+                  </div>
+
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                      <label style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted }}>
+                        Revised Overs Allocated to Team 2:
+                      </label>
+                      <span style={{ fontFamily: D.mono, fontSize: "14px", fontWeight: 800, color: D.cyan }}>
+                        {dlsRevisedOvers} overs
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="5"
+                      max={dlsFormatOvers}
+                      value={dlsRevisedOvers}
+                      onChange={e => setDlsRevisedOvers(Number(e.target.value))}
+                      style={{ width: "100%", accentColor: D.cyan }}
+                    />
+                  </div>
+
+                  {/* Quick Preset Buttons */}
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                    {[5, 10, 12, 15, 18, 20]
+                      .filter(ov => ov <= dlsFormatOvers)
+                      .map(ov => (
+                        <button
+                          key={ov}
+                          onClick={() => setDlsRevisedOvers(ov)}
+                          style={{
+                            padding: "3px 8px",
+                            borderRadius: D.sm,
+                            background: dlsRevisedOvers === ov ? `${D.cyan}30` : D.surf2,
+                            border: `1px solid ${dlsRevisedOvers === ov ? D.cyan : D.border}`,
+                            color: dlsRevisedOvers === ov ? D.cyan : D.textSecondary,
+                            fontFamily: D.mono,
+                            fontSize: "10px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {ov} ov
+                        </button>
+                      ))}
+                  </div>
+
+                  <div style={{ fontFamily: D.mono, fontSize: "10px", color: D.textMuted, borderTop: `1px solid ${D.border}`, paddingTop: "6px" }}>
+                    Current Match State: {matchDerivedState.totalRuns}/{matchDerivedState.totalWickets} in {matchDerivedState.oversStr} ov
+                  </div>
+                </div>
+              </div>
+
+              {/* Real-time Calculation Telemetry Cockpit */}
+              <div style={{ padding: "16px", background: `linear-gradient(135deg, ${D.surf0}, ${D.surf2})`, borderRadius: D.lg, border: `1px solid ${D.cyan}66`, display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px" }}>
+                  {/* Metric 1: Revised Target */}
+                  <div style={{ padding: "10px", background: D.surf1, borderRadius: D.md, border: `1px solid ${D.border}` }}>
+                    <div style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.textMuted }}>
+                      REVISED DLS TARGET
+                    </div>
+                    <div style={{ fontFamily: D.mono, fontSize: "28px", fontWeight: 900, color: D.cyan, marginTop: "2px" }}>
+                      {dlsCalculation.revisedTarget}
+                    </div>
+                    <div style={{ fontFamily: D.body, fontSize: "10px", color: D.textSecondary }}>
+                      Need {Math.max(0, dlsCalculation.revisedTarget - matchDerivedState.totalRuns)} runs to win
+                    </div>
+                  </div>
+
+                  {/* Metric 2: Par Score */}
+                  <div style={{ padding: "10px", background: D.surf1, borderRadius: D.md, border: `1px solid ${D.border}` }}>
+                    <div style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.textMuted }}>
+                      CURRENT PAR SCORE
+                    </div>
+                    <div style={{ fontFamily: D.mono, fontSize: "28px", fontWeight: 900, color: matchDerivedState.totalRuns >= dlsCalculation.parScoreAtCurrentOver ? D.emerald : D.rose, marginTop: "2px" }}>
+                      {dlsCalculation.parScoreAtCurrentOver}
+                    </div>
+                    <div style={{ fontFamily: D.body, fontSize: "10px", color: matchDerivedState.totalRuns >= dlsCalculation.parScoreAtCurrentOver ? D.emerald : D.rose }}>
+                      {matchDerivedState.totalRuns >= dlsCalculation.parScoreAtCurrentOver ? `Ahead by ${matchDerivedState.totalRuns - dlsCalculation.parScoreAtCurrentOver} runs` : `Behind by ${dlsCalculation.parScoreAtCurrentOver - matchDerivedState.totalRuns} runs`}
+                    </div>
+                  </div>
+
+                  {/* Metric 3: Required Run Rate */}
+                  <div style={{ padding: "10px", background: D.surf1, borderRadius: D.md, border: `1px solid ${D.border}` }}>
+                    <div style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.textMuted }}>
+                      REQUIRED RUN RATE (RRR)
+                    </div>
+                    <div style={{ fontFamily: D.mono, fontSize: "28px", fontWeight: 900, color: D.textPrimary, marginTop: "2px" }}>
+                      {dlsCalculation.requiredRunRate}
+                    </div>
+                    <div style={{ fontFamily: D.body, fontSize: "10px", color: D.textSecondary }}>
+                      Runs required per over
+                    </div>
+                  </div>
+
+                  {/* Metric 4: Resource Balance */}
+                  <div style={{ padding: "10px", background: D.surf1, borderRadius: D.md, border: `1px solid ${D.border}` }}>
+                    <div style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 700, color: D.textMuted }}>
+                      RESOURCE BALANCE
+                    </div>
+                    <div style={{ fontFamily: D.mono, fontSize: "18px", fontWeight: 800, color: D.indigo, marginTop: "6px" }}>
+                      {dlsCalculation.team2ResourceAvailable}% <span style={{ fontSize: "11px", color: D.textMuted }}>vs</span> {dlsCalculation.team1ResourceUsed}%
+                    </div>
+                    <div style={{ fontFamily: D.body, fontSize: "10px", color: D.textSecondary, marginTop: "4px" }}>
+                      R2 available vs R1 utilized
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mathematical Formula Description */}
+                <div style={{ padding: "8px 12px", background: D.surf0, borderRadius: D.md, border: `1px solid ${D.border}`, fontFamily: D.mono, fontSize: "11px", color: D.textSecondary }}>
+                  📐 <strong>Methodology:</strong> {dlsCalculation.formulaDescription}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button
+                  onClick={() => setDlsModalOpen(false)}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: D.pill,
+                    background: D.surf2,
+                    border: `1px solid ${D.border}`,
+                    color: D.textMuted,
+                    fontFamily: D.head,
+                    fontSize: "12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setDlsTarget(dlsCalculation.revisedTarget);
+                    setDlsRevisedOvers(dlsRevisedOvers);
+                    setDlsModalOpen(false);
+                    if (soundFxEnabled) scorerAudio.playBatHit("solid");
+                    if (ttsEnabled) scorerAudio.speakCommentary(`Revised DLS Target of ${dlsCalculation.revisedTarget} runs set for ${dlsRevisedOvers} overs.`);
+                  }}
+                  style={{
+                    padding: "8px 24px",
+                    borderRadius: D.pill,
+                    background: D.cyan,
+                    border: "none",
+                    color: "#000",
+                    fontFamily: D.head,
+                    fontSize: "12px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    boxShadow: `0 4px 14px ${D.cyan}40`,
+                  }}
+                >
+                  ✓ Apply DLS Target ({dlsCalculation.revisedTarget} Runs in {dlsRevisedOvers} Ov)
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── UMPIRE PENALTY RUNS AWARD MODAL (LAW 28.3 / LAW 41) ── */}
+        {penaltyModalOpen && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.85)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px",
+              zIndex: 10004,
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                maxWidth: "520px",
+                background: D.surf1,
+                border: `1px solid ${D.amber}66`,
+                borderRadius: D.xl,
+                padding: "24px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+                boxShadow: "0 24px 48px rgba(0,0,0,0.8)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span style={{ fontFamily: D.head, fontSize: "16px", fontWeight: 800, color: D.amber }}>
+                      ⚖️ AWARD +5 OFFICIAL PENALTY RUNS
+                    </span>
+                    <span
+                      style={{
+                        padding: "2px 8px",
+                        borderRadius: D.pill,
+                        background: `${D.amber}20`,
+                        border: `1px solid ${D.amber}`,
+                        color: D.amber,
+                        fontFamily: D.mono,
+                        fontSize: "10px",
+                        fontWeight: 800,
+                      }}
+                    >
+                      LAW 41 / 28.3
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: D.body, fontSize: "11px", color: D.textMuted, marginTop: "2px" }}>
+                    Award 5 penalty runs with official MCC/ICC Law categorization.
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setPenaltyModalOpen(false)}
+                  style={{
+                    width: "28px",
+                    height: "28px",
+                    borderRadius: "50%",
+                    background: D.surf2,
+                    border: `1px solid ${D.border}`,
+                    color: D.textMuted,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "14px",
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Beneficiary Selector */}
+              <div>
+                <label style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 700, color: D.textSecondary, display: "block", marginBottom: "6px" }}>
+                  AWARD PENALTY RUNS TO:
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  <button
+                    onClick={() => setPenaltyBeneficiary("batting")}
+                    style={{
+                      padding: "10px",
+                      borderRadius: D.md,
+                      background: penaltyBeneficiary === "batting" ? `${D.emerald}25` : D.surf2,
+                      border: `1.5px solid ${penaltyBeneficiary === "batting" ? D.emerald : D.border}`,
+                      color: penaltyBeneficiary === "batting" ? D.emerald : D.textSecondary,
+                      fontFamily: D.head,
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    🏏 Batting Team (+5 Runs)
+                  </button>
+                  <button
+                    onClick={() => setPenaltyBeneficiary("bowling")}
+                    style={{
+                      padding: "10px",
+                      borderRadius: D.md,
+                      background: penaltyBeneficiary === "bowling" ? `${D.rose}25` : D.surf2,
+                      border: `1.5px solid ${penaltyBeneficiary === "bowling" ? D.rose : D.border}`,
+                      color: penaltyBeneficiary === "bowling" ? D.rose : D.textSecondary,
+                      fontFamily: D.head,
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                  >
+                    🛡️ Fielding Team (+5 Runs)
+                  </button>
+                </div>
+              </div>
+
+              {/* Official Law Reason Selector */}
+              <div>
+                <label style={{ fontFamily: D.head, fontSize: "11px", fontWeight: 700, color: D.textSecondary, display: "block", marginBottom: "6px" }}>
+                  OFFICIAL LAW REASON CODE:
+                </label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {[
+                    "Ball struck helmet placed on field (Law 28.3)",
+                    "Deliberate short run by batter (Law 18.5)",
+                    "Deliberate distraction of striker / fielder (Law 41.2 / 41.4)",
+                    "Ball tampering or unfair condition alteration (Law 41.3)",
+                    "Time wasting / Slow over rate penalty (Law 41.9)",
+                    "Damaging the pitch protected area (Law 41.13)",
+                  ].map(reason => (
+                    <button
+                      key={reason}
+                      onClick={() => setPenaltyReason(reason)}
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: D.md,
+                        background: penaltyReason === reason ? `${D.amber}20` : D.surf2,
+                        border: `1px solid ${penaltyReason === reason ? D.amber : D.border}`,
+                        color: penaltyReason === reason ? D.amber : D.textSecondary,
+                        fontFamily: D.body,
+                        fontSize: "11px",
+                        textAlign: "left",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "4px" }}>
+                <button
+                  onClick={() => setPenaltyModalOpen(false)}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: D.pill,
+                    background: D.surf2,
+                    border: `1px solid ${D.border}`,
+                    color: D.textMuted,
+                    fontFamily: D.head,
+                    fontSize: "12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleAwardPenaltyRuns(penaltyBeneficiary, penaltyReason)}
+                  style={{
+                    padding: "8px 24px",
+                    borderRadius: D.pill,
+                    background: D.amber,
+                    border: "none",
+                    color: "#000",
+                    fontFamily: D.head,
+                    fontSize: "12px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    boxShadow: `0 4px 14px ${D.amber}40`,
+                  }}
+                >
+                  ⚖️ Confirm Award (+5 Penalty Runs)
+                </button>
+              </div>
             </div>
           </div>
         )}

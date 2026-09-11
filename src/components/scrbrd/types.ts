@@ -22,6 +22,7 @@ export interface Theme {
   teal: string;
   lime: string;
   pink: string;
+  purple?: string;
   gradMain: string;
   gradGold: string;
   gradLive: string;
@@ -87,6 +88,9 @@ export interface Player {
   weight?: string;
   battingPos?: number;
   bio?: string;
+  batting?: any;
+  bowling?: any;
+  ageDivision?: string;
   careerTotals?: {
     innings: number;
     runs: number;
@@ -340,7 +344,8 @@ export interface SchoolSquad {
   assignedGround: string;
   practiceSlot: string;
   squadCapCount: number;
-  matchFormat: "50-Over / Declaration" | "50-Over" | "40-Over" | "35-Over" | "30-Over" | "20-Over";
+  classRank?: number;
+  matchFormat: "50-Over / Declaration" | "50-Over" | "40-Over" | "35-Over" | "30-Over" | "25-Over" | "20-Over";
   captainId?: string;
   viceCaptainId?: string;
   seasonRecord: { played: number; won: number; lost: number; drawn: number; tied: number };
@@ -497,7 +502,7 @@ export interface PitchCondition {
   rollerCompaction: string;
   bounceRating: number; // out of 10
   paceRating: number; // out of 10
-  outfieldSpeed: "Fast" | "Medium" | "Slow";
+  outfieldSpeed: "Fast" | "Medium-Fast" | "Medium" | "Slow" | string;
   coversStatus: "off" | "on" | "standby";
   drainageTimeMin: number;
   curatorNotes: string;

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Theme, MatchScorecard, InningsScorecard } from './types';
 import PhaseScoringView from './PhaseScoringView';
 import ScorecardWagonHeatmapView from './ScorecardWagonHeatmapView';
+import { getBatterScoreStyle, getRunConfig } from './runColors';
 
 interface ScorecardModalProps {
   theme: Theme;
@@ -318,67 +319,147 @@ export default function ScorecardModal({
                   borderRadius: D.lg,
                   border: `1px solid ${D.border}`,
                   overflow: 'hidden',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
                 }}
               >
                 <div
                   style={{
-                    padding: '10px 16px',
+                    padding: '12px 18px',
                     background: D.surf2,
                     borderBottom: `1px solid ${D.border}`,
-                    fontFamily: D.head,
-                    fontSize: '12px',
-                    fontWeight: 800,
-                    letterSpacing: '0.05em',
-                    color: D.sky,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '8px',
                   }}
                 >
-                  BATTING
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 900, letterSpacing: '0.05em', color: D.sky }}>
+                      🏏 BATTING SCORECARD
+                    </span>
+                    <span style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
+                      ({currentInnings.batting.length} Batters)
+                    </span>
+                  </div>
+
+                  {/* Run Color Legend */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '10px', fontFamily: D.mono }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#fbbf24' }} />
+                      <span style={{ color: '#fbbf24' }}>100+</span>
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }} />
+                      <span style={{ color: '#f59e0b' }}>50+</span>
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#38bdf8' }} />
+                      <span style={{ color: '#38bdf8' }}>30+</span>
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
+                      <span style={{ color: '#10b981' }}>4s</span>
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#8b5cf6' }} />
+                      <span style={{ color: '#8b5cf6' }}>6s</span>
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f43f5e' }} />
+                      <span style={{ color: '#f43f5e' }}>Duck</span>
+                    </span>
+                  </div>
                 </div>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px' }}>
                     <thead>
-                      <tr style={{ borderBottom: `1px solid ${D.border}`, textAlign: 'left' }}>
-                        <th style={{ padding: '8px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>Batter</th>
-                        <th style={{ padding: '8px 8px', fontFamily: D.head, fontSize: '11px', color: D.textMuted }}>Dismissal</th>
-                        <th style={{ padding: '8px 12px', fontFamily: D.mono, fontSize: '11px', color: D.textMuted, textAlign: 'right' }}>R</th>
-                        <th style={{ padding: '8px 12px', fontFamily: D.mono, fontSize: '11px', color: D.textMuted, textAlign: 'right' }}>B</th>
-                        <th style={{ padding: '8px 12px', fontFamily: D.mono, fontSize: '11px', color: D.textMuted, textAlign: 'right' }}>4s</th>
-                        <th style={{ padding: '8px 12px', fontFamily: D.mono, fontSize: '11px', color: D.textMuted, textAlign: 'right' }}>6s</th>
-                        <th style={{ padding: '8px 16px', fontFamily: D.mono, fontSize: '11px', color: D.textMuted, textAlign: 'right' }}>SR</th>
+                      <tr style={{ borderBottom: `1px solid ${D.border}`, textAlign: 'left', background: D.surf1 }}>
+                        <th style={{ padding: '10px 16px', fontFamily: D.head, fontSize: '11px', color: D.textMuted, fontWeight: 700 }}>Batter</th>
+                        <th style={{ padding: '10px 10px', fontFamily: D.head, fontSize: '11px', color: D.textMuted, fontWeight: 700 }}>Dismissal</th>
+                        <th style={{ padding: '10px 14px', fontFamily: D.mono, fontSize: '11px', color: D.textPrimary, textAlign: 'right', fontWeight: 800 }}>R</th>
+                        <th style={{ padding: '10px 12px', fontFamily: D.mono, fontSize: '11px', color: D.textMuted, textAlign: 'right' }}>B</th>
+                        <th style={{ padding: '10px 12px', fontFamily: D.mono, fontSize: '11px', color: '#10b981', textAlign: 'right', fontWeight: 700 }}>4s</th>
+                        <th style={{ padding: '10px 12px', fontFamily: D.mono, fontSize: '11px', color: '#8b5cf6', textAlign: 'right', fontWeight: 700 }}>6s</th>
+                        <th style={{ padding: '10px 16px', fontFamily: D.mono, fontSize: '11px', color: D.textMuted, textAlign: 'right' }}>SR</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {currentInnings.batting.map((b) => (
-                        <tr
-                          key={b.id}
-                          style={{
-                            borderBottom: `1px solid ${D.border}`,
-                            background: b.isNotOut ? `${D.emerald}08` : 'transparent',
-                          }}
-                        >
-                          <td style={{ padding: '10px 16px', fontFamily: D.body, fontSize: '13px', fontWeight: 700 }}>
-                            {b.name} {b.isNotOut && <span style={{ color: D.emerald }}>*</span>}
-                          </td>
-                          <td style={{ padding: '10px 8px', fontFamily: D.body, fontSize: '12px', color: b.isNotOut ? D.emerald : D.textMuted }}>
-                            {b.dismissal}
-                          </td>
-                          <td style={{ padding: '10px 12px', fontFamily: D.mono, fontSize: '13px', fontWeight: 800, textAlign: 'right', color: b.runs >= 50 ? D.amber : D.textPrimary }}>
-                            {b.runs}
-                          </td>
-                          <td style={{ padding: '10px 12px', fontFamily: D.mono, fontSize: '12px', color: D.textMuted, textAlign: 'right' }}>
-                            {b.balls}
-                          </td>
-                          <td style={{ padding: '10px 12px', fontFamily: D.mono, fontSize: '12px', color: D.emerald, textAlign: 'right' }}>
-                            {b.fours}
-                          </td>
-                          <td style={{ padding: '10px 12px', fontFamily: D.mono, fontSize: '12px', color: D.violet, textAlign: 'right' }}>
-                            {b.sixes}
-                          </td>
-                          <td style={{ padding: '10px 16px', fontFamily: D.mono, fontSize: '12px', color: b.sr >= 130 ? D.emerald : D.textSecondary, textAlign: 'right' }}>
-                            {b.sr.toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
+                      {currentInnings.batting.map((b, idx) => {
+                        const isDuck = b.runs === 0 && !b.isNotOut;
+                        const scoreStyle = getBatterScoreStyle(b.runs, b.balls, b.isNotOut, isDuck);
+
+                        return (
+                          <tr
+                            key={b.id || idx}
+                            style={{
+                              borderBottom: `1px solid ${D.border}`,
+                              background: b.isNotOut ? `${D.emerald}0a` : idx % 2 === 1 ? `${D.surf2}40` : 'transparent',
+                              transition: 'background 0.15s ease',
+                            }}
+                          >
+                            <td style={{ padding: '12px 16px', fontFamily: D.body, fontSize: '13px', fontWeight: 700 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ color: b.isNotOut ? D.emerald : D.textPrimary }}>{b.name}</span>
+                                {b.isNotOut && (
+                                  <span style={{ background: `${D.emerald}25`, color: D.emerald, padding: '1px 6px', borderRadius: D.sm, fontSize: '10px', fontFamily: D.mono, fontWeight: 800 }}>
+                                    NOT OUT *
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td style={{ padding: '12px 10px', fontFamily: D.body, fontSize: '12px', color: b.isNotOut ? D.emerald : D.textMuted }}>
+                              {b.dismissal}
+                            </td>
+                            <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
+                                {scoreStyle.badge && (
+                                  <span style={{ fontSize: '11px' }}>{scoreStyle.badge}</span>
+                                )}
+                                <span
+                                  style={{
+                                    fontFamily: D.mono,
+                                    fontSize: '14px',
+                                    fontWeight: 900,
+                                    color: scoreStyle.color,
+                                    background: scoreStyle.background,
+                                    border: scoreStyle.border,
+                                    padding: scoreStyle.isMilestone ? '2px 8px' : isDuck ? '2px 6px' : '0',
+                                    borderRadius: D.sm,
+                                  }}
+                                >
+                                  {b.runs}
+                                </span>
+                              </div>
+                            </td>
+                            <td style={{ padding: '12px 12px', fontFamily: D.mono, fontSize: '12px', color: D.textMuted, textAlign: 'right' }}>
+                              {b.balls}
+                            </td>
+                            <td style={{ padding: '12px 12px', textAlign: 'right' }}>
+                              {b.fours > 0 ? (
+                                <span style={{ fontFamily: D.mono, fontSize: '12px', fontWeight: 700, color: '#10b981', background: 'rgba(16, 185, 129, 0.15)', padding: '2px 6px', borderRadius: D.sm }}>
+                                  {b.fours}
+                                </span>
+                              ) : (
+                                <span style={{ fontFamily: D.mono, fontSize: '12px', color: D.textMuted }}>0</span>
+                              )}
+                            </td>
+                            <td style={{ padding: '12px 12px', textAlign: 'right' }}>
+                              {b.sixes > 0 ? (
+                                <span style={{ fontFamily: D.mono, fontSize: '12px', fontWeight: 700, color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.18)', padding: '2px 6px', borderRadius: D.sm }}>
+                                  {b.sixes}
+                                </span>
+                              ) : (
+                                <span style={{ fontFamily: D.mono, fontSize: '12px', color: D.textMuted }}>0</span>
+                              )}
+                            </td>
+                            <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '12px', color: b.sr >= 140 ? D.emerald : b.sr >= 100 ? D.sky : D.textSecondary, textAlign: 'right', fontWeight: b.sr >= 120 ? 700 : 500 }}>
+                              {b.sr.toFixed(1)}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -460,30 +541,48 @@ export default function ScorecardModal({
                       </tr>
                     </thead>
                     <tbody>
-                      {currentInnings.bowling.map((bw) => (
-                        <tr key={bw.id} style={{ borderBottom: `1px solid ${D.border}` }}>
-                          <td style={{ padding: '10px 16px', fontFamily: D.body, fontSize: '13px', fontWeight: 700 }}>
+                      {currentInnings.bowling.map((bw, idx) => (
+                        <tr
+                          key={bw.id || idx}
+                          style={{
+                            borderBottom: `1px solid ${D.border}`,
+                            background: idx % 2 === 1 ? `${D.surf2}40` : 'transparent',
+                          }}
+                        >
+                          <td style={{ padding: '12px 16px', fontFamily: D.body, fontSize: '13px', fontWeight: 700 }}>
                             {bw.name}
                           </td>
-                          <td style={{ padding: '10px 12px', fontFamily: D.mono, fontSize: '12px', textAlign: 'right' }}>
+                          <td style={{ padding: '12px 12px', fontFamily: D.mono, fontSize: '12px', textAlign: 'right' }}>
                             {bw.overs}
                           </td>
-                          <td style={{ padding: '10px 12px', fontFamily: D.mono, fontSize: '12px', color: D.textMuted, textAlign: 'right' }}>
+                          <td style={{ padding: '12px 12px', fontFamily: D.mono, fontSize: '12px', color: D.textMuted, textAlign: 'right' }}>
                             {bw.maidens}
                           </td>
-                          <td style={{ padding: '10px 12px', fontFamily: D.mono, fontSize: '12px', textAlign: 'right' }}>
+                          <td style={{ padding: '12px 12px', fontFamily: D.mono, fontSize: '12px', textAlign: 'right', color: bw.runs > 40 ? '#f43f5e' : bw.runs <= 25 ? '#10b981' : D.textPrimary }}>
                             {bw.runs}
                           </td>
-                          <td style={{ padding: '10px 12px', fontFamily: D.mono, fontSize: '13px', fontWeight: 800, color: bw.wickets >= 3 ? D.amber : D.emerald, textAlign: 'right' }}>
-                            {bw.wickets}
+                          <td style={{ padding: '12px 12px', textAlign: 'right' }}>
+                            <span
+                              style={{
+                                fontFamily: D.mono,
+                                fontSize: '13px',
+                                fontWeight: 800,
+                                color: bw.wickets >= 3 ? '#fbbf24' : bw.wickets >= 1 ? '#10b981' : D.textMuted,
+                                background: bw.wickets >= 3 ? 'rgba(251, 191, 36, 0.18)' : bw.wickets >= 1 ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                                padding: bw.wickets >= 1 ? '2px 8px' : '0',
+                                borderRadius: D.sm,
+                              }}
+                            >
+                              {bw.wickets}
+                            </span>
                           </td>
-                          <td style={{ padding: '10px 12px', fontFamily: D.mono, fontSize: '12px', color: bw.economy <= 6.0 ? D.emerald : D.textSecondary, textAlign: 'right' }}>
+                          <td style={{ padding: '12px 12px', fontFamily: D.mono, fontSize: '12px', color: bw.economy <= 6.0 ? '#10b981' : bw.economy <= 8.5 ? '#38bdf8' : bw.economy <= 10.0 ? '#f59e0b' : '#f43f5e', textAlign: 'right', fontWeight: 700 }}>
                             {bw.economy.toFixed(2)}
                           </td>
-                          <td style={{ padding: '10px 12px', fontFamily: D.mono, fontSize: '12px', color: D.sky, textAlign: 'right' }}>
+                          <td style={{ padding: '12px 12px', fontFamily: D.mono, fontSize: '12px', color: D.sky, textAlign: 'right' }}>
                             {bw.dots}
                           </td>
-                          <td style={{ padding: '10px 16px', fontFamily: D.mono, fontSize: '12px', color: D.textMuted, textAlign: 'right' }}>
+                          <td style={{ padding: '12px 16px', fontFamily: D.mono, fontSize: '12px', color: D.textMuted, textAlign: 'right' }}>
                             {bw.wides}/{bw.noBalls}
                           </td>
                         </tr>
@@ -561,8 +660,22 @@ export default function ScorecardModal({
                         <div style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 700 }}>
                           {p.wicket}{p.wicket === 1 ? 'st' : p.wicket === 2 ? 'nd' : p.wicket === 3 ? 'rd' : 'th'} Wicket Partnership {p.unbroken && <span style={{ color: D.emerald }}>(Unbroken *)</span>}
                         </div>
-                        <div style={{ fontFamily: D.mono, fontSize: '14px', fontWeight: 800, color: D.emerald }}>
-                          {p.runs} runs <span style={{ fontSize: '11px', color: D.textMuted, fontWeight: 'normal' }}>({p.balls} balls)</span>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <span
+                            style={{
+                              fontFamily: D.mono,
+                              fontSize: '14px',
+                              fontWeight: 900,
+                              color: p.runs >= 50 ? '#f59e0b' : '#10b981',
+                              background: p.runs >= 50 ? 'rgba(245, 158, 11, 0.18)' : 'rgba(16, 185, 129, 0.15)',
+                              border: `1px solid ${p.runs >= 50 ? '#f59e0b' : '#10b981'}40`,
+                              padding: '2px 8px',
+                              borderRadius: D.sm,
+                            }}
+                          >
+                            {p.runs}
+                          </span>
+                          <span style={{ fontSize: '11px', color: D.textMuted, fontFamily: D.mono }}>({p.balls}b)</span>
                         </div>
                       </div>
 
