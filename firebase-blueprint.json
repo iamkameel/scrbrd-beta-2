@@ -52,6 +52,28 @@
         "status": { "type": "string", "maxLength": 50 }
       },
       "required": ["id", "homeTeam", "awayTeam", "date", "status"]
+    },
+    "tacticalDirective": {
+      "title": "Tactical Directive",
+      "description": "Real-time tactical command broadcasted from Coach Cockpit to Captain Cockpit",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "matchId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "targetBatter": { "type": "string", "maxLength": 100 },
+        "bowler": { "type": "string", "maxLength": 100 },
+        "bowlingPlan": { "type": "string", "maxLength": 300 },
+        "fieldPreset": { "type": "string", "maxLength": 100 },
+        "instruction": { "type": "string", "maxLength": 500 },
+        "rationale": { "type": "string", "maxLength": 500 },
+        "confidence": { "type": "number" },
+        "sampleSize": { "type": "number" },
+        "status": { "type": "string", "maxLength": 50 },
+        "captainResponse": { "type": "string", "maxLength": 300 },
+        "timestamp": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "matchId", "title", "instruction", "status"]
     }
   },
   "firestore": {
@@ -66,6 +88,10 @@
     "/fixtures/{fixtureId}": {
       "schema": "fixture",
       "description": "School cricket fixtures schedule"
+    },
+    "/tacticalDirectives/{directiveId}": {
+      "schema": "tacticalDirective",
+      "description": "Real-time live tactical directives between coach and captain"
     }
   }
 }
