@@ -177,6 +177,20 @@ export default function WagonWheel({
   const [activeTab, setActiveTab] = useState<'wheel' | 'sectors' | 'fielders' | 'zones'>('wheel');
   const [showFielderOverlay, setShowFielderOverlay] = useState<boolean>(true);
   const [fieldPreset, setFieldPreset] = useState<'standard' | 'powerplay' | 'attacking' | 'death'>('standard');
+  const [displayMode, setDisplayMode] = useState<'spokes' | 'heatmap' | 'sectors' | 'density'>('spokes');
+  const [selectedVenue, setSelectedVenue] = useState<string>('standard_65m');
+
+  const VENUE_GEOMETRIES = [
+    { id: 'standard_65m', name: 'Standard Oval (65m)', boundaryMeters: 65 },
+    { id: 'kingsmead_68m', name: 'Kingsmead Stadium (68m)', boundaryMeters: 68 },
+    { id: 'st_charles_55m', name: 'St Charles Oval (55m)', boundaryMeters: 55 },
+    { id: 'michaelhouse_60m', name: 'Michaelhouse Meadows (60m)', boundaryMeters: 60 },
+    { id: 'hilton_64m', name: "Hilton College Campbell's (64m)", boundaryMeters: 64 },
+    { id: 'kearsney_63m', name: 'Kearsney College AH Smith (63m)', boundaryMeters: 63 },
+    { id: 'maritzburg_62m', name: 'Maritzburg College Goldstones (62m)', boundaryMeters: 62 },
+  ];
+
+  const currentVenue = VENUE_GEOMETRIES.find(v => v.id === selectedVenue) || VENUE_GEOMETRIES[0];
 
   // ── CONSTANTS FOR PITCH & GROUND GEOMETRY (SVG viewBox 0 0 360 360) ──
   // Ground Center: (180, 180)
@@ -189,7 +203,8 @@ export default function WagonWheel({
   const STRIKER_ORIGIN_Y = 160; // Exact Batting Crease Origin
   const BOWLER_CREASE_Y = 200;
   const BOUNDARY_RADIUS = 150;
-  const INFIELD_RADIUS = 82; // 30-yard circle equivalent
+  // 30 yards = 27.432m. Normalized against venue boundary:
+  const INFIELD_RADIUS = Math.round((27.432 / currentVenue.boundaryMeters) * BOUNDARY_RADIUS);
 
   // Dynamic Fielder Placements based on Preset & Stance
   const fielders: FieldPosition[] = useMemo(() => {
@@ -505,8 +520,110 @@ export default function WagonWheel({
           </div>
         </div>
 
-        {/* Action Controls & Stance Toggle */}
+        {/* Action Controls, Mode Switcher & Stance Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Visualization Mode Selector */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: D.surf2,
+              borderRadius: D.pill,
+              border: `1px solid ${D.border}`,
+              padding: '2px',
+            }}
+          >
+            <button
+              onClick={() => setDisplayMode('spokes')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: D.pill,
+                background: displayMode === 'spokes' ? D.indigo : 'transparent',
+                color: displayMode === 'spokes' ? '#fff' : D.textMuted,
+                fontFamily: D.head,
+                fontSize: '11px',
+                fontWeight: 800,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              🎯 Spokes
+            </button>
+            <button
+              onClick={() => setDisplayMode('heatmap')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: D.pill,
+                background: displayMode === 'heatmap' ? D.rose : 'transparent',
+                color: displayMode === 'heatmap' ? '#fff' : D.textMuted,
+                fontFamily: D.head,
+                fontSize: '11px',
+                fontWeight: 800,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              🔥 Heat Map
+            </button>
+            <button
+              onClick={() => setDisplayMode('sectors')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: D.pill,
+                background: displayMode === 'sectors' ? D.amber : 'transparent',
+                color: displayMode === 'sectors' ? '#fff' : D.textMuted,
+                fontFamily: D.head,
+                fontSize: '11px',
+                fontWeight: 800,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              📊 Sectors
+            </button>
+            <button
+              onClick={() => setDisplayMode('density')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: D.pill,
+                background: displayMode === 'density' ? D.emerald : 'transparent',
+                color: displayMode === 'density' ? '#fff' : D.textMuted,
+                fontFamily: D.head,
+                fontSize: '11px',
+                fontWeight: 800,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              ⚡ Density
+            </button>
+          </div>
+
+          {/* Venue Boundary Selector */}
+          <select
+            value={selectedVenue}
+            onChange={e => setSelectedVenue(e.target.value)}
+            style={{
+              padding: '5px 10px',
+              borderRadius: D.pill,
+              background: D.surf2,
+              border: `1px solid ${D.borderMed}`,
+              color: D.textPrimary,
+              fontFamily: D.mono,
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+            title="Ground Geometry & Boundary Calibration"
+          >
+            {VENUE_GEOMETRIES.map(v => (
+              <option key={v.id} value={v.id}>
+                🏟️ {v.name}
+              </option>
+            ))}
+          </select>
+
           {/* Batting Hand Toggle */}
           <div
             style={{

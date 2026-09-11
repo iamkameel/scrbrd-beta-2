@@ -828,14 +828,18 @@ export default function BroadcastScorer({
 
     // Default wagon coordinates if not provided
     let defaultShot: WagonWheelShot | undefined = customWagonShot;
-    if (!defaultShot && (runVal > 0 || isWkt)) {
-      // Auto-assign sensible default coordinates based on outcome
-      if (runVal === 4) defaultShot = classifyWagonCoordinates(-0.75, -0.65, activeBatHand); // Deep Extra Cover
-      else if (runVal === 6) defaultShot = classifyWagonCoordinates(0.68, -0.72, activeBatHand); // Deep Mid-Wicket
-      else if (runVal === 1) defaultShot = classifyWagonCoordinates(-0.45, -0.35, activeBatHand); // Cover Point
-      else if (runVal === 2) defaultShot = classifyWagonCoordinates(0.55, -0.45, activeBatHand); // Mid-Wicket
-      else if (runVal === 3) defaultShot = classifyWagonCoordinates(-0.68, -0.25, activeBatHand); // Deep Point
-      else if (isWkt) defaultShot = classifyWagonCoordinates(0.52, -0.38, activeBatHand); // Mid-Wicket catch
+    if (!defaultShot) {
+      if (selectedPhase2Landing) {
+        defaultShot = { ...selectedPhase2Landing, shotType: "Drive", batHand: activeBatHand };
+      } else if (runVal > 0 || isWkt) {
+        // Auto-assign sensible default coordinates based on outcome
+        if (runVal === 4) defaultShot = classifyWagonCoordinates(-0.75, -0.65, activeBatHand); // Deep Extra Cover
+        else if (runVal === 6) defaultShot = classifyWagonCoordinates(0.68, -0.72, activeBatHand); // Deep Mid-Wicket
+        else if (runVal === 1) defaultShot = classifyWagonCoordinates(-0.45, -0.35, activeBatHand); // Cover Point
+        else if (runVal === 2) defaultShot = classifyWagonCoordinates(0.55, -0.45, activeBatHand); // Mid-Wicket
+        else if (runVal === 3) defaultShot = classifyWagonCoordinates(-0.68, -0.25, activeBatHand); // Deep Point
+        else if (isWkt) defaultShot = classifyWagonCoordinates(0.52, -0.38, activeBatHand); // Mid-Wicket catch
+      }
     }
 
     // Default shot stroke suggestion
@@ -3268,6 +3272,86 @@ export default function BroadcastScorer({
                     </button>
                   </div>
                 )}
+
+                {/* Integrated Wagon Wheel HUD for Scoring in Full Mode */}
+                <div style={{ background: D.surf1, padding: "12px", borderRadius: D.md, border: `1px solid ${D.border}`, display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontFamily: D.head, fontSize: "10px", fontWeight: 800, color: D.sky }}>
+                      🎯 360° WAGON WHEEL HUD & PLACEMENT
+                    </span>
+                    <span style={{ fontFamily: D.mono, fontSize: "10px", color: D.emerald }}>
+                      {selectedPhase2Landing?.fieldingZone || "Cover"} ({selectedPhase2Landing?.distanceMeters || 45}m)
+                    </span>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: "10px", alignItems: "center" }}>
+                    {/* Mini SVG Oval */}
+                    <div style={{ position: "relative", width: "100%", aspectRatio: "1/1", maxHeight: "150px", background: "#0c1810", borderRadius: D.md, border: `1px solid ${D.emerald}55`, overflow: "hidden", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                      <svg
+                        viewBox="0 0 340 340"
+                        style={{ width: "100%", height: "100%", cursor: "crosshair", userSelect: "none" }}
+                        onClick={e => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const clickX = e.clientX - rect.left;
+                          const clickY = e.clientY - rect.top;
+                          const normX = (clickX - 170) / 140;
+                          const normY = (clickY - 170) / 140;
+                          const calculated = classifyWagonCoordinates(normX, normY, activeBatHand);
+                          setSelectedPhase2Landing(calculated);
+                        }}
+                      >
+                        <circle cx="170" cy="170" r="140" fill="#0e2315" stroke="#22c55e" strokeWidth="2" strokeDasharray="3 3" />
+                        <circle cx="170" cy="170" r="75" fill="#14331d" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.75" />
+                        <rect x="164" y="142" width="12" height="56" rx="2" fill="#d97706" opacity="0.65" />
+                        {selectedPhase2Landing && (
+                          <>
+                            <line x1="170" y1="195" x2={170 + selectedPhase2Landing.x * 140} y2={170 + selectedPhase2Landing.y * 140} stroke="#f59e0b" strokeWidth="2" />
+                            <circle cx={170 + selectedPhase2Landing.x * 140} cy={170 + selectedPhase2Landing.y * 140} r="5" fill="#ffffff" stroke="#f59e0b" strokeWidth="2" />
+                          </>
+                        )}
+                      </svg>
+                    </div>
+
+                    {/* Quick Sector Presets & Zone info */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <div style={{ fontFamily: D.body, fontSize: "10px", color: D.textSecondary }}>
+                        Click oval or tap sector to set shot vector.
+                      </div>
+                      <div style={{ display: "flex", gap: "3px", flexWrap: "wrap" }}>
+                        {[
+                          { label: "Cover", x: -0.65, y: -0.65 },
+                          { label: "Straight", x: 0, y: -0.85 },
+                          { label: "Mid-Wkt", x: 0.65, y: -0.55 },
+                          { label: "Point", x: -0.75, y: -0.2 },
+                          { label: "Sq Leg", x: 0.75, y: 0.1 },
+                          { label: "Third Man", x: -0.65, y: 0.55 },
+                        ].map(preset => (
+                          <button
+                            key={preset.label}
+                            onClick={() => {
+                              const effectiveX = activeBatHand === "L" ? -preset.x : preset.x;
+                              const calculated = classifyWagonCoordinates(effectiveX, preset.y, activeBatHand);
+                              setSelectedPhase2Landing(calculated);
+                            }}
+                            style={{
+                              padding: "3px 6px",
+                              borderRadius: D.sm,
+                              background: selectedPhase2Landing?.sector?.includes(preset.label) ? D.sky : D.surf2,
+                              color: selectedPhase2Landing?.sector?.includes(preset.label) ? "#fff" : D.textSecondary,
+                              border: `1px solid ${D.border}`,
+                              fontFamily: D.head,
+                              fontSize: "9px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Standard Runs */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "8px" }}>
