@@ -28,7 +28,7 @@ export const MATERIAL_NAV_GROUPS: NavGroup[] = [
   {
     id: 'match_ops',
     label: 'Match Operations',
-    items: ['matches', 'coach_cockpit', 'captain_cockpit', 'broadcast', 'fields'],
+    items: ['matches', 'coach_cockpit', 'captain_cockpit', 'broadcast', 'officials', 'fields'],
   },
   {
     id: 'competitions',

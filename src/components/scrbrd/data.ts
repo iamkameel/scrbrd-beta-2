@@ -181,6 +181,7 @@ export const NAV_META: Record<string, { icon: string; label: string }> = {
   fields: { icon: "🌿", label: "Fields" },
   staff: { icon: "🔧", label: "Staff" },
   governance: { icon: "⚖️", label: "POPIA Governance" },
+  officials: { icon: "🛡️", label: "Match Officials" },
   notifications: { icon: "📥", label: "Inbox & Alerts" },
   inbox: { icon: "📥", label: "Inbox & Alerts" },
   settings: { icon: "⚙️", label: "Settings" },

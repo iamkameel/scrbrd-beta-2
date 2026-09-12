@@ -48,6 +48,8 @@ import GovernanceView from "./GovernanceView";
 import MultiSquadCoachView from "./MultiSquadCoachView";
 import StatsGuruQueryEngineView from "./StatsGuruQueryEngineView";
 import SettingsView from "./SettingsView";
+import LeagueCompetitionsView from "./LeagueCompetitionsView";
+import OfficialsView from "./OfficialsView";
 import UserProfilesView from "./UserProfilesView";
 import RulebookView from "./RulebookView";
 import PitchDeckView from "./PitchDeckView";
@@ -1216,6 +1218,41 @@ export default function ScrbrdOS() {
 
           {/* Commercial & Sponsorship Management */}
           {page === "sponsorship" && <CommercialView theme={D} activeSchoolId={activeSchool.id} />}
+
+          {/* League & Competitions Engine */}
+          {(page === "competitions" || page === "leagues" || page === "tournaments") && (
+            <LeagueCompetitionsView
+              theme={D}
+              role={role}
+              onSelectMatch={(mId) => {
+                const targetMatch = MATCHES.find((m) => m.id === mId) || MATCHES[0];
+                setActiveHeroMatch(targetMatch);
+                setPage("matches");
+              }}
+            />
+          )}
+
+          {/* Promotion & Demotion Regulation Matrix */}
+          {page === "promotion_demotion" && (
+            <PromotionDemotionView
+              theme={D}
+              activeSchoolId={activeSchool.id}
+              currentRole={role}
+            />
+          )}
+
+          {/* Match Officials & Umpire Appointments Hub */}
+          {(page === "officials" || page === "umpires") && (
+            <OfficialsView
+              theme={D}
+              currentRole={role}
+              onSelectMatch={(mId) => {
+                const targetMatch = MATCHES.find((m) => m.id === mId) || MATCHES[0];
+                setActiveHeroMatch(targetMatch);
+                setPage("matches");
+              }}
+            />
+          )}
 
           {/* Dedicated Broadcast Rights & Syndication */}
           {page === "broadcast" && <CommercialView theme={D} activeSchoolId={activeSchool.id} initialTab="broadcast" />}

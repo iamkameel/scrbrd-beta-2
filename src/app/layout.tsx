@@ -31,8 +31,8 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SCRBRD - School Cricket Intelligence Platform",
-  description: "Manage cricket teams, players, matches, live scoring, and school sports operations with SCRBRD.",
+  title: "SCRBRD Beta",
+  description: "KZN Schools cricket intelligence platform featuring broadcast live scoring, 360° wagon wheels, interactive scorecards, phase scoring dynamics, live match telemetry, and POPIA zero-trust RBAC governance.",
 };
 
 export default function RootLayout({

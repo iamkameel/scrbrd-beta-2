@@ -1,7 +1,15 @@
-import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/googleai';
+/**
+ * @fileOverview Gemini AI Client initialization with lazy setup.
+ */
+import { GoogleGenAI } from '@google/genai';
 
-export const ai = genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-2.0-flash',
-});
+let client: GoogleGenAI | null = null;
+
+export function getGeminiClient(): GoogleGenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  if (!client) {
+    client = new GoogleGenAI({ apiKey });
+  }
+  return client;
+}
