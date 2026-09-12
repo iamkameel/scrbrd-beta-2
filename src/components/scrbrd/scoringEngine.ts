@@ -1,6 +1,37 @@
 // SCRBRD OS — Pure Event-Replay Scoring Engine (CricketOS Spec)
 // "The ball log is the only source of truth. Nothing stores a score."
 
+export const KIND = Object.freeze({
+  INIT: "init",
+  TOSS: "toss",
+  BATTERS: "batters",
+  BOWLER: "bowler",
+  BALL: "ball",
+  INNINGS_END: "innings_end",
+  HANDOVER: "handover",
+} as const);
+
+export const BALL_TYPE = Object.freeze({
+  RUN: "run",
+  WIDE: "wd",
+  NO_BALL: "nb",
+  BYE: "b",
+  LEG_BYE: "lb",
+  PENALTY: "pen",
+  WICKET: "w",
+} as const);
+
+export const BAT_STATUS = Object.freeze({
+  YET_TO_BAT: "yet_to_bat",
+  NOT_OUT: "not_out",
+  OUT: "out",
+  RETIRED: "retired",
+  RETIRED_HURT: "retired_hurt",
+} as const);
+
+export const isLegal = (type?: string): boolean =>
+  type !== BALL_TYPE.WIDE && type !== "wd" && type !== BALL_TYPE.NO_BALL && type !== "nb";
+
 export interface WagonWheelShot {
   x: number;
   y: number;
@@ -15,12 +46,16 @@ export interface WagonWheelShot {
   fieldingZoneDesc?: string;
   distanceMeters?: number;
   suggestedRuns?: number;
+  placementSource?: "point" | "sector";
+  theta?: number;
 }
 
 export interface BallEvent {
   id: string;
   seq: number;
   epoch?: number;
+  kind?: string;
+  innings?: number;
   isLegalDelivery: boolean; // false for wide ('wd') or no-ball ('nb')
   extraType?: "wd" | "nb" | "b" | "lb" | "pen";
   runsOffBat: number;
@@ -28,13 +63,16 @@ export interface BallEvent {
   totalRuns: number; // runsOffBat + extraRuns
   isWicket: boolean;
   wicketType?: "bowled" | "caught" | "lbw" | "run_out" | "stumped" | "hit_wicket" | "retired_hurt" | "obstructing" | string;
+  dismissedBatterName?: string;
   fielderName?: string;
   fielderId?: string;
   batterName: string;
   batterId?: string;
+  nonStrikerName?: string;
   bowlerName: string;
   bowlerId?: string;
   isFreeHit?: boolean;
+  freeHitSaved?: boolean;
   isVoided?: boolean;
   commentary?: string;
   timestamp?: string;
@@ -298,14 +336,25 @@ export function deriveInnings(
     const striker = battersMap[strikerName];
     const bowler = bowlersMap[currentBowlerName];
 
-    // Determine Free Hit status
-    const isFreeHit = isFreeHitNext;
-    isFreeHitNext = e.extraType === "nb"; // Rule 6: No-ball triggers free hit on next delivery
+    // Determine Free Hit status for this delivery
+    const wasFreeHit = isFreeHitNext;
+
+    // Rule 6: Free hit is set by a no-ball and consumed ONLY by the next legal delivery.
+    // (A wide does not consume a free hit!)
+    if (e.extraType === "nb") {
+      isFreeHitNext = true;
+    } else if (e.isLegalDelivery) {
+      isFreeHitNext = false;
+    }
 
     // Rule 3: Balls faced - No-Balls count towards balls faced, Wides DO NOT
     if (e.extraType !== "wd") {
       striker.balls += 1;
-      currentPartnership.p1Name === strikerName ? currentPartnership.p1Balls++ : currentPartnership.p2Balls++;
+      if (currentPartnership.p1Name === strikerName) {
+        currentPartnership.p1Balls += 1;
+      } else {
+        currentPartnership.p2Balls += 1;
+      }
     }
 
     // Runs off bat attribution
@@ -341,7 +390,7 @@ export function deriveInnings(
       extras.penalties += e.extraRuns;
     }
 
-    // Total ball runs
+    // Total ball runs added to innings
     const ballTotal = e.totalRuns;
     totalRuns += ballTotal;
     currentPartnership.runs += ballTotal;
@@ -360,20 +409,25 @@ export function deriveInnings(
     let isValidWicket = false;
     if (e.isWicket) {
       const mode = (e.wicketType || "caught").toLowerCase().replace(/\s+/g, "_");
-      const isUncreditedMode = mode.includes("run_out") || mode.includes("retired") || mode.includes("obstructing");
+      const isRunOutOrUncredited = mode.includes("run_out") || mode.includes("retired") || mode.includes("obstructing");
 
-      if (!isFreeHit || isUncreditedMode) {
+      if (!wasFreeHit || isRunOutOrUncredited) {
         isValidWicket = true;
+      } else {
+        e.freeHitSaved = true;
       }
     }
 
     if (isValidWicket) {
       totalWickets += 1;
-      striker.isNotOut = false;
+      const outPlayerName = e.dismissedBatterName || strikerName;
+      const outBatter = battersMap[outPlayerName] || striker;
+      outBatter.isNotOut = false;
       const dismissalText = describeDismissal(e.wicketType || "caught", currentBowlerName, e.fielderName);
-      striker.dismissal = dismissalText;
+      outBatter.dismissal = dismissalText;
 
-      if (!e.wicketType?.includes("run_out") && !e.wicketType?.includes("retired")) {
+      const isBowlerWicket = !e.wicketType?.includes("run_out") && !e.wicketType?.includes("retired") && !e.wicketType?.includes("obstructing");
+      if (isBowlerWicket) {
         bowler.wickets += 1;
       }
 
@@ -385,7 +439,7 @@ export function deriveInnings(
         wicketNumber: totalWickets,
         score: totalRuns,
         over: overStr,
-        player: strikerName,
+        player: outPlayerName,
         dismissal: dismissalText,
       });
 
@@ -402,13 +456,18 @@ export function deriveInnings(
       // Bring in next batter from initial order or generic
       const nextPos = totalWickets + 2;
       const nextBatterObj = initialBattingOrder.find(b => b.pos === nextPos);
-      const newStrikerName = nextBatterObj ? nextBatterObj.name : `Batter #${nextPos}`;
+      const newBatterName = nextBatterObj ? nextBatterObj.name : `Batter #${nextPos}`;
 
-      strikerName = newStrikerName;
-      if (!battersMap[strikerName]) {
-        battersMap[strikerName] = {
+      if (outPlayerName === strikerName) {
+        strikerName = newBatterName;
+      } else {
+        nonStrikerName = newBatterName;
+      }
+
+      if (!battersMap[newBatterName]) {
+        battersMap[newBatterName] = {
           id: `bat_${nextPos}`,
-          name: strikerName,
+          name: newBatterName,
           runs: 0,
           balls: 0,
           fours: 0,
@@ -423,12 +482,12 @@ export function deriveInnings(
         wicketNumber: totalWickets + 1,
         runs: 0,
         balls: 0,
-        p1Name: nonStrikerName,
-        p1Runs: battersMap[nonStrikerName]?.runs || 0,
-        p1Balls: battersMap[nonStrikerName]?.balls || 0,
-        p2Name: strikerName,
-        p2Runs: 0,
-        p2Balls: 0,
+        p1Name: strikerName,
+        p1Runs: battersMap[strikerName]?.runs || 0,
+        p1Balls: battersMap[strikerName]?.balls || 0,
+        p2Name: nonStrikerName,
+        p2Runs: battersMap[nonStrikerName]?.runs || 0,
+        p2Balls: battersMap[nonStrikerName]?.balls || 0,
       };
     }
 
@@ -439,7 +498,7 @@ export function deriveInnings(
       overLegalBalls += 1;
       currentPartnership.balls += 1;
 
-      // Rule 4: Check Maiden Over boundary
+      // Rule 4: Check Maiden Over boundary (6 legal deliveries, 0 conceded runs)
       if (overLegalBalls === 6) {
         if (overConcededRuns === 0) {
           bowler.maidens += 1;
@@ -450,10 +509,15 @@ export function deriveInnings(
     }
 
     // Strike Rotation Logic:
-    // Rule 1: Odd runs off No-Ball rotate strike
-    // Rule 2: Odd runs off Wide rotate strike
-    // Standard odd runs rotate strike
-    const rotateStrikeOnRuns = ballTotal % 2 === 1;
+    // Rule 1: Odd runs off No-Ball rotate strike (runs run physically)
+    // Rule 2: Odd runs off Wide rotate strike (byes run physically)
+    // Runs completed between the wickets:
+    const physicalRuns =
+      e.extraType === "wd" || e.extraType === "nb"
+        ? e.runsOffBat || Math.max(0, e.totalRuns - 1)
+        : e.runsOffBat || (e.extraType === "b" || e.extraType === "lb" ? e.extraRuns : 0);
+
+    const rotateStrikeOnRuns = !isValidWicket && physicalRuns % 2 === 1;
     if (rotateStrikeOnRuns) {
       const temp = strikerName;
       strikerName = nonStrikerName;
@@ -518,3 +582,101 @@ export function deriveInnings(
     isFreeHitNext,
   };
 }
+
+/**
+ * Produces verification state for dual-device handover handshake
+ */
+export function confirmationState(derived: InningsDerivedState) {
+  return {
+    runs: derived.totalRuns,
+    wickets: derived.totalWickets,
+    balls: derived.legalBalls,
+    striker: derived.activeStrikerName,
+    nonStriker: derived.activeNonStrikerName,
+    bowler: derived.activeBowlerName,
+    overs: derived.oversStr,
+  };
+}
+
+export interface MatchResult {
+  winner: string | null;
+  margin: string;
+  statement: string;
+}
+
+export interface MatchDerivedState {
+  innings: InningsDerivedState[];
+  currentInningsIndex: number;
+  result: MatchResult | null;
+}
+
+/**
+ * Checks whether an innings has concluded based on wickets, overs, or target chased
+ */
+export function isInningsOver(
+  derived: InningsDerivedState,
+  maxOvers: number = 20,
+  squadSize: number = 11,
+  target?: number
+): boolean {
+  const allOut = derived.totalWickets >= Math.min(10, Math.max(1, squadSize - 1));
+  const oversDone = derived.legalBalls >= maxOvers * 6;
+  const chased = target != null && derived.totalRuns >= target;
+  return allOut || oversDone || chased;
+}
+
+/**
+ * Derives complete multi-innings match state from an append-only event stream
+ */
+export function deriveMatch(
+  events: BallEvent[] = [],
+  team1BattingOrder: { name: string; id?: string; pos: number }[] = [],
+  team2BattingOrder: { name: string; id?: string; pos: number }[] = [],
+  team1Name: string = "Team 1",
+  team2Name: string = "Team 2",
+  maxOvers: number = 20
+): MatchDerivedState {
+  const innings1Events = events.filter(e => (e.innings ?? 1) === 1);
+  const innings2Events = events.filter(e => e.innings === 2);
+
+  const inn1 = deriveInnings(innings1Events, team1BattingOrder);
+  const target = inn1.totalRuns + 1;
+  const inn2 = deriveInnings(innings2Events, team2BattingOrder);
+
+  const inn1Done = isInningsOver(inn1, maxOvers, team1BattingOrder.length || 11);
+  const inn2Done = isInningsOver(inn2, maxOvers, team2BattingOrder.length || 11, target);
+
+  let result: MatchResult | null = null;
+  if (inn2Done && inn2.legalBalls > 0) {
+    if (inn2.totalRuns > inn1.totalRuns) {
+      const wicketsRemaining = Math.min(10, (team2BattingOrder.length || 11) - 1) - inn2.totalWickets;
+      result = {
+        winner: team2Name,
+        margin: `${wicketsRemaining} wicket${wicketsRemaining === 1 ? "" : "s"}`,
+        statement: `${team2Name} won by ${wicketsRemaining} wicket${wicketsRemaining === 1 ? "" : "s"}`,
+      };
+    } else if (inn1.totalRuns > inn2.totalRuns) {
+      const runMargin = inn1.totalRuns - inn2.totalRuns;
+      result = {
+        winner: team1Name,
+        margin: `${runMargin} run${runMargin === 1 ? "" : "s"}`,
+        statement: `${team1Name} won by ${runMargin} run${runMargin === 1 ? "" : "s"}`,
+      };
+    } else {
+      result = {
+        winner: null,
+        margin: "tie",
+        statement: "Match tied",
+      };
+    }
+  }
+
+  const currentInningsIndex = inn1Done && innings2Events.length > 0 ? 1 : 0;
+
+  return {
+    innings: [inn1, inn2],
+    currentInningsIndex,
+    result,
+  };
+}
+

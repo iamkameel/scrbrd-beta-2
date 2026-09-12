@@ -179,6 +179,8 @@ export default function WagonWheel({
   const [fieldPreset, setFieldPreset] = useState<'standard' | 'powerplay' | 'attacking' | 'death'>('standard');
   const [displayMode, setDisplayMode] = useState<'spokes' | 'heatmap' | 'sectors' | 'density'>('spokes');
   const [selectedVenue, setSelectedVenue] = useState<string>('standard_65m');
+  const [customBoundaryMeters, setCustomBoundaryMeters] = useState<number>(65);
+  const [showBoundarySlider, setShowBoundarySlider] = useState<boolean>(false);
 
   const VENUE_GEOMETRIES = [
     { id: 'standard_65m', name: 'Standard Oval (65m)', boundaryMeters: 65 },
@@ -188,9 +190,11 @@ export default function WagonWheel({
     { id: 'hilton_64m', name: "Hilton College Campbell's (64m)", boundaryMeters: 64 },
     { id: 'kearsney_63m', name: 'Kearsney College AH Smith (63m)', boundaryMeters: 63 },
     { id: 'maritzburg_62m', name: 'Maritzburg College Goldstones (62m)', boundaryMeters: 62 },
+    { id: 'custom', name: '⚙️ Custom Dimension...', boundaryMeters: customBoundaryMeters },
   ];
 
   const currentVenue = VENUE_GEOMETRIES.find(v => v.id === selectedVenue) || VENUE_GEOMETRIES[0];
+  const effectiveBoundaryMeters = selectedVenue === 'custom' ? customBoundaryMeters : currentVenue.boundaryMeters;
 
   // ── CONSTANTS FOR PITCH & GROUND GEOMETRY (SVG viewBox 0 0 360 360) ──
   // Ground Center: (180, 180)
@@ -204,7 +208,7 @@ export default function WagonWheel({
   const BOWLER_CREASE_Y = 200;
   const BOUNDARY_RADIUS = 150;
   // 30 yards = 27.432m. Normalized against venue boundary:
-  const INFIELD_RADIUS = Math.round((27.432 / currentVenue.boundaryMeters) * BOUNDARY_RADIUS);
+  const INFIELD_RADIUS = Math.round((27.432 / effectiveBoundaryMeters) * BOUNDARY_RADIUS);
 
   // Dynamic Fielder Placements based on Preset & Stance
   const fielders: FieldPosition[] = useMemo(() => {
@@ -276,12 +280,30 @@ export default function WagonWheel({
     return baseList;
   }, [fieldPreset, batHand]);
 
-  // Filtered shot deliveries
+  // Multi-Era Partitioning: Point-Capture vs Legacy Sector-Era deliveries (SCRBRD_OS §8)
+  const { pointShots, sectorEraShots } = useMemo(() => {
+    const points: ShotBall[] = [];
+    const sectors: ShotBall[] = [];
+    shots.forEach(s => {
+      if (s.placementSource === 'sector' || (s as any).isEstimated) {
+        sectors.push(s);
+      } else {
+        points.push(s);
+      }
+    });
+    return { pointShots: points, sectorEraShots: sectors };
+  }, [shots]);
+
+  // Filtered shot deliveries with continuous heat map multi-era guard
   const filteredShots = useMemo(() => {
-    if (filterRuns === 'all') return shots;
-    if (filterRuns === 'boundaries') return shots.filter(s => s.runs === 4 || s.runs === 6);
-    return shots.filter(s => s.runs === filterRuns);
-  }, [shots, filterRuns]);
+    let base = shots;
+    if (displayMode === 'heatmap') {
+      base = pointShots; // Only render exact coordinate contact vectors for continuous heat maps
+    }
+    if (filterRuns === 'all') return base;
+    if (filterRuns === 'boundaries') return base.filter(s => s.runs === 4 || s.runs === 6);
+    return base.filter(s => s.runs === filterRuns);
+  }, [shots, pointShots, displayMode, filterRuns]);
 
   // Overall & Side Metrics (OFF vs LEG / ON)
   const stats = useMemo(() => {
@@ -445,6 +467,9 @@ export default function WagonWheel({
     const relX = Math.round(svgX - SVG_CENTER_X);
     const relY = Math.round(svgY - SVG_CENTER_Y);
 
+    const distanceMeters = Math.round((distFromStriker / BOUNDARY_RADIUS) * effectiveBoundaryMeters);
+    const fieldingZoneDesc = distFromCenter >= BOUNDARY_RADIUS ? "Boundary Maximum" : distFromStriker <= INFIELD_RADIUS ? "Infield 30yd Ring" : "Deep Outfield";
+
     const newShot: ShotBall = {
       id: `w_shot_${Date.now()}`,
       x: relX,
@@ -454,7 +479,11 @@ export default function WagonWheel({
       batsman: batsmanName,
       bowler: 'Active Bowler',
       over: '14.3',
-      description: `${calculatedRuns === 6 ? 'Maximum Six' : calculatedRuns === 4 ? 'Boundary Four' : calculatedRuns === 0 ? 'Dot Ball' : `${calculatedRuns} Run(s)`} stroked to ${detectedSector} (${batHand === 'R' ? (relX < 0 ? 'Off Side' : 'Leg Side') : relX > 0 ? 'Off Side' : 'Leg Side'})`,
+      description: `${calculatedRuns === 6 ? 'Maximum Six' : calculatedRuns === 4 ? 'Boundary Four' : calculatedRuns === 0 ? 'Dot Ball' : `${calculatedRuns} Run(s)`} stroked to ${detectedSector} (${batHand === 'R' ? (relX < 0 ? 'Off Side' : 'Leg Side') : relX > 0 ? 'Off Side' : 'Leg Side'}) · ${distanceMeters}m · ${fieldingZoneDesc}`,
+      distanceMeters,
+      fieldingZoneDesc,
+      placementSource: 'point',
+      theta: Math.round(effectiveAngle),
     };
 
     setShots(prev => [newShot, ...prev]);
@@ -600,29 +629,47 @@ export default function WagonWheel({
           </div>
 
           {/* Venue Boundary Selector */}
-          <select
-            value={selectedVenue}
-            onChange={e => setSelectedVenue(e.target.value)}
-            style={{
-              padding: '5px 10px',
-              borderRadius: D.pill,
-              background: D.surf2,
-              border: `1px solid ${D.borderMed}`,
-              color: D.textPrimary,
-              fontFamily: D.mono,
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              outline: 'none',
-            }}
-            title="Ground Geometry & Boundary Calibration"
-          >
-            {VENUE_GEOMETRIES.map(v => (
-              <option key={v.id} value={v.id}>
-                🏟️ {v.name}
-              </option>
-            ))}
-          </select>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <select
+              value={selectedVenue}
+              onChange={e => {
+                setSelectedVenue(e.target.value);
+                if (e.target.value === 'custom') setShowBoundarySlider(true);
+              }}
+              style={{
+                padding: '5px 10px',
+                borderRadius: D.pill,
+                background: D.surf2,
+                border: `1px solid ${D.borderMed}`,
+                color: D.textPrimary,
+                fontFamily: D.mono,
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+              title="Ground Geometry & Boundary Calibration"
+            >
+              {VENUE_GEOMETRIES.map(v => (
+                <option key={v.id} value={v.id}>
+                  🏟️ {v.name}
+                </option>
+              ))}
+            </select>
+            {selectedVenue === 'custom' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: D.surf2, padding: '2px 8px', borderRadius: D.pill, border: `1px solid ${D.indigo}60` }}>
+                <span style={{ fontFamily: D.mono, fontSize: '10px', color: D.indigo, fontWeight: 800 }}>{customBoundaryMeters}m</span>
+                <input
+                  type="range"
+                  min="45"
+                  max="85"
+                  value={customBoundaryMeters}
+                  onChange={e => setCustomBoundaryMeters(Number(e.target.value))}
+                  style={{ width: '60px', accentColor: D.indigo, cursor: 'pointer' }}
+                />
+              </div>
+            )}
+          </div>
 
           {/* Batting Hand Toggle */}
           <div
@@ -865,6 +912,37 @@ export default function WagonWheel({
             </span>
           </div>
 
+          {/* Multi-Era Continuous Heat Map Banner (SCRBRD_OS §8) */}
+          {displayMode === 'heatmap' && (
+            <div
+              style={{
+                width: '100%',
+                background: 'rgba(15, 23, 42, 0.88)',
+                border: `1px solid ${D.rose}50`,
+                borderRadius: D.md,
+                padding: '5px 10px',
+                marginBottom: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontFamily: D.mono,
+                fontSize: '10px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fca5a5' }}>
+                <span>🔥</span>
+                <span>
+                  <strong>Continuous Heat Map:</strong> {pointShots.length} exact contacts
+                </span>
+              </div>
+              {sectorEraShots.length > 0 && (
+                <span style={{ color: D.amber, background: `${D.amber}20`, padding: '2px 6px', borderRadius: D.pill, fontSize: '9px' }}>
+                  {sectorEraShots.length} sector-era logs preserved (§8)
+                </span>
+              )}
+            </div>
+          )}
+
           {/* SVG Ground Container */}
           <svg
             viewBox="0 0 360 360"
@@ -898,6 +976,17 @@ export default function WagonWheel({
               <filter id="vectorGlow" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="2" result="blur" />
                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+
+              {/* Radial heat spot gradient for continuous heat map */}
+              <radialGradient id="heatSpot" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#ef4444" stopOpacity="0.85" />
+                <stop offset="30%" stopColor="#f59e0b" stopOpacity="0.65" />
+                <stop offset="65%" stopColor="#3b82f6" stopOpacity="0.35" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+              </radialGradient>
+              <filter id="heatBlur" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="7" />
               </filter>
             </defs>
 
@@ -1009,9 +1098,90 @@ export default function WagonWheel({
             <circle cx={batHand === 'R' ? 228 : 132} cy="160" r="2.5" fill="#f8fafc" stroke="#0f172a" strokeWidth="0.8" />
             <text x={batHand === 'R' ? 228 : 132} y="168" textAnchor="middle" fill="#ffffff" fontSize="5" fontFamily="'DM Mono', monospace">SQ.U</text>
 
-            {/* ── WAGON WHEEL SHOT RADIATION VECTORS ── */}
+            {/* ── SECTOR TOTALS / WEDGE VISUALIZATION ── */}
+            {displayMode === 'sectors' && (
+              <g opacity="0.8">
+                {sectorData.map(sec => {
+                  // Angle in radians from striker crease
+                  const startRad = ((sec.angleStart + 90) * Math.PI) / 180;
+                  const endRad = ((sec.angleEnd + 90) * Math.PI) / 180;
+                  const midRad = (((sec.angleStart + sec.angleEnd) / 2 + 90) * Math.PI) / 180;
+                  const r = BOUNDARY_RADIUS - 4;
+
+                  const x1 = STRIKER_ORIGIN_X + Math.cos(startRad) * r;
+                  const y1 = STRIKER_ORIGIN_Y + Math.sin(startRad) * r;
+                  const x2 = STRIKER_ORIGIN_X + Math.cos(endRad) * r;
+                  const y2 = STRIKER_ORIGIN_Y + Math.sin(endRad) * r;
+                  const labelX = STRIKER_ORIGIN_X + Math.cos(midRad) * (r * 0.65);
+                  const labelY = STRIKER_ORIGIN_Y + Math.sin(midRad) * (r * 0.65);
+
+                  const intensity = Math.min(1, sec.runs / Math.max(1, stats.totalRuns * 0.4 || 10));
+                  const fillColor = sec.runs > 0 ? `rgba(245, 158, 11, ${0.15 + intensity * 0.6})` : 'rgba(255,255,255,0.02)';
+
+                  return (
+                    <g key={`wedge_${sec.id}`}>
+                      <path
+                        d={`M ${STRIKER_ORIGIN_X} ${STRIKER_ORIGIN_Y} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`}
+                        fill={fillColor}
+                        stroke="#f59e0b"
+                        strokeWidth="0.8"
+                        strokeOpacity={sec.runs > 0 ? 0.7 : 0.2}
+                      />
+                      {sec.runs > 0 && (
+                        <g>
+                          <circle cx={labelX} cy={labelY} r="12" fill="#0f172a" stroke="#f59e0b" strokeWidth="1" />
+                          <text x={labelX} y={labelY + 3} textAnchor="middle" fill="#fef08a" fontSize="8" fontFamily="'Space Grotesk', sans-serif" fontWeight="900">
+                            {sec.runs}
+                          </text>
+                        </g>
+                      )}
+                    </g>
+                  );
+                })}
+              </g>
+            )}
+
+            {/* ── CONTINUOUS HEAT MAP VISUALIZATION ── */}
+            {displayMode === 'heatmap' && (
+              <g opacity="0.9" filter="url(#heatBlur)">
+                {filteredShots.map((shot, idx) => {
+                  const destX = SVG_CENTER_X + (shot.x ?? 0);
+                  const destY = SVG_CENTER_Y + (shot.y ?? 0);
+                  const heatRadius = shot.runs === 6 ? 32 : shot.runs === 4 ? 26 : shot.runs >= 1 ? 18 : 12;
+                  return (
+                    <circle
+                      key={`heat_${shot.id || idx}`}
+                      cx={destX}
+                      cy={destY}
+                      r={heatRadius}
+                      fill="url(#heatSpot)"
+                    />
+                  );
+                })}
+              </g>
+            )}
+
+            {/* ── DENSITY CLUSTER VISUALIZATION ── */}
+            {displayMode === 'density' && (
+              <g opacity="0.85">
+                {filteredShots.map((shot, idx) => {
+                  const destX = SVG_CENTER_X + (shot.x ?? 0);
+                  const destY = SVG_CENTER_Y + (shot.y ?? 0);
+                  const colCfg = SHOT_COLORS[shot.runs] || SHOT_COLORS[1];
+                  return (
+                    <g key={`density_${shot.id || idx}`}>
+                      <circle cx={destX} cy={destY} r={shot.runs === 6 ? 16 : shot.runs === 4 ? 12 : 8} fill={colCfg.stroke} opacity="0.25" />
+                      <circle cx={destX} cy={destY} r={shot.runs === 6 ? 8 : shot.runs === 4 ? 6 : 4} fill={colCfg.stroke} opacity="0.6" />
+                      <circle cx={destX} cy={destY} r="2.5" fill="#ffffff" />
+                    </g>
+                  );
+                })}
+              </g>
+            )}
+
+            {/* ── WAGON WHEEL SHOT RADIATION VECTORS (SPOKES MODE) ── */}
             {/* ALL SHOTS MUST ORIGINATE EXACTLY AT STRIKER CREASE (180, 160) */}
-            {filteredShots.map((shot, idx) => {
+            {(displayMode === 'spokes' || displayMode === 'heatmap') && filteredShots.map((shot, idx) => {
               // Convert shot relative offset (relative to center 180, 180) to destination SVG point
               const destX = SVG_CENTER_X + (shot.x ?? 0);
               const destY = SVG_CENTER_Y + (shot.y ?? 0);
@@ -1036,7 +1206,7 @@ export default function WagonWheel({
                     stroke={colCfg.stroke}
                     strokeWidth={isSel ? 3.5 : shot.runs >= 4 ? 2.4 : 1.4}
                     strokeLinecap="round"
-                    opacity={isSel ? 1 : 0.85}
+                    opacity={displayMode === 'heatmap' ? 0.45 : isSel ? 1 : 0.85}
                     filter={isSel ? 'url(#vectorGlow)' : undefined}
                   />
 
@@ -1274,6 +1444,23 @@ export default function WagonWheel({
               </div>
               <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textPrimary, lineHeight: '1.4' }}>
                 {selectedShot.description}
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '2px' }}>
+                {selectedShot.distanceMeters != null && (
+                  <span style={{ padding: '2px 8px', borderRadius: D.pill, background: `${D.indigo}20`, color: D.indigo, fontFamily: D.mono, fontSize: '10px', fontWeight: 800 }}>
+                    📏 {selectedShot.distanceMeters}m
+                  </span>
+                )}
+                {selectedShot.fieldingZoneDesc && (
+                  <span style={{ padding: '2px 8px', borderRadius: D.pill, background: `${D.emerald}20`, color: D.emerald, fontFamily: D.mono, fontSize: '10px', fontWeight: 800 }}>
+                    🎯 {selectedShot.fieldingZoneDesc}
+                  </span>
+                )}
+                {selectedShot.theta != null && (
+                  <span style={{ padding: '2px 8px', borderRadius: D.pill, background: `${D.sky}20`, color: D.sky, fontFamily: D.mono, fontSize: '10px', fontWeight: 800 }}>
+                    🧭 θ {selectedShot.theta}°
+                  </span>
+                )}
               </div>
               <div style={{ display: 'flex', gap: '12px', fontFamily: D.mono, fontSize: '10px', color: D.textMuted }}>
                 <span>Over: {selectedShot.over}</span>

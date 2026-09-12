@@ -28,6 +28,7 @@ import {
   validateAndRouteEvent,
   HandoverAuditLogRecord
 } from "./handoverProtocol";
+import { offlineSyncEngine, SyncEngineStatus } from "./offlineSyncQueue";
 
 interface BroadcastScorerProps {
   theme: Theme;
@@ -554,6 +555,10 @@ export default function BroadcastScorer({
 
   // Automatic Heartbeat Lease Renewal Timer
   useEffect(() => {
+    offlineSyncEngine.setActiveLease(activeSessionLease);
+  }, [activeSessionLease]);
+
+  useEffect(() => {
     const timer = setInterval(() => {
       setActiveSessionLease(prev => {
         const remainingMs = prev.leaseExpiry - Date.now();
@@ -1001,6 +1006,14 @@ export default function BroadcastScorer({
 
     setRedoStack([]);
     setDeliveries(prev => [newRecord, ...prev]);
+
+    // Persist to IndexedDB Event Log Queue & Sync Engine
+    offlineSyncEngine.recordDeliveryEvent(
+      activeMatch?.id || "m1",
+      newRecord,
+      activeSessionLease.sessionEpoch,
+      activeSessionLease.activeScorerToken
+    );
 
     // Audio SFX & Voice Synthesis
     if (soundFxEnabled) {

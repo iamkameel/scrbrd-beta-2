@@ -3,6 +3,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // ── RBAC HELPER FUNCTIONS ──────────────────────────────────────
+    
     function isValidId(id) {
       return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -10,35 +12,119 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
-
+    
+    function getUserData() {
+      return isSignedIn() ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data : null;
+    }
+    
+    function getUserRole() {
+      return isSignedIn() ? getUserData().role : 'viewer';
+    }
+    
+    function hasAnyRole(roles) {
+      return isSignedIn() && (
+        request.auth.token.role in roles ||
+        getUserRole() in roles ||
+        request.auth.token.admin == true
+      );
+    }
+    
+    function isAdmin() {
+      return hasAnyRole(['superadmin', 'schooladmin', 'admin']);
+    }
+    
+    function isCoach() {
+      return hasAnyRole(['superadmin', 'schooladmin', 'headcoach', 'coach', 'doc', 'sportsmaster']);
+    }
+    
+    function isScorer() {
+      return hasAnyRole(['superadmin', 'schooladmin', 'headcoach', 'coach', 'scorer']);
+    }
+    
+    function isAnalyst() {
+      return hasAnyRole(['superadmin', 'schooladmin', 'headcoach', 'coach', 'analyst', 'scout']);
+    }
+    
+    function isPlayer() {
+      return hasAnyRole(['superadmin', 'schooladmin', 'player']);
+    }
+    
     // Default deny catch-all
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Matches collection
+    // ── USERS COLLECTION (TENANTS & ROLES) ──────────────────────────
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && (request.auth.uid == userId || isAdmin()) && isValidId(userId);
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // ── MATCHES COLLECTION ─────────────────────────────────────────
     match /matches/{matchId} {
-      allow read: if true;
-      allow create, update: if isSignedIn() && isValidId(matchId);
-      allow delete: if isSignedIn() && isValidId(matchId);
+      allow read: if true; // Public live scores for parents, viewers, and athletes
+      allow create: if isCoach() || isScorer();
+      allow update: if isCoach() || isScorer();
+      allow delete: if isAdmin();
+
+      // Sub-collection: Deliveries (Monotonic Ball Event Log)
+      match /deliveries/{deliveryId} {
+        allow read: if true;
+        allow create: if isScorer() && isValidId(deliveryId);
+        allow update: if isScorer() && isValidId(deliveryId);
+        allow delete: if isAdmin();
+      }
+
+      // Sub-collection: Scorer Session Leases (Handover Protocol)
+      match /leases/{leaseId} {
+        allow read: if true;
+        allow create, update: if isScorer() && isValidId(leaseId);
+        allow delete: if isAdmin();
+      }
+
+      // Sub-collection: Handover Audit Logs
+      match /handoverLogs/{logId} {
+        allow read: if isCoach() || isScorer() || isAnalyst();
+        allow create: if isScorer() && isValidId(logId);
+        allow update, delete: if false; // Immutable audit log
+      }
+
+      // Sub-collection: Divergent Ball Quarantine Queue
+      match /quarantine/{quarantineId} {
+        allow read: if isCoach() || isScorer() || isAnalyst();
+        allow create: if isScorer() && isValidId(quarantineId);
+        allow update: if isCoach() || isScorer();
+        allow delete: if isAdmin();
+      }
     }
 
-    // Players collection
+    // ── PLAYERS ROSTER COLLECTION ──────────────────────────────────
     match /players/{playerId} {
-      allow read: if true;
-      allow create, update, delete: if isSignedIn() && isValidId(playerId);
+      allow read: if true; // Basic player profiles are readable by all roles
+      allow create, update: if isCoach() || isAdmin();
+      allow delete: if isAdmin();
     }
 
-    // Fixtures collection
+    // ── FIXTURES & TOURNAMENT CALENDAR ─────────────────────────────
     match /fixtures/{fixtureId} {
       allow read: if true;
-      allow create, update, delete: if isSignedIn() && isValidId(fixtureId);
+      allow create, update, delete: if isCoach() || isAdmin();
     }
 
-    // Tactical Directives collection (Coach to Captain live telemetry)
+    // ── TACTICAL DIRECTIVES (Coach Cockpit to Captain Telemetry) ────
     match /tacticalDirectives/{directiveId} {
-      allow read: if true;
-      allow create, update, delete: if isValidId(directiveId);
+      allow read: if isSignedIn(); // Restricted from public viewers
+      allow create, update: if isCoach() || hasAnyRole(['captain']);
+      allow delete: if isCoach() || isAdmin();
+    }
+
+    // ── SKILL ASSESSMENTS & POPIA COMPLIANT LOG ────────────────────
+    match /assessments/{assessmentId} {
+      // De-identified numeric scores readable by coaches and analysts; self-view by student
+      allow read: if isCoach() || isAnalyst() || (isPlayer() && resource.data.playerId == request.auth.uid);
+      allow create, update: if isCoach() && isValidId(assessmentId);
+      allow delete: if isAdmin();
     }
   }
 }

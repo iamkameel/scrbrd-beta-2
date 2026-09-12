@@ -20,6 +20,41 @@
       },
       "required": ["id", "homeTeam", "awayTeam", "status"]
     },
+    "delivery": {
+      "title": "Delivery",
+      "description": "Monotonic ball-by-ball delivery event in a match innings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "matchId": { "type": "string", "maxLength": 128 },
+        "seq": { "type": "number" },
+        "over": { "type": "number" },
+        "ball": { "type": "number" },
+        "bowler": { "type": "string", "maxLength": 100 },
+        "batter": { "type": "string", "maxLength": 100 },
+        "runsOffBat": { "type": "number" },
+        "extraRuns": { "type": "number" },
+        "totalRuns": { "type": "number" },
+        "isWicket": { "type": "string", "maxLength": 10 },
+        "timestamp": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "matchId", "seq", "bowler", "batter"]
+    },
+    "sessionLease": {
+      "title": "Scorer Session Lease",
+      "description": "Authoritative active scorer session lease for single-scorer token enforcement",
+      "type": "object",
+      "properties": {
+        "matchId": { "type": "string", "maxLength": 128 },
+        "sessionEpoch": { "type": "number" },
+        "leaseExpiry": { "type": "number" },
+        "activeScorerToken": { "type": "string", "maxLength": 128 },
+        "scorerName": { "type": "string", "maxLength": 100 },
+        "scorerDeviceId": { "type": "string", "maxLength": 64 },
+        "lastHeartbeat": { "type": "number" }
+      },
+      "required": ["matchId", "sessionEpoch", "activeScorerToken", "scorerName"]
+    },
     "player": {
       "title": "Player",
       "description": "Cricket player roster profile",
@@ -74,12 +109,50 @@
         "timestamp": { "type": "string", "maxLength": 64 }
       },
       "required": ["id", "matchId", "title", "instruction", "status"]
+    },
+    "skillAssessment": {
+      "title": "Skill Assessment Record",
+      "description": "Append-only longitudinal assessment log for student athlete competencies",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "playerId": { "type": "string", "maxLength": 128 },
+        "assessorName": { "type": "string", "maxLength": 100 },
+        "assessorRole": { "type": "string", "maxLength": 50 },
+        "window": { "type": "string", "maxLength": 50 },
+        "committedAt": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "maxLength": 30 },
+        "notes": { "type": "string", "maxLength": 2000 }
+      },
+      "required": ["id", "playerId", "assessorName", "window", "committedAt"]
+    },
+    "userProfile": {
+      "title": "User Profile",
+      "description": "User role, tenant school association, and permissions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 150 },
+        "name": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "maxLength": 50 },
+        "schoolId": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "maxLength": 30 }
+      },
+      "required": ["id", "email", "role"]
     }
   },
   "firestore": {
     "/matches/{matchId}": {
       "schema": "match",
       "description": "Live and completed cricket matches"
+    },
+    "/matches/{matchId}/deliveries/{deliveryId}": {
+      "schema": "delivery",
+      "description": "Monotonic delivery ball-log events"
+    },
+    "/matches/{matchId}/leases/{leaseId}": {
+      "schema": "sessionLease",
+      "description": "Authoritative session token lease for scoring device"
     },
     "/players/{playerId}": {
       "schema": "player",
@@ -92,6 +165,14 @@
     "/tacticalDirectives/{directiveId}": {
       "schema": "tacticalDirective",
       "description": "Real-time live tactical directives between coach and captain"
+    },
+    "/assessments/{assessmentId}": {
+      "schema": "skillAssessment",
+      "description": "Append-only skill assessment evaluations"
+    },
+    "/users/{userId}": {
+      "schema": "userProfile",
+      "description": "User accounts and RBAC tenant roles"
     }
   }
 }

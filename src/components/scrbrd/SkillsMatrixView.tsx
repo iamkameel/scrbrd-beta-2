@@ -18,10 +18,18 @@ import {
 import PlayerSearchFilterSelect from './PlayerSearchFilterSelect';
 import PlayerSkillRadarChart from './PlayerSkillRadarChart';
 import {
+  calculateBattingIndex,
+  calculateBowlingIndex,
+  calculateSelfAdjustedRating,
+  MIN_BALLS_FACED,
+  MIN_BALLS_BOWLED,
+  FULL_EVIDENCE_SAMPLE,
+} from './performanceRatingEngine';
+import {
   Target, Award, TrendingUp, Shield, Zap, Sparkles, CheckCircle2,
   AlertCircle, Dumbbell, UserCheck, BookOpen, Clock, Layers,
   ChevronRight, Edit3, Save, RotateCcw, Filter, Search, ArrowUpRight,
-  Flame, Lock, Eye, BarChart2, Download, FileText, Info, HelpCircle
+  Flame, Lock, Eye, BarChart2, Download, FileText, Info, HelpCircle, Activity
 } from 'lucide-react';
 
 interface SkillsMatrixViewProps {
@@ -610,6 +618,9 @@ export default function SkillsMatrixView({
                     <th style={{ padding: '12px 10px', fontFamily: D.head, fontSize: '12px', fontWeight: 700, color: D.pink, textAlign: 'center' }}>
                       {displayMode === 'terminal_100' ? 'Match IQ' : 'Match IQ Par'}
                     </th>
+                    <th style={{ padding: '12px 10px', fontFamily: D.head, fontSize: '12px', fontWeight: 700, color: D.sky, textAlign: 'center' }}>
+                      Evidence Drift
+                    </th>
                     <th style={{ padding: '12px 10px', fontFamily: D.head, fontSize: '12px', fontWeight: 700, color: D.textMuted, textAlign: 'center' }}>Assessment Window</th>
                     <th style={{ padding: '12px 16px', fontFamily: D.head, fontSize: '12px', fontWeight: 700, color: D.textSecondary, textAlign: 'right' }}>Action</th>
                   </tr>
@@ -755,6 +766,48 @@ export default function SkillsMatrixView({
                               {iqRel.index}x
                             </span>
                           )}
+                        </td>
+                        {/* Evidence Drift Badge */}
+                        <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                          {(() => {
+                            const isBat = p.role === 'BAT' || p.role === 'ALL' || p.role === 'WK';
+                            const balls = p.careerTotals?.balls || (p.avg ? Math.round(p.avg * 4) : 90);
+                            const runs = p.careerTotals?.runs || (p.avg ? Math.round(p.avg * 4) : 100);
+                            const bIdx = calculateBattingIndex({ runs, ballsFaced: balls, dismissals: 3 });
+                            const coachSc = (footworkScore + driveScore) / 10;
+                            const rating = calculateSelfAdjustedRating(coachSc, bIdx.index, balls, MIN_BALLS_FACED);
+                            
+                            return (
+                              <span
+                                style={{
+                                  padding: '2px 8px',
+                                  borderRadius: D.pill,
+                                  background:
+                                    rating.driftDirection === 'ahead_of_assessment'
+                                      ? `${D.emerald}20`
+                                      : rating.driftDirection === 'behind_assessment'
+                                      ? `${D.rose}20`
+                                      : `${D.surf2}`,
+                                  color:
+                                    rating.driftDirection === 'ahead_of_assessment'
+                                      ? D.emerald
+                                      : rating.driftDirection === 'behind_assessment'
+                                      ? D.rose
+                                      : D.textMuted,
+                                  fontFamily: D.mono,
+                                  fontSize: '10px',
+                                  fontWeight: 700,
+                                }}
+                                title={rating.narrative}
+                              >
+                                {rating.driftDirection === 'ahead_of_assessment'
+                                  ? `+${rating.drift} ↗`
+                                  : rating.driftDirection === 'behind_assessment'
+                                  ? `${rating.drift} ↘`
+                                  : `±0.0`}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td style={{ padding: '12px 10px', textAlign: 'center', fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
                           {latest ? `${latest.window} (${latest.status})` : 'Unassessed'}
@@ -958,6 +1011,178 @@ export default function SkillsMatrixView({
               showBenchmark={true}
             />
           </div>
+
+          {/* Objective Performance Rating & Drift Engine Card (SCRBRD_OS) */}
+          {(() => {
+            const isBatter = activePlayer.role === 'BAT' || activePlayer.role === 'ALL' || activePlayer.role === 'WK';
+
+            // Extract ball-log evidence stats
+            const ballsFaced = activePlayer.careerTotals?.balls || (activePlayer.careerTotals?.runs ? Math.round(activePlayer.careerTotals.runs / ((activePlayer.sr || 110) / 100)) : (activePlayer.avg ? Math.round((activePlayer.avg * 4) / ((activePlayer.sr || 110) / 100)) : 95));
+            const battingRuns = activePlayer.careerTotals?.runs || (activePlayer.avg ? Math.round(activePlayer.avg * 4) : 110);
+            const dismissals = activePlayer.careerTotals?.innings || 4;
+
+            const ballsBowled = activePlayer.careerTotals?.balls || (activePlayer.wkts ? activePlayer.wkts * 24 : 120);
+            const wickets = activePlayer.wkts || (activePlayer.careerTotals?.wktsTotal || 5);
+            const runsConceded = Math.round(((activePlayer.econ || 5.2) * ballsBowled) / 6);
+
+            const battingIdx = calculateBattingIndex({ runs: battingRuns, ballsFaced, dismissals });
+            const bowlingIdx = calculateBowlingIndex({ runsConceded, ballsBowled, wickets });
+
+            // Subjective coach anchor on 1-20 scale
+            const coachBatScore = latestAssessment
+              ? ((latestAssessment.scores.batting.footwork + latestAssessment.scores.batting.frontFootDrive + latestAssessment.scores.batting.powerHitting) / 3) / 5
+              : (activePlayer.avg ? Math.min(20, Math.max(1, activePlayer.avg / 3)) : 12);
+            
+            const coachBowlScore = latestAssessment
+              ? ((latestAssessment.scores.bowling.seamRelease + latestAssessment.scores.bowling.deathYorkers + latestAssessment.scores.bowling.lineLengthControl) / 3) / 5
+              : (activePlayer.econ ? Math.min(20, Math.max(1, (12 - activePlayer.econ) * 2)) : 12);
+
+            const ratingResult = isBatter
+              ? calculateSelfAdjustedRating(coachBatScore, battingIdx.index, ballsFaced, MIN_BALLS_FACED)
+              : calculateSelfAdjustedRating(coachBowlScore, bowlingIdx.index, ballsBowled, MIN_BALLS_BOWLED);
+
+            const sampleCount = isBatter ? ballsFaced : ballsBowled;
+            const minFloor = isBatter ? MIN_BALLS_FACED : MIN_BALLS_BOWLED;
+            const evidencePct = Math.round(ratingResult.evidenceWeight * 100);
+            const coachPct = 100 - evidencePct;
+
+            return (
+              <div
+                style={{
+                  padding: '20px',
+                  borderRadius: D.lg,
+                  background: D.cardBg,
+                  border: `1px solid ${D.borderMed}`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        padding: '8px',
+                        borderRadius: D.md,
+                        background: `${D.indigo}20`,
+                        color: D.indigo,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Activity size={20} />
+                    </div>
+                    <div>
+                      <div style={{ fontFamily: D.head, fontSize: '15px', fontWeight: 800, color: D.textPrimary }}>
+                        Continuous Performance Rating & Statutory Drift
+                      </div>
+                      <div style={{ fontFamily: D.mono, fontSize: '11px', color: D.textMuted }}>
+                        SCRBRD_OS Rating Engine · Dual-Layer Bayesian Evidence Model
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Drift Status Pill */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: D.pill,
+                        background:
+                          ratingResult.driftDirection === 'ahead_of_assessment'
+                            ? `${D.emerald}20`
+                            : ratingResult.driftDirection === 'behind_assessment'
+                            ? `${D.rose}20`
+                            : `${D.sky}20`,
+                        color:
+                          ratingResult.driftDirection === 'ahead_of_assessment'
+                            ? D.emerald
+                            : ratingResult.driftDirection === 'behind_assessment'
+                            ? D.rose
+                            : D.sky,
+                        fontFamily: D.mono,
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        border: `1px solid ${
+                          ratingResult.driftDirection === 'ahead_of_assessment'
+                            ? D.emerald
+                            : ratingResult.driftDirection === 'behind_assessment'
+                            ? D.rose
+                            : D.sky
+                        }40`,
+                      }}
+                    >
+                      {ratingResult.driftDirection === 'ahead_of_assessment'
+                        ? `📈 +${ratingResult.drift} Ahead of Assessment`
+                        : ratingResult.driftDirection === 'behind_assessment'
+                        ? `📉 ${ratingResult.drift} Behind Assessment`
+                        : `🎯 Aligned with Coach Baseline`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Main 3 Metrics Display */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                  {/* 1. Coach Assessment Anchor */}
+                  <div style={{ padding: '14px', borderRadius: D.md, background: D.surf1, border: `1px solid ${D.border}` }}>
+                    <div style={{ fontFamily: D.head, fontSize: '11px', fontWeight: 700, color: D.textMuted }}>
+                      COACH BASELINE (ANCHOR)
+                    </div>
+                    <div style={{ fontFamily: D.mono, fontSize: '24px', fontWeight: 800, color: D.textPrimary, marginTop: '4px' }}>
+                      {ratingResult.coachAssessment.toFixed(1)} <span style={{ fontSize: '13px', color: D.textMuted }}>/ 20</span>
+                    </div>
+                    <div style={{ fontFamily: D.body, fontSize: '11px', color: D.textSecondary, marginTop: '4px' }}>
+                      Weight: <strong>{coachPct}%</strong> (Subjective Rubric)
+                    </div>
+                  </div>
+
+                  {/* 2. Match Log Evidence Index */}
+                  <div style={{ padding: '14px', borderRadius: D.md, background: D.surf1, border: `1px solid ${D.border}` }}>
+                    <div style={{ fontFamily: D.head, fontSize: '11px', fontWeight: 700, color: D.sky }}>
+                      MATCH EVIDENCE INDEX
+                    </div>
+                    <div style={{ fontFamily: D.mono, fontSize: '24px', fontWeight: 800, color: D.sky, marginTop: '4px' }}>
+                      {ratingResult.evidenceIndex != null ? `${ratingResult.evidenceIndex.toFixed(1)}` : '—'} <span style={{ fontSize: '13px', color: D.textMuted }}>/ 20</span>
+                    </div>
+                    <div style={{ fontFamily: D.body, fontSize: '11px', color: D.textSecondary, marginTop: '4px' }}>
+                      Weight: <strong>{evidencePct}%</strong> ({sampleCount} balls logged)
+                    </div>
+                  </div>
+
+                  {/* 3. Self-Adjusted Composite Rating */}
+                  <div style={{ padding: '14px', borderRadius: D.md, background: `${D.emerald}12`, border: `1px solid ${D.emerald}40` }}>
+                    <div style={{ fontFamily: D.head, fontSize: '11px', fontWeight: 700, color: D.emerald }}>
+                      DYNAMIC COMPOSITE RATING
+                    </div>
+                    <div style={{ fontFamily: D.mono, fontSize: '24px', fontWeight: 800, color: D.emerald, marginTop: '4px' }}>
+                      {ratingResult.blendedRating.toFixed(1)} <span style={{ fontSize: '13px', color: D.textMuted }}>/ 20</span>
+                    </div>
+                    <div style={{ fontFamily: D.body, fontSize: '11px', color: D.textSecondary, marginTop: '4px' }}>
+                      Confidence: <strong>{sampleCount >= FULL_EVIDENCE_SAMPLE ? 'High (Mature)' : sampleCount >= minFloor ? 'Moderate (Emerging)' : 'Floor Insufficient'}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Evidence Weight Distribution Bar */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: D.mono, fontSize: '11px' }}>
+                    <span style={{ color: D.textMuted }}>Coach Anchor ({coachPct}%)</span>
+                    <span style={{ color: D.sky }}>Evidence Weight ({evidencePct}%) · {sampleCount}/{FULL_EVIDENCE_SAMPLE} balls to max weighting</span>
+                  </div>
+                  <div style={{ width: '100%', height: '8px', borderRadius: D.pill, background: D.surf2, overflow: 'hidden', display: 'flex' }}>
+                    <div style={{ width: `${coachPct}%`, background: D.borderMed, transition: 'width 0.3s ease' }} />
+                    <div style={{ width: `${evidencePct}%`, background: D.sky, transition: 'width 0.3s ease' }} />
+                  </div>
+                </div>
+
+                {/* Explanatory Narrative Footer */}
+                <div style={{ padding: '10px 14px', borderRadius: D.md, background: D.surf2, fontFamily: D.body, fontSize: '12px', color: D.textSecondary, lineHeight: 1.5 }}>
+                  💬 <strong>Engine Audit:</strong> {ratingResult.narrative}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Assessment Form or Derived Read Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
