@@ -2,14 +2,12 @@
 
 import React, { useState } from 'react';
 import { Theme, SchoolRegistryItem } from './types';
-import { NAV_META, ROLES } from './data';
+import { NAV_META } from './data';
 import {
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   Search,
   Radio,
-  ExternalLink,
 } from 'lucide-react';
 import { ScrbrdLogo } from './ScrbrdLogo';
 
@@ -73,7 +71,6 @@ export default function MaterialNav({
   isRail,
   onToggleRail,
   activeSchool,
-  currentRole,
   liveMatchCount = 1,
   unreadAlertCount = 3,
   onOpenCommandPalette,
@@ -85,15 +82,16 @@ export default function MaterialNav({
 
   return (
     <aside
+      id="scrbrd-sidebar"
       style={{
-        width: isRail ? '76px' : '260px',
-        minWidth: isRail ? '76px' : '260px',
+        width: isRail ? '72px' : '260px',
+        minWidth: isRail ? '72px' : '260px',
         height: '100vh',
-        background: D.isDark ? '#0a0f1d' : '#ffffff',
+        background: D.surf0,
         borderRight: `1px solid ${D.border}`,
         display: 'flex',
         flexDirection: 'column',
-        transition: 'width 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'width 0.2s ease, background 0.2s ease, border-color 0.2s ease',
         position: 'relative',
         zIndex: 50,
         userSelect: 'none',
@@ -102,12 +100,12 @@ export default function MaterialNav({
       {/* Brand Header */}
       <div
         style={{
-          padding: isRail ? '18px 12px' : '18px 20px',
+          padding: isRail ? '14px 10px' : '16px 18px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: isRail ? 'center' : 'space-between',
           borderBottom: `1px solid ${D.border}`,
-          height: '68px',
+          height: '62px',
           boxSizing: 'border-box',
         }}
       >
@@ -121,19 +119,20 @@ export default function MaterialNav({
             overflow: 'hidden',
           }}
         >
-          <ScrbrdLogo theme={D} size={isRail ? 28 : 26} />
+          <ScrbrdLogo size={isRail ? 24 : 22} />
           {!isRail && (
-            <div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               <div
                 style={{
                   fontFamily: D.head,
-                  fontSize: '16px',
+                  fontSize: '15px',
                   fontWeight: 800,
                   color: D.textPrimary,
-                  letterSpacing: '0.04em',
+                  letterSpacing: '0.02em',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
+                  lineHeight: '1.2',
                 }}
               >
                 SCRBRD
@@ -141,18 +140,19 @@ export default function MaterialNav({
                   style={{
                     fontSize: '9px',
                     fontWeight: 700,
-                    padding: '2px 5px',
+                    padding: '1px 5px',
                     borderRadius: '4px',
-                    background: `${schoolPrimary}25`,
+                    background: `${schoolPrimary}15`,
                     color: schoolPrimary,
                     fontFamily: D.mono,
+                    border: `1px solid ${schoolPrimary}30`,
                   }}
                 >
-                  OS 2.0
+                  PRO
                 </span>
               </div>
               <div style={{ fontFamily: D.mono, fontSize: '10px', color: D.textMuted }}>
-                {activeSchool.shortName} · Cricket
+                {activeSchool.shortName} · KZN Cricket
               </div>
             </div>
           )}
@@ -160,12 +160,13 @@ export default function MaterialNav({
 
         {!isRail && (
           <button
+            id="btn-collapse-rail"
             onClick={onToggleRail}
-            title="Collapse to compact navigation rail"
+            title="Collapse sidebar"
             style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '8px',
+              width: '26px',
+              height: '26px',
+              borderRadius: '6px',
               border: `1px solid ${D.border}`,
               background: 'transparent',
               color: D.textMuted,
@@ -173,105 +174,108 @@ export default function MaterialNav({
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              transition: 'all 0.15s ease',
+              transition: 'background 0.15s ease',
             }}
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={15} />
           </button>
         )}
       </div>
 
-      {/* Quick Scorer Action FAB Button (Material 3 Extended FAB) */}
-      <div style={{ padding: isRail ? '12px 10px' : '12px 16px', borderBottom: `1px solid ${D.border}` }}>
+      {/* Quick Scorer Action FAB Button */}
+      <div style={{ padding: isRail ? '10px 8px' : '10px 14px', borderBottom: `1px solid ${D.border}` }}>
         <button
+          id="btn-sidebar-launch-scorer"
           onClick={onLaunchScorer}
           style={{
             width: '100%',
-            padding: isRail ? '12px 0' : '10px 14px',
-            borderRadius: isRail ? '16px' : '14px',
+            padding: isRail ? '10px 0' : '9px 12px',
+            borderRadius: '8px',
             border: 'none',
-            background: `linear-gradient(135deg, ${D.emerald}ee, #059669)`,
+            background: D.emerald,
             color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
             cursor: 'pointer',
-            boxShadow: `0 4px 14px ${D.emerald}35`,
-            transition: 'all 0.15s ease',
+            transition: 'opacity 0.15s ease',
           }}
           title="Launch Live Authoritative Scorer Hub"
         >
-          <Radio size={16} className="animate-pulse" />
+          <Radio size={15} />
           {!isRail && (
-            <span style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 700, letterSpacing: '0.01em' }}>
-              Live Scoring Hub
+            <span style={{ fontFamily: D.head, fontSize: '12px', fontWeight: 700, letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>
+              Official Scorer Console
             </span>
           )}
         </button>
       </div>
 
-      {/* Quick Search Shortcut */}
+      {/* Search Input Filter for Navigation (Desktop expanded) */}
       {!isRail && (
-        <div style={{ padding: '8px 16px 4px 16px' }}>
-          <button
-            onClick={onOpenCommandPalette}
+        <div style={{ padding: '10px 14px 4px 14px' }}>
+          <div
             style={{
-              width: '100%',
-              padding: '8px 12px',
-              borderRadius: '10px',
-              border: `1px solid ${D.border}`,
-              background: D.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-              color: D.textMuted,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-              fontFamily: D.body,
-              fontSize: '12px',
+              gap: '8px',
+              padding: '6px 10px',
+              borderRadius: '6px',
+              border: `1px solid ${D.border}`,
+              background: D.isDark ? '#151e2e' : '#f8fafc',
             }}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Search size={14} />
-              Quick search...
-            </span>
-            <kbd
+            <Search size={13} color={D.textMuted} />
+            <input
+              type="text"
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              placeholder="Filter views..."
               style={{
-                fontSize: '10px',
-                fontFamily: D.mono,
-                padding: '2px 5px',
-                borderRadius: '4px',
-                background: D.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                color: D.textPrimary,
+                fontFamily: D.body,
+                fontSize: '12px',
               }}
-            >
-              ⌘K
-            </kbd>
-          </button>
+            />
+          </div>
         </div>
       )}
 
-      {/* Navigation Group Items with Material 3 active pill indicators */}
+      {/* Navigation Group Items */}
       <nav
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: isRail ? '10px 8px' : '10px 12px',
+          padding: isRail ? '8px 6px' : '8px 10px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '14px',
+          gap: '12px',
         }}
       >
         {MATERIAL_NAV_GROUPS.map((group) => {
+          const visibleItems = group.items.filter((itemKey) => {
+            if (!filterQuery) return true;
+            const meta = NAV_META[itemKey];
+            return meta?.label.toLowerCase().includes(filterQuery.toLowerCase());
+          });
+
+          if (visibleItems.length === 0) return null;
+
           return (
-            <div key={group.id} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <div key={group.id} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {!isRail && (
                 <div
                   style={{
-                    padding: '4px 10px',
+                    padding: '4px 8px',
                     fontFamily: D.mono,
                     fontSize: '10px',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
+                    letterSpacing: '0.06em',
                     color: D.textMuted,
                     fontWeight: 700,
                   }}
@@ -280,7 +284,7 @@ export default function MaterialNav({
                 </div>
               )}
 
-              {group.items.map((itemKey) => {
+              {visibleItems.map((itemKey) => {
                 const meta = NAV_META[itemKey];
                 if (!meta) return null;
                 const isActive = currentPage === itemKey;
@@ -291,45 +295,46 @@ export default function MaterialNav({
                   badge = { label: `${liveMatchCount} LIVE`, color: D.emerald };
                 } else if (itemKey === 'inbox' && unreadAlertCount > 0) {
                   badge = { label: `${unreadAlertCount}`, color: D.amber };
-                } else if (itemKey === 'analytics' || itemKey === 'analyst_cockpit') {
+                } else if (itemKey === 'analyst_cockpit') {
                   badge = { label: 'PRO', color: D.indigo };
                 }
 
                 return (
                   <button
                     key={itemKey}
+                    id={`nav-item-${itemKey}`}
                     onClick={() => onNavigate(itemKey)}
                     title={meta.label}
                     style={{
                       width: '100%',
-                      minHeight: '40px',
-                      padding: isRail ? '8px 0' : '8px 12px',
-                      borderRadius: isRail ? '14px' : '12px',
+                      minHeight: '36px',
+                      padding: isRail ? '8px 0' : '7px 10px',
+                      borderRadius: '8px',
                       border: 'none',
                       background: isActive
-                        ? isRail
-                          ? `${D.indigo}25`
-                          : D.isDark
-                          ? 'rgba(99, 102, 241, 0.16)'
-                          : 'rgba(99, 102, 241, 0.12)'
+                        ? D.isDark
+                          ? '#1e293b'
+                          : '#f1f5f9'
                         : 'transparent',
                       color: isActive ? (D.isDark ? '#ffffff' : D.indigo) : D.textSecondary,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: isRail ? 'center' : 'space-between',
                       cursor: 'pointer',
-                      transition: 'all 0.12s ease',
+                      transition: 'background 0.12s ease, color 0.12s ease',
                       position: 'relative',
+                      borderLeft: isActive && !isRail ? `3px solid ${D.indigo}` : '3px solid transparent',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
                       <span
                         style={{
-                          fontSize: isRail ? '18px' : '16px',
+                          fontSize: isRail ? '16px' : '15px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          width: '24px',
+                          width: '20px',
+                          flexShrink: 0,
                         }}
                       >
                         {meta.icon}
@@ -341,6 +346,9 @@ export default function MaterialNav({
                             fontSize: '13px',
                             fontWeight: isActive ? 700 : 500,
                             letterSpacing: '-0.01em',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                           }}
                         >
                           {meta.label}
@@ -354,11 +362,13 @@ export default function MaterialNav({
                           fontFamily: D.mono,
                           fontSize: '9px',
                           fontWeight: 700,
-                          padding: '2px 6px',
-                          borderRadius: '6px',
-                          background: `${badge.color}20`,
+                          padding: '1px 5px',
+                          borderRadius: '4px',
+                          background: `${badge.color}15`,
                           color: badge.color,
-                          border: `1px solid ${badge.color}40`,
+                          border: `1px solid ${badge.color}30`,
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
                         }}
                       >
                         {badge.label}
@@ -371,8 +381,8 @@ export default function MaterialNav({
                           position: 'absolute',
                           top: '4px',
                           right: '6px',
-                          width: '8px',
-                          height: '8px',
+                          width: '6px',
+                          height: '6px',
                           borderRadius: '50%',
                           background: badge.color,
                         }}
@@ -390,19 +400,20 @@ export default function MaterialNav({
       {isRail && (
         <div
           style={{
-            padding: '12px 8px',
+            padding: '10px 6px',
             borderTop: `1px solid ${D.border}`,
             display: 'flex',
             justifyContent: 'center',
           }}
         >
           <button
+            id="btn-expand-rail"
             onClick={onToggleRail}
             title="Expand Navigation Drawer"
             style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '10px',
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
               border: `1px solid ${D.border}`,
               background: 'transparent',
               color: D.textMuted,
@@ -412,40 +423,41 @@ export default function MaterialNav({
               cursor: 'pointer',
             }}
           >
-            <ChevronRight size={18} />
+            <ChevronRight size={16} />
           </button>
         </div>
       )}
 
-      {/* User Persona & Role Footer in expanded mode */}
+      {/* Institution summary footer in expanded mode */}
       {!isRail && (
         <div
           style={{
-            padding: '14px 16px',
+            padding: '12px 14px',
             borderTop: `1px solid ${D.border}`,
-            background: D.isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.01)',
+            background: D.isDark ? '#0e1420' : '#f8fafc',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
             <div
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: `${schoolPrimary}30`,
+                width: '30px',
+                height: '30px',
+                borderRadius: '8px',
+                background: `${schoolPrimary}20`,
                 color: schoolPrimary,
                 fontFamily: D.head,
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 800,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
-              {activeSchool.shortName.charAt(0)}
+              {activeSchool.crestIcon}
             </div>
             <div style={{ overflow: 'hidden' }}>
               <div

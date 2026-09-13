@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Theme, SchoolRegistryItem } from './types';
 import { SCHOOLS_REGISTRY, ROLES, NAV_META } from './data';
 import {
@@ -16,7 +16,6 @@ import {
   ShieldCheck,
   Check,
   Building,
-  Users,
 } from 'lucide-react';
 
 interface MaterialTopBarProps {
@@ -66,6 +65,28 @@ export default function MaterialTopBar({
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
   const [squadMenuOpen, setSquadMenuOpen] = useState(false);
 
+  const schoolMenuRef = useRef<HTMLDivElement>(null);
+  const roleMenuRef = useRef<HTMLDivElement>(null);
+  const squadMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close menus on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (schoolMenuRef.current && !schoolMenuRef.current.contains(target)) {
+        setSchoolMenuOpen(false);
+      }
+      if (roleMenuRef.current && !roleMenuRef.current.contains(target)) {
+        setRoleMenuOpen(false);
+      }
+      if (squadMenuRef.current && !squadMenuRef.current.contains(target)) {
+        setSquadMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const schoolPrimary = activeSchool?.color || D.indigo;
   const currentRoleMeta = ROLES[currentRole] || { label: currentRole, color: D.indigo };
 
@@ -80,65 +101,150 @@ export default function MaterialTopBar({
   const currentSquadLabel =
     squadOptions.find((s) => s.id === selectedSquadId)?.label || '1st XI';
 
+  const pageLabel = NAV_META[currentPage]?.label || currentPage;
+
   return (
     <header
+      id="scrbrd-topbar"
       style={{
-        height: isCompactDensity ? '56px' : '64px',
-        background: D.isDark ? 'rgba(10, 15, 29, 0.85)' : 'rgba(255, 255, 255, 0.85)',
-        backdropFilter: 'blur(12px)',
+        height: isCompactDensity ? '54px' : '62px',
+        background: D.surf0,
         borderBottom: `1px solid ${D.border}`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 20px',
+        padding: '0 18px',
         position: 'sticky',
         top: 0,
         zIndex: 40,
-        transition: 'height 0.15s ease',
+        transition: 'background 0.2s ease, height 0.15s ease, border-color 0.2s ease',
       }}
     >
-      {/* Left side: Hamburger (mobile) + Breadcrumbs & Context */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+      {/* Left side: Mobile Toggle + Breadcrumbs Context */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button
+          id="btn-mobile-nav"
           onClick={onToggleMobileNav}
           className="md:hidden"
           style={{
             background: 'transparent',
-            border: 'none',
+            border: `1px solid ${D.border}`,
+            borderRadius: '8px',
             color: D.textPrimary,
             cursor: 'pointer',
-            padding: '4px',
+            padding: '6px',
             display: 'flex',
             alignItems: 'center',
           }}
+          aria-label="Toggle navigation menu"
         >
-          <Menu size={20} />
+          <Menu size={18} />
         </button>
 
-        {/* M3 Tonal Breadcrumb trail */}
+        {/* Institution & Squad context */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontFamily: D.body }}>
-          <span style={{ fontWeight: 700, color: schoolPrimary, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span>{activeSchool.crestIcon}</span>
-            <span>{activeSchool.shortName}</span>
-          </span>
+          {/* Active School Dropdown */}
+          <div ref={schoolMenuRef} style={{ position: 'relative' }}>
+            <button
+              id="btn-school-switcher"
+              onClick={() => {
+                setSchoolMenuOpen((v) => !v);
+                setRoleMenuOpen(false);
+                setSquadMenuOpen(false);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '7px',
+                padding: '5px 10px',
+                borderRadius: '8px',
+                background: D.isDark ? '#151e2e' : '#f1f5f9',
+                border: `1px solid ${D.border}`,
+                color: D.textPrimary,
+                fontWeight: 700,
+                fontSize: '12px',
+                cursor: 'pointer',
+                transition: 'border-color 0.15s ease',
+              }}
+            >
+              <span style={{ fontSize: '15px' }}>{activeSchool.crestIcon}</span>
+              <span>{activeSchool.shortName}</span>
+              <ChevronDown size={13} color={D.textMuted} />
+            </button>
+
+            {schoolMenuOpen && (
+              <div
+                id="dropdown-schools"
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  left: 0,
+                  zIndex: 100,
+                  width: '260px',
+                  background: D.surf0,
+                  border: `1px solid ${D.borderMed}`,
+                  borderRadius: '12px',
+                  boxShadow: D.isDark ? '0 12px 30px rgba(0,0,0,0.5)' : '0 10px 25px rgba(0,0,0,0.08)',
+                  padding: '6px',
+                }}
+              >
+                <div style={{ padding: '6px 10px', fontFamily: D.mono, fontSize: '10px', textTransform: 'uppercase', color: D.textMuted, fontWeight: 700, letterSpacing: '0.05em' }}>
+                  KZN Schools Registry
+                </div>
+                {Object.values(SCHOOLS_REGISTRY).map((school) => {
+                  const isSelected = activeSchool.id === school.id;
+                  return (
+                    <button
+                      key={school.id}
+                      onClick={() => {
+                        onSelectSchool(school.id);
+                        setSchoolMenuOpen(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: isSelected ? (D.isDark ? '#1e293b' : '#f1f5f9') : 'transparent',
+                        color: isSelected ? school.color : D.textPrimary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>{school.crestIcon}</span>
+                        <span style={{ fontWeight: isSelected ? 700 : 500 }}>{school.name}</span>
+                      </div>
+                      {isSelected && <Check size={14} color={school.color} />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           <span style={{ color: D.textMuted }}>/</span>
 
           {/* Squad context chip */}
-          <div style={{ position: 'relative' }}>
+          <div ref={squadMenuRef} style={{ position: 'relative' }}>
             <button
+              id="btn-squad-switcher"
               onClick={() => {
-                setSquadMenuOpen(!squadMenuOpen);
+                setSquadMenuOpen((v) => !v);
                 setSchoolMenuOpen(false);
                 setRoleMenuOpen(false);
               }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
-                padding: '4px 10px',
+                gap: '5px',
+                padding: '5px 10px',
                 borderRadius: '8px',
-                background: D.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                background: D.isDark ? '#151e2e' : '#f1f5f9',
                 border: `1px solid ${D.border}`,
                 color: D.textPrimary,
                 fontFamily: D.mono,
@@ -153,70 +259,76 @@ export default function MaterialTopBar({
 
             {squadMenuOpen && (
               <div
+                id="dropdown-squads"
                 style={{
                   position: 'absolute',
-                  top: '110%',
+                  top: 'calc(100% + 6px)',
                   left: 0,
                   zIndex: 100,
-                  width: '130px',
-                  background: D.isDark ? '#0f172a' : '#ffffff',
+                  width: '140px',
+                  background: D.surf0,
                   border: `1px solid ${D.borderMed}`,
-                  borderRadius: '12px',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+                  borderRadius: '10px',
+                  boxShadow: D.isDark ? '0 12px 30px rgba(0,0,0,0.5)' : '0 10px 25px rgba(0,0,0,0.08)',
                   padding: '6px',
                 }}
               >
-                {squadOptions.map((sq) => (
-                  <button
-                    key={sq.id}
-                    onClick={() => {
-                      onSelectSquad(sq.id);
-                      setSquadMenuOpen(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      padding: '8px 10px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: selectedSquadId === sq.id ? `${D.indigo}20` : 'transparent',
-                      color: selectedSquadId === sq.id ? D.indigo : D.textPrimary,
-                      fontFamily: D.mono,
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <span>{sq.label}</span>
-                    {selectedSquadId === sq.id && <Check size={12} color={D.indigo} />}
-                  </button>
-                ))}
+                {squadOptions.map((sq) => {
+                  const isSelected = selectedSquadId === sq.id;
+                  return (
+                    <button
+                      key={sq.id}
+                      onClick={() => {
+                        onSelectSquad(sq.id);
+                        setSquadMenuOpen(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '7px 9px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: isSelected ? (D.isDark ? '#1e293b' : '#f1f5f9') : 'transparent',
+                        color: isSelected ? schoolPrimary : D.textPrimary,
+                        fontFamily: D.mono,
+                        fontSize: '12px',
+                        fontWeight: isSelected ? 700 : 500,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <span>{sq.label}</span>
+                      {isSelected && <Check size={13} color={schoolPrimary} />}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
 
-          <span style={{ color: D.textMuted }}>/</span>
+          <span style={{ color: D.textMuted }} className="hidden sm:inline">/</span>
 
-          <span style={{ color: D.textPrimary, fontWeight: 700 }}>
-            {NAV_META[currentPage]?.label || currentPage}
+          {/* Current Page Label */}
+          <span className="hidden sm:inline" style={{ color: D.textPrimary, fontWeight: 700, fontSize: '13px' }}>
+            {pageLabel}
           </span>
         </div>
       </div>
 
-      {/* Center: Command Palette Trigger Input (Desktop) */}
-      <div className="hidden lg:flex" style={{ flex: 1, maxWidth: '420px', margin: '0 20px' }}>
+      {/* Center: Command Palette Trigger Input */}
+      <div className="hidden md:flex" style={{ flex: 1, maxWidth: '440px', margin: '0 18px' }}>
         <button
+          id="btn-omnisearch-trigger"
           onClick={onOpenCommandPalette}
           style={{
             width: '100%',
-            height: '38px',
-            padding: '0 14px',
-            borderRadius: '12px',
+            height: '36px',
+            padding: '0 12px',
+            borderRadius: '8px',
             border: `1px solid ${D.border}`,
-            background: D.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+            background: D.isDark ? '#151e2e' : '#f8fafc',
             color: D.textMuted,
             display: 'flex',
             alignItems: 'center',
@@ -224,7 +336,7 @@ export default function MaterialTopBar({
             cursor: 'pointer',
             fontFamily: D.body,
             fontSize: '13px',
-            transition: 'all 0.15s ease',
+            transition: 'border-color 0.15s ease, background 0.15s ease',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = D.borderMed;
@@ -233,18 +345,20 @@ export default function MaterialTopBar({
             e.currentTarget.style.borderColor = D.border;
           }}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             <Search size={15} color={D.textMuted} />
-            Search matches, athletes, pitches or stats...
+            <span>Search fixtures, players, pitches, stats...</span>
           </span>
           <kbd
             style={{
               fontSize: '10px',
               fontFamily: D.mono,
               padding: '2px 6px',
-              borderRadius: '6px',
-              background: D.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+              borderRadius: '4px',
+              background: D.isDark ? '#1c2638' : '#e2e8f0',
               color: D.textSecondary,
+              fontWeight: 600,
+              flexShrink: 0,
             }}
           >
             ⌘K
@@ -253,91 +367,13 @@ export default function MaterialTopBar({
       </div>
 
       {/* Right Action Cluster */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        {/* School Switcher Pill */}
-        <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => {
-              setSchoolMenuOpen(!schoolMenuOpen);
-              setRoleMenuOpen(false);
-              setSquadMenuOpen(false);
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '999px',
-              border: `1px solid ${D.border}`,
-              background: D.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-              color: D.textPrimary,
-              fontFamily: D.body,
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            <Building size={13} color={schoolPrimary} />
-            <span className="hidden sm:inline">{activeSchool.shortName}</span>
-            <ChevronDown size={12} color={D.textMuted} />
-          </button>
-
-          {schoolMenuOpen && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '115%',
-                right: 0,
-                zIndex: 100,
-                width: '260px',
-                background: D.isDark ? '#0f172a' : '#ffffff',
-                border: `1px solid ${D.borderMed}`,
-                borderRadius: '16px',
-                boxShadow: '0 15px 35px rgba(0,0,0,0.3)',
-                padding: '8px',
-              }}
-            >
-              <div style={{ padding: '6px 10px', fontFamily: D.mono, fontSize: '10px', textTransform: 'uppercase', color: D.textMuted, fontWeight: 700 }}>
-                Select Active Institution
-              </div>
-              {Object.values(SCHOOLS_REGISTRY).map((school) => (
-                <button
-                  key={school.id}
-                  onClick={() => {
-                    onSelectSchool(school.id);
-                    setSchoolMenuOpen(false);
-                  }}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: activeSchool.id === school.id ? `${D.indigo}15` : 'transparent',
-                    color: activeSchool.id === school.id ? D.indigo : D.textPrimary,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>{school.crestIcon}</span>
-                    <span style={{ fontWeight: 600 }}>{school.name}</span>
-                  </div>
-                  {activeSchool.id === school.id && <Check size={14} color={D.indigo} />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {/* Role Switcher Pill */}
-        <div style={{ position: 'relative' }}>
+        <div ref={roleMenuRef} style={{ position: 'relative' }}>
           <button
+            id="btn-role-switcher"
             onClick={() => {
-              setRoleMenuOpen(!roleMenuOpen);
+              setRoleMenuOpen((v) => !v);
               setSchoolMenuOpen(false);
               setSquadMenuOpen(false);
             }}
@@ -345,202 +381,172 @@ export default function MaterialTopBar({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '999px',
-              border: `1px solid ${currentRoleMeta.color}40`,
-              background: `${currentRoleMeta.color}15`,
-              color: currentRoleMeta.color,
+              padding: '5px 10px',
+              borderRadius: '8px',
+              border: `1px solid ${D.border}`,
+              background: D.isDark ? '#151e2e' : '#f1f5f9',
+              color: D.textPrimary,
               fontFamily: D.body,
               fontSize: '12px',
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: 'pointer',
+              transition: 'border-color 0.15s ease',
             }}
           >
-            <ShieldCheck size={13} />
-            <span>{currentRoleMeta.label}</span>
-            <ChevronDown size={12} />
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: currentRoleMeta.color,
+                flexShrink: 0,
+              }}
+            />
+            <span className="hidden sm:inline">{currentRoleMeta.label}</span>
+            <ChevronDown size={12} color={D.textMuted} />
           </button>
 
           {roleMenuOpen && (
             <div
+              id="dropdown-roles"
               style={{
                 position: 'absolute',
-                top: '115%',
+                top: 'calc(100% + 6px)',
                 right: 0,
                 zIndex: 100,
                 width: '240px',
                 maxHeight: '340px',
                 overflowY: 'auto',
-                background: D.isDark ? '#0f172a' : '#ffffff',
+                background: D.surf0,
                 border: `1px solid ${D.borderMed}`,
-                borderRadius: '16px',
-                boxShadow: '0 15px 35px rgba(0,0,0,0.3)',
-                padding: '8px',
+                borderRadius: '12px',
+                boxShadow: D.isDark ? '0 12px 30px rgba(0,0,0,0.5)' : '0 10px 25px rgba(0,0,0,0.08)',
+                padding: '6px',
               }}
             >
-              <div style={{ padding: '6px 10px', fontFamily: D.mono, fontSize: '10px', textTransform: 'uppercase', color: D.textMuted, fontWeight: 700 }}>
-                Switch Role Persona
+              <div style={{ padding: '6px 10px', fontFamily: D.mono, fontSize: '10px', textTransform: 'uppercase', color: D.textMuted, fontWeight: 700, letterSpacing: '0.05em' }}>
+                Role & Persona RBAC
               </div>
-              {Object.entries(ROLES).map(([rKey, rMeta]) => (
-                <button
-                  key={rKey}
-                  onClick={() => {
-                    onSelectRole(rKey);
-                    setRoleMenuOpen(false);
-                  }}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: currentRole === rKey ? `${rMeta.color}20` : 'transparent',
-                    color: currentRole === rKey ? rMeta.color : D.textPrimary,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div
-                      style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        background: rMeta.color,
-                      }}
-                    />
-                    <span>{rMeta.label}</span>
-                  </div>
-                  {currentRole === rKey && <Check size={14} color={rMeta.color} />}
-                </button>
-              ))}
+              {Object.entries(ROLES).map(([rKey, rMeta]) => {
+                const isSelected = currentRole === rKey;
+                return (
+                  <button
+                    key={rKey}
+                    onClick={() => {
+                      onSelectRole(rKey);
+                      setRoleMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '7px 9px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: isSelected ? (D.isDark ? '#1e293b' : '#f1f5f9') : 'transparent',
+                      color: isSelected ? rMeta.color : D.textPrimary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: isSelected ? 700 : 500,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span
+                        style={{
+                          width: '7px',
+                          height: '7px',
+                          borderRadius: '50%',
+                          background: rMeta.color,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span>{rMeta.label}</span>
+                    </div>
+                    {isSelected && <Check size={13} color={rMeta.color} />}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Live Match Pulsing Button */}
-        {liveMatchCount > 0 && (
-          <button
-            onClick={onLaunchScorer}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '999px',
-              border: `1px solid ${D.emerald}50`,
-              background: `${D.emerald}18`,
-              color: D.emerald,
-              fontFamily: D.mono,
-              fontSize: '11px',
-              fontWeight: 800,
-              cursor: 'pointer',
-            }}
-            title="Launch Authoritative Scorer Hub"
-          >
-            <span
-              style={{
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                background: D.emerald,
-                animation: 'pulse 1.5s infinite',
-              }}
-            />
-            <span>LIVE SCORER</span>
-          </button>
-        )}
-
-        {/* AI Intelligence Drawer Toggle */}
+        {/* AI Tactical Signals Toggle */}
         <button
+          id="btn-ai-signals"
           onClick={onOpenIntelligenceDrawer}
-          title="Open SCRBRD Intelligence Signals"
+          title="SCRBRD AI Tactical Signals"
           style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '10px',
-            border: `1px solid ${D.indigo}40`,
-            background: `${D.indigo}15`,
-            color: D.indigo,
+            width: '34px',
+            height: '34px',
+            borderRadius: '8px',
+            border: `1px solid ${D.border}`,
+            background: 'transparent',
+            color: D.textSecondary,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
             position: 'relative',
+            transition: 'color 0.15s ease, background 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = D.indigo;
+            e.currentTarget.style.background = D.isDark ? '#151e2e' : '#f1f5f9';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = D.textSecondary;
+            e.currentTarget.style.background = 'transparent';
           }}
         >
-          <Sparkles size={17} />
-          <span
-            style={{
-              position: 'absolute',
-              top: '-3px',
-              right: '-3px',
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              background: D.indigo,
-            }}
-          />
-        </button>
-
-        {/* Density Toggle (Comfortable vs Compact) */}
-        <button
-          onClick={onToggleDensity}
-          title={`Switch density: Currently ${isCompactDensity ? 'Compact' : 'Comfortable'}`}
-          style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '10px',
-            border: `1px solid ${D.border}`,
-            background: isCompactDensity ? `${D.sky}20` : 'transparent',
-            color: isCompactDensity ? D.sky : D.textMuted,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-          }}
-        >
-          <SlidersHorizontal size={16} />
+          <Sparkles size={16} />
         </button>
 
         {/* Notifications Icon with Badge */}
         <button
+          id="btn-notifications"
           onClick={onOpenNotifications}
-          title="View Action Center & Notifications"
+          title="Notifications & System Alerts"
           style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '10px',
+            width: '34px',
+            height: '34px',
+            borderRadius: '8px',
             border: `1px solid ${D.border}`,
             background: 'transparent',
-            color: D.textMuted,
+            color: D.textSecondary,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
             position: 'relative',
+            transition: 'color 0.15s ease, background 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = D.textPrimary;
+            e.currentTarget.style.background = D.isDark ? '#151e2e' : '#f1f5f9';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = D.textSecondary;
+            e.currentTarget.style.background = 'transparent';
           }}
         >
-          <Bell size={17} />
+          <Bell size={16} />
           {unreadNotificationsCount > 0 && (
             <span
               style={{
                 position: 'absolute',
-                top: '-4px',
-                right: '-4px',
-                minWidth: '16px',
-                height: '16px',
-                padding: '0 4px',
-                borderRadius: '8px',
-                background: D.amber,
-                color: '#000',
+                top: '-2px',
+                right: '-2px',
+                minWidth: '15px',
+                height: '15px',
+                padding: '0 3px',
+                borderRadius: '999px',
+                background: D.rose,
+                color: '#ffffff',
                 fontFamily: D.mono,
                 fontSize: '9px',
-                fontWeight: 800,
+                fontWeight: 700,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -551,24 +557,86 @@ export default function MaterialTopBar({
           )}
         </button>
 
-        {/* Theme Toggle */}
+        {/* Density Toggle */}
         <button
-          onClick={onToggleTheme}
-          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          id="btn-density-toggle"
+          onClick={onToggleDensity}
+          title={`Switch density: Currently ${isCompactDensity ? 'Compact' : 'Standard'}`}
           style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '10px',
+            width: '34px',
+            height: '34px',
+            borderRadius: '8px',
             border: `1px solid ${D.border}`,
-            background: 'transparent',
-            color: D.textMuted,
+            background: isCompactDensity ? (D.isDark ? '#151e2e' : '#f1f5f9') : 'transparent',
+            color: isCompactDensity ? D.indigo : D.textSecondary,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
           }}
         >
-          {isDark ? <Sun size={17} /> : <Moon size={17} />}
+          <SlidersHorizontal size={15} />
+        </button>
+
+        {/* Theme Toggle */}
+        <button
+          id="btn-theme-toggle"
+          onClick={onToggleTheme}
+          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          style={{
+            width: '34px',
+            height: '34px',
+            borderRadius: '8px',
+            border: `1px solid ${D.border}`,
+            background: 'transparent',
+            color: D.textSecondary,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'color 0.15s ease, background 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = D.textPrimary;
+            e.currentTarget.style.background = D.isDark ? '#151e2e' : '#f1f5f9';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = D.textSecondary;
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          {isDark ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+
+        {/* Primary CTA: Launch Scorer */}
+        <button
+          id="btn-launch-scorer-header"
+          onClick={onLaunchScorer}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 13px',
+            borderRadius: '8px',
+            border: 'none',
+            background: D.emerald,
+            color: '#ffffff',
+            fontFamily: D.body,
+            fontSize: '12px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            transition: 'opacity 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '0.9';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '1';
+          }}
+        >
+          <Radio size={14} />
+          <span>Live Scorer</span>
         </button>
       </div>
     </header>

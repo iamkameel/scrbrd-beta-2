@@ -5,13 +5,16 @@ import React from 'react';
 interface ScrbrdLogoProps {
   height?: number;
   width?: number;
+  size?: number;
+  theme?: any;
   className?: string;
   isDark?: boolean;
 }
 
-export function ScrbrdLogo({ height = 26, width, className }: ScrbrdLogoProps) {
+export function ScrbrdLogo({ height = 26, width, size, className }: ScrbrdLogoProps) {
+  const effectiveHeight = size || height;
   // Calculated width keeping the 486 x 96 ratio (~5.06:1)
-  const calcWidth = width || Math.round(height * 5.0625);
+  const calcWidth = width || Math.round(effectiveHeight * 5.0625);
 
   return (
     <svg

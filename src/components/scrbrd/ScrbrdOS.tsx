@@ -77,7 +77,7 @@ export default function ScrbrdOS() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [activeSchoolId, setActiveSchoolId] = useState<string>("WES");
   const [selectedSquadId, setSelectedSquadId] = useState<string>("WES_1ST");
-  const [isDark, setIsDark] = useState<boolean>(true);
+  const [isDark, setIsDark] = useState<boolean>(false);
   const [isRailNav, setIsRailNav] = useState<boolean>(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState<boolean>(false);
   const [intelligenceDrawerOpen, setIntelligenceDrawerOpen] = useState<boolean>(false);

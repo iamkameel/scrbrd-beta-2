@@ -3,24 +3,13 @@
 import React, { useState } from 'react';
 import { Theme, SchoolRegistryItem, Match, Player } from './types';
 import {
-  Sparkles,
-  Radio,
-  Calendar,
-  AlertTriangle,
-  TrendingUp,
-  ShieldCheck,
-  CheckCircle2,
-  Users,
   Trophy,
   ArrowRight,
   Activity,
-  Layers,
   Thermometer,
-  Clock,
-  Compass,
-  Zap,
+  Users,
+  TrendingUp,
   Play,
-  FileCheck,
 } from 'lucide-react';
 import GoogleWeatherWidget from './GoogleWeatherWidget';
 
@@ -40,18 +29,13 @@ interface DashboardIntelligenceViewProps {
 export default function DashboardIntelligenceView({
   theme: D,
   activeSchool,
-  currentRole,
   matches,
-  players,
   isCompactDensity = false,
   onNavigate,
   onLaunchScorer,
-  onSelectPlayer,
-  onOpenIntelligenceDrawer,
 }: DashboardIntelligenceViewProps) {
   const [activePerspective, setActivePerspective] = useState<'coach' | 'executive' | 'scorer' | 'athlete'>('coach');
   const [actionCategoryFilter, setActionCategoryFilter] = useState<'all' | 'urgent' | 'selection' | 'medical' | 'logistics'>('all');
-  const [selectedFieldId, setSelectedFieldId] = useState<string>('bowdens');
 
   const schoolPrimary = activeSchool?.color || D.indigo;
 
@@ -63,7 +47,6 @@ export default function DashboardIntelligenceView({
     {
       id: 'act_1',
       title: 'Confirm Match Availability for Saturday',
-      role: 'athlete',
       category: 'urgent',
       due: 'Today 17:00',
       description: 'Westville 1st XI vs DHS 1st XI at Bowden’s Field. 2 players pending.',
@@ -73,7 +56,6 @@ export default function DashboardIntelligenceView({
     {
       id: 'act_2',
       title: 'Sign Tour Consent & Medical Waiver',
-      role: 'athlete',
       category: 'logistics',
       due: 'Tomorrow 12:00',
       description: 'KZN Schools T20 Championship travel clearance. 3 signatures required.',
@@ -83,7 +65,6 @@ export default function DashboardIntelligenceView({
     {
       id: 'act_3',
       title: 'Bowler Overload Threshold Notice',
-      role: 'coach',
       category: 'medical',
       due: 'Immediate',
       description: 'K. Pillay has exceeded 30 overs in 7-day rolling window. Recommend rest or 4-over cap.',
@@ -93,7 +74,6 @@ export default function DashboardIntelligenceView({
     {
       id: 'act_4',
       title: 'Submit Final Playing XI Lineup',
-      role: 'coach',
       category: 'selection',
       due: 'Friday 18:00',
       description: '14 squad members available. 1 restricted for bowling workload.',
@@ -103,7 +83,6 @@ export default function DashboardIntelligenceView({
     {
       id: 'act_5',
       title: 'Verify Ground Scoreboard Synchronization',
-      role: 'scorer',
       category: 'urgent',
       due: 'Pre-Match 08:30',
       description: 'Check electronic telemetry link between digital scorer console and Main Oval board.',
@@ -119,42 +98,42 @@ export default function DashboardIntelligenceView({
 
   return (
     <div
+      id="dashboard-intelligence-view"
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: isCompactDensity ? '16px' : '24px',
-        maxWidth: '1600px',
+        gap: isCompactDensity ? '18px' : '24px',
+        maxWidth: '1440px',
         margin: '0 auto',
       }}
     >
-      {/* Institutional Crest & Perspective Switcher Bar (Material 3 Surface Container) */}
-      <div
+      {/* Institutional Banner */}
+      <section
+        id="section-institutional-header"
         style={{
-          background: D.isDark
-            ? `linear-gradient(135deg, ${schoolPrimary}18 0%, rgba(15, 23, 42, 0.95) 100%)`
-            : `linear-gradient(135deg, ${schoolPrimary}12 0%, #ffffff 100%)`,
-          borderRadius: '24px',
+          background: D.surf0,
+          borderRadius: '12px',
           border: `1px solid ${D.border}`,
-          padding: isCompactDensity ? '16px 20px' : '22px 28px',
+          padding: isCompactDensity ? '16px 20px' : '20px 24px',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div
               style={{
-                fontSize: '32px',
-                width: '54px',
-                height: '54px',
-                borderRadius: '16px',
-                background: `${schoolPrimary}20`,
+                fontSize: '28px',
+                width: '48px',
+                height: '48px',
+                borderRadius: '10px',
+                background: `${schoolPrimary}15`,
+                border: `1px solid ${schoolPrimary}30`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: `0 4px 12px ${schoolPrimary}30`,
+                flexShrink: 0,
               }}
             >
               {activeSchool.crestIcon}
@@ -167,9 +146,10 @@ export default function DashboardIntelligenceView({
                     fontSize: '11px',
                     fontWeight: 700,
                     padding: '2px 8px',
-                    borderRadius: '999px',
-                    background: `${schoolPrimary}25`,
+                    borderRadius: '4px',
+                    background: `${schoolPrimary}15`,
                     color: schoolPrimary,
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {activeSchool.region} · Est. {activeSchool.founded}
@@ -180,19 +160,20 @@ export default function DashboardIntelligenceView({
                     fontSize: '11px',
                     fontWeight: 700,
                     padding: '2px 8px',
-                    borderRadius: '999px',
-                    background: `${D.emerald}20`,
+                    borderRadius: '4px',
+                    background: `${D.emerald}15`,
                     color: D.emerald,
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  🔥 4-Match Winning Run
+                  4-Match Winning Run
                 </span>
               </div>
 
               <h1
                 style={{
                   fontFamily: D.head,
-                  fontSize: isCompactDensity ? '20px' : '24px',
+                  fontSize: isCompactDensity ? '20px' : '22px',
                   fontWeight: 800,
                   color: D.textPrimary,
                   margin: '4px 0 2px 0',
@@ -201,104 +182,88 @@ export default function DashboardIntelligenceView({
               >
                 {activeSchool.name} Cricket Operations
               </h1>
-              <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textSecondary }}>
-                Home Ground: <strong style={{ color: D.textPrimary }}>{activeSchool.mainOval}</strong> · Head of Cricket: {activeSchool.headOfCricket}
+              <div style={{ fontFamily: D.body, fontSize: '13px', color: D.textSecondary }}>
+                Home Oval: <strong style={{ color: D.textPrimary }}>{activeSchool.mainOval}</strong> · Head of Cricket: {activeSchool.headOfCricket}
               </div>
             </div>
           </div>
 
-          {/* Material 3 Segmented Perspective Switcher */}
+          {/* Perspective Switcher */}
           <div
+            id="control-perspective-switcher"
             style={{
               display: 'flex',
               alignItems: 'center',
-              background: D.isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.05)',
-              padding: '4px',
-              borderRadius: '16px',
+              background: D.isDark ? '#151e2e' : '#f1f5f9',
+              padding: '3px',
+              borderRadius: '8px',
               border: `1px solid ${D.border}`,
             }}
           >
             {[
-              { id: 'coach', label: 'Coach & HP', icon: '🏏' },
-              { id: 'executive', label: 'Executive', icon: '🏛️' },
-              { id: 'scorer', label: 'Scorer Hub', icon: '⚡' },
-              { id: 'athlete', label: 'Athlete Portal', icon: '👤' },
+              { id: 'coach', label: 'Coach & HP' },
+              { id: 'executive', label: 'Executive' },
+              { id: 'scorer', label: 'Scorer Hub' },
+              { id: 'athlete', label: 'Athlete Portal' },
             ].map((p) => {
               const isActive = activePerspective === p.id;
               return (
                 <button
                   key={p.id}
+                  id={`btn-perspective-${p.id}`}
                   onClick={() => setActivePerspective(p.id as any)}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: isCompactDensity ? '6px 10px' : '8px 14px',
-                    borderRadius: '12px',
+                    padding: isCompactDensity ? '5px 10px' : '6px 12px',
+                    borderRadius: '6px',
                     border: 'none',
-                    background: isActive ? (D.isDark ? '#1e293b' : '#ffffff') : 'transparent',
+                    background: isActive ? D.surf0 : 'transparent',
                     color: isActive ? D.textPrimary : D.textMuted,
                     fontFamily: D.body,
                     fontSize: '12px',
                     fontWeight: isActive ? 700 : 500,
                     cursor: 'pointer',
-                    boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
-                    transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap',
+                    boxShadow: isActive ? (D.isDark ? '0 1px 3px rgba(0,0,0,0.4)' : '0 1px 3px rgba(0,0,0,0.06)') : 'none',
+                    transition: 'background 0.15s ease, color 0.15s ease',
                   }}
                 >
-                  <span>{p.icon}</span>
-                  <span>{p.label}</span>
+                  {p.label}
                 </button>
               );
             })}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Hero "Next Up" Live Telemetry Card (Material 3 Elevated Card) */}
-      <div
+      {/* Hero Live Match Telemetry Section */}
+      <section
+        id="section-live-telemetry"
         style={{
-          background: D.isDark ? '#0f172a' : '#ffffff',
-          borderRadius: '24px',
+          background: D.surf0,
+          borderRadius: '12px',
           border: `1px solid ${D.border}`,
-          padding: isCompactDensity ? '18px 22px' : '24px 28px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
+          padding: isCompactDensity ? '18px 20px' : '22px 24px',
           display: 'flex',
           flexDirection: 'column',
           gap: '18px',
-          position: 'relative',
-          overflow: 'hidden',
         }}
       >
-        {/* Glowing live accent line */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: liveMatch.status === 'live'
-              ? `linear-gradient(90deg, ${D.emerald}, ${D.sky})`
-              : `linear-gradient(90deg, ${D.indigo}, ${D.amber})`,
-          }}
-        />
-
-        {/* Top bar of card */}
+        {/* Top bar of live match card */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span
               style={{
                 fontFamily: D.mono,
                 fontSize: '11px',
-                fontWeight: 800,
-                padding: '4px 10px',
-                borderRadius: '999px',
-                background: liveMatch.status === 'live' ? `${D.emerald}20` : `${D.indigo}20`,
+                fontWeight: 700,
+                padding: '4px 8px',
+                borderRadius: '4px',
+                background: liveMatch.status === 'live' ? `${D.emerald}15` : `${D.indigo}15`,
                 color: liveMatch.status === 'live' ? D.emerald : D.indigo,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
+                whiteSpace: 'nowrap',
               }}
             >
               <span
@@ -309,7 +274,7 @@ export default function DashboardIntelligenceView({
                   background: liveMatch.status === 'live' ? D.emerald : D.indigo,
                 }}
               />
-              {liveMatch.status === 'live' ? 'LIVE BROADCAST IN PROGRESS' : 'NEXT SCHEDULED FIXTURE'}
+              {liveMatch.status === 'live' ? 'LIVE BROADCAST' : 'UPCOMING FIXTURE'}
             </span>
 
             <span style={{ fontFamily: D.mono, fontSize: '12px', color: D.textMuted }}>
@@ -319,10 +284,11 @@ export default function DashboardIntelligenceView({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
+              id="btn-goto-match-centre"
               onClick={() => onNavigate('matches')}
               style={{
                 padding: '6px 12px',
-                borderRadius: '10px',
+                borderRadius: '6px',
                 border: `1px solid ${D.border}`,
                 background: 'transparent',
                 color: D.textSecondary,
@@ -330,30 +296,32 @@ export default function DashboardIntelligenceView({
                 fontSize: '12px',
                 fontWeight: 600,
                 cursor: 'pointer',
+                whiteSpace: 'nowrap',
               }}
             >
               Match Centre →
             </button>
 
             <button
+              id="btn-open-scorer-hub"
               onClick={() => onLaunchScorer(liveMatch)}
               style={{
-                padding: '7px 16px',
-                borderRadius: '12px',
+                padding: '6px 12px',
+                borderRadius: '6px',
                 border: 'none',
-                background: `linear-gradient(135deg, ${D.emerald}, #059669)`,
+                background: D.emerald,
                 color: '#ffffff',
-                fontFamily: D.head,
-                fontSize: '13px',
+                fontFamily: D.body,
+                fontSize: '12px',
                 fontWeight: 700,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                boxShadow: `0 4px 14px ${D.emerald}30`,
+                whiteSpace: 'nowrap',
               }}
             >
-              <Play size={14} fill="#ffffff" />
+              <Play size={13} fill="#ffffff" />
               <span>Launch Scorer Hub</span>
             </button>
           </div>
@@ -371,9 +339,9 @@ export default function DashboardIntelligenceView({
           {/* Home team */}
           <div
             style={{
-              padding: '16px 20px',
-              borderRadius: '18px',
-              background: D.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+              padding: '16px 18px',
+              borderRadius: '8px',
+              background: D.isDark ? '#151e2e' : '#f8fafc',
               border: `1px solid ${D.border}`,
               display: 'flex',
               alignItems: 'center',
@@ -381,19 +349,19 @@ export default function DashboardIntelligenceView({
             }}
           >
             <div>
-              <div style={{ fontFamily: D.head, fontSize: '18px', fontWeight: 800, color: D.textPrimary }}>
+              <div style={{ fontFamily: D.head, fontSize: '17px', fontWeight: 800, color: D.textPrimary }}>
                 {liveMatch.homeTeam}
               </div>
-              <div style={{ fontFamily: D.mono, fontSize: '12px', color: D.emerald, fontWeight: 700 }}>
+              <div style={{ fontFamily: D.mono, fontSize: '12px', color: D.emerald, fontWeight: 700, marginTop: '2px' }}>
                 1st Innings: 248/6 (50.0 ov)
               </div>
             </div>
-            <div style={{ fontSize: '28px' }}>🏛️</div>
+            <div style={{ fontSize: '24px' }}>🏛️</div>
           </div>
 
           {/* Equation & Status Center */}
-          <div style={{ textAlign: 'center', padding: '0 10px' }}>
-            <div style={{ fontFamily: D.head, fontSize: '15px', fontWeight: 800, color: D.textPrimary }}>
+          <div style={{ textAlign: 'center', padding: '0 8px' }}>
+            <div style={{ fontFamily: D.head, fontSize: '14px', fontWeight: 800, color: D.textPrimary }}>
               vs
             </div>
             <div
@@ -402,7 +370,7 @@ export default function DashboardIntelligenceView({
                 fontSize: '13px',
                 fontWeight: 700,
                 color: D.indigo,
-                margin: '4px 0',
+                margin: '3px 0',
               }}
             >
               {liveMatch.awayTeam} need 52 runs from 48 balls (RRR 6.50)
@@ -415,9 +383,9 @@ export default function DashboardIntelligenceView({
           {/* Away team */}
           <div
             style={{
-              padding: '16px 20px',
-              borderRadius: '18px',
-              background: D.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+              padding: '16px 18px',
+              borderRadius: '8px',
+              background: D.isDark ? '#151e2e' : '#f8fafc',
               border: `1px solid ${D.border}`,
               display: 'flex',
               alignItems: 'center',
@@ -425,14 +393,14 @@ export default function DashboardIntelligenceView({
             }}
           >
             <div>
-              <div style={{ fontFamily: D.head, fontSize: '18px', fontWeight: 800, color: D.textPrimary }}>
+              <div style={{ fontFamily: D.head, fontSize: '17px', fontWeight: 800, color: D.textPrimary }}>
                 {liveMatch.awayTeam}
               </div>
-              <div style={{ fontFamily: D.mono, fontSize: '12px', color: D.sky, fontWeight: 700 }}>
+              <div style={{ fontFamily: D.mono, fontSize: '12px', color: D.sky, fontWeight: 700, marginTop: '2px' }}>
                 Current: 197/4 (42.0 ov)
               </div>
             </div>
-            <div style={{ fontSize: '28px' }}>🦅</div>
+            <div style={{ fontSize: '24px' }}>🦅</div>
           </div>
         </div>
 
@@ -442,63 +410,63 @@ export default function DashboardIntelligenceView({
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '12px',
-            paddingTop: '6px',
+            paddingTop: '12px',
             borderTop: `1px solid ${D.border}`,
           }}
         >
           <div
             style={{
-              padding: '12px 14px',
-              borderRadius: '14px',
-              background: D.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+              padding: '10px 12px',
+              borderRadius: '6px',
+              background: D.isDark ? '#151e2e' : '#f8fafc',
               border: `1px solid ${D.border}`,
             }}
           >
             <div style={{ fontFamily: D.mono, fontSize: '10px', textTransform: 'uppercase', color: D.textMuted, marginBottom: '2px' }}>
               Striker at Crease
             </div>
-            <div style={{ fontFamily: D.body, fontSize: '13px', fontWeight: 700, color: D.textPrimary }}>
-              A. Sithole · <strong style={{ color: D.emerald }}>68* (54b, 7x4, 2x6)</strong>
+            <div style={{ fontFamily: D.body, fontSize: '12px', fontWeight: 700, color: D.textPrimary }}>
+              A. Sithole · <span style={{ color: D.emerald, fontFamily: D.mono }}>68* (54b)</span>
             </div>
           </div>
 
           <div
             style={{
-              padding: '12px 14px',
-              borderRadius: '14px',
-              background: D.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+              padding: '10px 12px',
+              borderRadius: '6px',
+              background: D.isDark ? '#151e2e' : '#f8fafc',
               border: `1px solid ${D.border}`,
             }}
           >
             <div style={{ fontFamily: D.mono, fontSize: '10px', textTransform: 'uppercase', color: D.textMuted, marginBottom: '2px' }}>
               Non-Striker
             </div>
-            <div style={{ fontFamily: D.body, fontSize: '13px', fontWeight: 700, color: D.textPrimary }}>
-              D. Evans · <strong style={{ color: D.sky }}>24* (28b, 2x4)</strong>
+            <div style={{ fontFamily: D.body, fontSize: '12px', fontWeight: 700, color: D.textPrimary }}>
+              D. Evans · <span style={{ color: D.sky, fontFamily: D.mono }}>24* (28b)</span>
             </div>
           </div>
 
           <div
             style={{
-              padding: '12px 14px',
-              borderRadius: '14px',
-              background: D.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+              padding: '10px 12px',
+              borderRadius: '6px',
+              background: D.isDark ? '#151e2e' : '#f8fafc',
               border: `1px solid ${D.border}`,
             }}
           >
             <div style={{ fontFamily: D.mono, fontSize: '10px', textTransform: 'uppercase', color: D.textMuted, marginBottom: '2px' }}>
               Current Bowler
             </div>
-            <div style={{ fontFamily: D.body, fontSize: '13px', fontWeight: 700, color: D.textPrimary }}>
-              K. Pillay · <strong style={{ color: D.amber }}>8.0-1-38-2 (Econ 4.75)</strong>
+            <div style={{ fontFamily: D.body, fontSize: '12px', fontWeight: 700, color: D.textPrimary }}>
+              K. Pillay · <span style={{ color: D.amber, fontFamily: D.mono }}>8.0-1-38-2</span>
             </div>
           </div>
 
           <div
             style={{
-              padding: '12px 14px',
-              borderRadius: '14px',
-              background: D.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+              padding: '10px 12px',
+              borderRadius: '6px',
+              background: D.isDark ? '#151e2e' : '#f8fafc',
               border: `1px solid ${D.border}`,
               display: 'flex',
               flexDirection: 'column',
@@ -515,15 +483,106 @@ export default function DashboardIntelligenceView({
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Action Centre Section (Material 3 Filter Chips + Urgent Action Cards) */}
-      <div
+      {/* 4-KPI Overview Row */}
+      <section
+        id="section-kpi-grid"
         style={{
-          background: D.isDark ? '#0f172a' : '#ffffff',
-          borderRadius: '24px',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '14px',
+        }}
+      >
+        <div
+          style={{
+            padding: '16px 18px',
+            borderRadius: '10px',
+            background: D.surf0,
+            border: `1px solid ${D.border}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: D.textMuted, marginBottom: '4px' }}>
+            <span style={{ fontFamily: D.mono, fontSize: '11px', textTransform: 'uppercase' }}>Win Rate (Season)</span>
+            <Trophy size={16} color={D.amber} />
+          </div>
+          <div style={{ fontFamily: D.mono, fontSize: '26px', fontWeight: 800, color: D.textPrimary }}>
+            61.6%
+          </div>
+          <div style={{ fontFamily: D.body, fontSize: '12px', color: D.emerald, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <TrendingUp size={12} /> +8.4% vs 2025 season
+          </div>
+        </div>
+
+        <div
+          style={{
+            padding: '16px 18px',
+            borderRadius: '10px',
+            background: D.surf0,
+            border: `1px solid ${D.border}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: D.textMuted, marginBottom: '4px' }}>
+            <span style={{ fontFamily: D.mono, fontSize: '11px', textTransform: 'uppercase' }}>Total Runs Scored</span>
+            <Activity size={16} color={D.sky} />
+          </div>
+          <div style={{ fontFamily: D.mono, fontSize: '26px', fontWeight: 800, color: D.textPrimary }}>
+            1,842
+          </div>
+          <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textMuted, marginTop: '2px' }}>
+            Avg Run Rate: 5.12 rpo across 8 matches
+          </div>
+        </div>
+
+        <div
+          style={{
+            padding: '16px 18px',
+            borderRadius: '10px',
+            background: D.surf0,
+            border: `1px solid ${D.border}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: D.textMuted, marginBottom: '4px' }}>
+            <span style={{ fontFamily: D.mono, fontSize: '11px', textTransform: 'uppercase' }}>Available Squad</span>
+            <Users size={16} color={D.emerald} />
+          </div>
+          <div style={{ fontFamily: D.mono, fontSize: '26px', fontWeight: 800, color: D.textPrimary }}>
+            14 / 16
+          </div>
+          <div style={{ fontFamily: D.body, fontSize: '12px', color: D.amber, marginTop: '2px' }}>
+            2 modified load, 0 sidelined
+          </div>
+        </div>
+
+        <div
+          style={{
+            padding: '16px 18px',
+            borderRadius: '10px',
+            background: D.surf0,
+            border: `1px solid ${D.border}`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: D.textMuted, marginBottom: '4px' }}>
+            <span style={{ fontFamily: D.mono, fontSize: '11px', textTransform: 'uppercase' }}>Curator Pitch Index</span>
+            <Thermometer size={16} color={D.indigo} />
+          </div>
+          <div style={{ fontFamily: D.mono, fontSize: '26px', fontWeight: 800, color: D.textPrimary }}>
+            8.8 / 10
+          </div>
+          <div style={{ fontFamily: D.body, fontSize: '12px', color: D.emerald, marginTop: '2px' }}>
+            Turf dry, true bounce, 14% moisture
+          </div>
+        </div>
+      </section>
+
+      {/* Action Centre Section */}
+      <section
+        id="section-action-centre"
+        style={{
+          background: D.surf0,
+          borderRadius: '12px',
           border: `1px solid ${D.border}`,
-          padding: isCompactDensity ? '18px 20px' : '22px 26px',
+          padding: isCompactDensity ? '16px 20px' : '20px 24px',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
@@ -531,33 +590,35 @@ export default function DashboardIntelligenceView({
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <h2 style={{ fontFamily: D.head, fontSize: '17px', fontWeight: 800, color: D.textPrimary, margin: 0 }}>
-              Action Centre & Critical Tasks
+            <h2 style={{ fontFamily: D.head, fontSize: '16px', fontWeight: 800, color: D.textPrimary, margin: 0 }}>
+              Action Centre & Approvals
             </h2>
             <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textMuted }}>
-              Decisions and approvals requiring attention for your active context
+              Required decisions and verifications for your institutional role
             </div>
           </div>
 
-          {/* Material 3 Filter Chips */}
+          {/* Filter Chips */}
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {(['all', 'urgent', 'selection', 'medical', 'logistics'] as const).map((cat) => {
               const isSelected = actionCategoryFilter === cat;
               return (
                 <button
                   key={cat}
+                  id={`filter-action-${cat}`}
                   onClick={() => setActionCategoryFilter(cat)}
                   style={{
-                    padding: '5px 12px',
-                    borderRadius: '999px',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
                     border: isSelected ? `1px solid ${D.indigo}` : `1px solid ${D.border}`,
-                    background: isSelected ? `${D.indigo}20` : 'transparent',
+                    background: isSelected ? (D.isDark ? '#1e293b' : '#f1f5f9') : 'transparent',
                     color: isSelected ? D.indigo : D.textSecondary,
                     fontFamily: D.body,
-                    fontSize: '12px',
+                    fontSize: '11px',
                     fontWeight: isSelected ? 700 : 500,
                     cursor: 'pointer',
                     textTransform: 'capitalize',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {cat}
@@ -578,21 +639,21 @@ export default function DashboardIntelligenceView({
           {filteredActions.map((act) => {
             const isUrgent = act.category === 'urgent';
             const isMed = act.category === 'medical';
-            const badgeColor = isUrgent ? D.rose : isMed ? D.amber : D.indigo;
+            const tagColor = isUrgent ? D.rose : isMed ? D.amber : D.indigo;
 
             return (
               <div
                 key={act.id}
+                id={`action-item-${act.id}`}
                 style={{
                   padding: '14px 16px',
-                  borderRadius: '16px',
-                  background: D.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
+                  borderRadius: '8px',
+                  background: D.isDark ? '#151e2e' : '#f8fafc',
                   border: `1px solid ${D.border}`,
-                  borderLeft: `4px solid ${badgeColor}`,
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  gap: '10px',
+                  gap: '12px',
                 }}
               >
                 <div>
@@ -601,12 +662,13 @@ export default function DashboardIntelligenceView({
                       style={{
                         fontFamily: D.mono,
                         fontSize: '9px',
-                        fontWeight: 800,
+                        fontWeight: 700,
                         textTransform: 'uppercase',
                         padding: '2px 6px',
                         borderRadius: '4px',
-                        background: `${badgeColor}15`,
-                        color: badgeColor,
+                        background: `${tagColor}15`,
+                        color: tagColor,
+                        whiteSpace: 'nowrap',
                       }}
                     >
                       {act.category} · Due {act.due}
@@ -624,129 +686,38 @@ export default function DashboardIntelligenceView({
                   onClick={act.onAction}
                   style={{
                     alignSelf: 'flex-start',
-                    padding: '6px 12px',
-                    borderRadius: '8px',
-                    border: `1px solid ${badgeColor}40`,
-                    background: `${badgeColor}10`,
-                    color: badgeColor,
+                    padding: '5px 10px',
+                    borderRadius: '6px',
+                    border: `1px solid ${D.border}`,
+                    background: D.surf0,
+                    color: D.textPrimary,
                     fontFamily: D.body,
                     fontSize: '11px',
-                    fontWeight: 700,
+                    fontWeight: 600,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   <span>{act.actionText}</span>
-                  <ArrowRight size={12} />
+                  <ArrowRight size={11} />
                 </button>
               </div>
             );
           })}
         </div>
-      </div>
-
-      {/* 5-KPI Bento Grid (Institutional & Performance Benchmarks) */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '14px',
-        }}
-      >
-        <div
-          style={{
-            padding: '18px',
-            borderRadius: '20px',
-            background: D.isDark ? '#0f172a' : '#ffffff',
-            border: `1px solid ${D.border}`,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: D.textMuted, marginBottom: '6px' }}>
-            <span style={{ fontFamily: D.mono, fontSize: '11px', textTransform: 'uppercase' }}>Win Rate (Season)</span>
-            <Trophy size={16} color={D.amber} />
-          </div>
-          <div style={{ fontFamily: D.mono, fontSize: '28px', fontWeight: 800, color: D.textPrimary }}>
-            61.6%
-          </div>
-          <div style={{ fontFamily: D.body, fontSize: '12px', color: D.emerald, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <TrendingUp size={12} /> +8.4% vs 2025 season
-          </div>
-        </div>
-
-        <div
-          style={{
-            padding: '18px',
-            borderRadius: '20px',
-            background: D.isDark ? '#0f172a' : '#ffffff',
-            border: `1px solid ${D.border}`,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: D.textMuted, marginBottom: '6px' }}>
-            <span style={{ fontFamily: D.mono, fontSize: '11px', textTransform: 'uppercase' }}>Total Runs Scored</span>
-            <Activity size={16} color={D.sky} />
-          </div>
-          <div style={{ fontFamily: D.mono, fontSize: '28px', fontWeight: 800, color: D.textPrimary }}>
-            1,842
-          </div>
-          <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textMuted, marginTop: '4px' }}>
-            Avg Run Rate: 5.12 rpo across 8 matches
-          </div>
-        </div>
-
-        <div
-          style={{
-            padding: '18px',
-            borderRadius: '20px',
-            background: D.isDark ? '#0f172a' : '#ffffff',
-            border: `1px solid ${D.border}`,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: D.textMuted, marginBottom: '6px' }}>
-            <span style={{ fontFamily: D.mono, fontSize: '11px', textTransform: 'uppercase' }}>Available XI Squad</span>
-            <Users size={16} color={D.emerald} />
-          </div>
-          <div style={{ fontFamily: D.mono, fontSize: '28px', fontWeight: 800, color: D.textPrimary }}>
-            14 / 16
-          </div>
-          <div style={{ fontFamily: D.body, fontSize: '12px', color: D.amber, marginTop: '4px' }}>
-            2 modified load, 0 sidelined
-          </div>
-        </div>
-
-        <div
-          style={{
-            padding: '18px',
-            borderRadius: '20px',
-            background: D.isDark ? '#0f172a' : '#ffffff',
-            border: `1px solid ${D.border}`,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: D.textMuted, marginBottom: '6px' }}>
-            <span style={{ fontFamily: D.mono, fontSize: '11px', textTransform: 'uppercase' }}>Curator Pitch Index</span>
-            <Thermometer size={16} color={D.indigo} />
-          </div>
-          <div style={{ fontFamily: D.mono, fontSize: '28px', fontWeight: 800, color: D.textPrimary }}>
-            8.8 / 10
-          </div>
-          <div style={{ fontFamily: D.body, fontSize: '12px', color: D.emerald, marginTop: '4px' }}>
-            Turf dry, true bounce, 14% moisture
-          </div>
-        </div>
-      </div>
+      </section>
 
       {/* Turf Curator & Home Ground Telemetry */}
-      <div
+      <section
+        id="section-pitch-environmental"
         style={{
-          background: D.isDark ? '#0f172a' : '#ffffff',
-          borderRadius: '24px',
+          background: D.surf0,
+          borderRadius: '12px',
           border: `1px solid ${D.border}`,
-          padding: isCompactDensity ? '18px 20px' : '22px 26px',
+          padding: isCompactDensity ? '16px 20px' : '20px 24px',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
@@ -755,18 +726,19 @@ export default function DashboardIntelligenceView({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <h3 style={{ fontFamily: D.head, fontSize: '16px', fontWeight: 800, color: D.textPrimary, margin: 0 }}>
-              Pitch & Environmental Telemetry
+              Pitch & Environmental Diagnostics
             </h3>
             <div style={{ fontFamily: D.body, fontSize: '12px', color: D.textMuted }}>
-              Groundskeeper turf sensors & live localized weather
+              Groundskeeper telemetry & live localized weather for {activeSchool.mainOval}
             </div>
           </div>
 
           <button
+            id="btn-goto-fields"
             onClick={() => onNavigate('fields')}
             style={{
               padding: '6px 12px',
-              borderRadius: '8px',
+              borderRadius: '6px',
               border: `1px solid ${D.border}`,
               background: 'transparent',
               color: D.indigo,
@@ -774,6 +746,7 @@ export default function DashboardIntelligenceView({
               fontSize: '12px',
               fontWeight: 700,
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
             }}
           >
             Manage All Ovals →
@@ -791,8 +764,8 @@ export default function DashboardIntelligenceView({
           <div
             style={{
               padding: '16px',
-              borderRadius: '16px',
-              background: D.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+              borderRadius: '8px',
+              background: D.isDark ? '#151e2e' : '#f8fafc',
               border: `1px solid ${D.border}`,
               display: 'flex',
               flexDirection: 'column',
@@ -800,29 +773,29 @@ export default function DashboardIntelligenceView({
             }}
           >
             <div style={{ fontFamily: D.head, fontSize: '13px', fontWeight: 700, color: D.textPrimary }}>
-              Bowden&apos;s Field Surface Diagnostics
+              Bowden&apos;s Field Surface Telemetry
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div style={{ padding: '10px', borderRadius: '10px', background: D.isDark ? '#1e293b' : '#f1f5f9' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div style={{ padding: '10px', borderRadius: '6px', background: D.surf0, border: `1px solid ${D.border}` }}>
                 <div style={{ fontSize: '10px', fontFamily: D.mono, color: D.textMuted }}>SOIL MOISTURE</div>
                 <div style={{ fontSize: '18px', fontFamily: D.mono, fontWeight: 800, color: D.sky }}>14.2%</div>
                 <div style={{ fontSize: '10px', color: D.emerald }}>Optimal Hardness</div>
               </div>
 
-              <div style={{ padding: '10px', borderRadius: '10px', background: D.isDark ? '#1e293b' : '#f1f5f9' }}>
+              <div style={{ padding: '10px', borderRadius: '6px', background: D.surf0, border: `1px solid ${D.border}` }}>
                 <div style={{ fontSize: '10px', fontFamily: D.mono, color: D.textMuted }}>COMPACTION</div>
                 <div style={{ fontSize: '18px', fontFamily: D.mono, fontWeight: 800, color: D.emerald }}>320 PSI</div>
                 <div style={{ fontSize: '10px', color: D.textMuted }}>Heavy Roller Applied</div>
               </div>
 
-              <div style={{ padding: '10px', borderRadius: '10px', background: D.isDark ? '#1e293b' : '#f1f5f9' }}>
+              <div style={{ padding: '10px', borderRadius: '6px', background: D.surf0, border: `1px solid ${D.border}` }}>
                 <div style={{ fontSize: '10px', fontFamily: D.mono, color: D.textMuted }}>GRASS COVER</div>
                 <div style={{ fontSize: '18px', fontFamily: D.mono, fontWeight: 800, color: D.amber }}>4.5 mm</div>
                 <div style={{ fontSize: '10px', color: D.textMuted }}>Kikuyu / Ryegrass</div>
               </div>
 
-              <div style={{ padding: '10px', borderRadius: '10px', background: D.isDark ? '#1e293b' : '#f1f5f9' }}>
+              <div style={{ padding: '10px', borderRadius: '6px', background: D.surf0, border: `1px solid ${D.border}` }}>
                 <div style={{ fontSize: '10px', fontFamily: D.mono, color: D.textMuted }}>EXPECTED BOUNCE</div>
                 <div style={{ fontSize: '18px', fontFamily: D.mono, fontWeight: 800, color: D.indigo }}>True / Fast</div>
                 <div style={{ fontSize: '10px', color: D.emerald }}>Pace Bowler Assist</div>
@@ -830,12 +803,12 @@ export default function DashboardIntelligenceView({
             </div>
           </div>
 
-          {/* Live Weather Forecast Widget */}
+          {/* Localized Weather Forecast Widget */}
           <div
             style={{
               padding: '16px',
-              borderRadius: '16px',
-              background: D.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+              borderRadius: '8px',
+              background: D.isDark ? '#151e2e' : '#f8fafc',
               border: `1px solid ${D.border}`,
             }}
           >
@@ -851,7 +824,7 @@ export default function DashboardIntelligenceView({
             />
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

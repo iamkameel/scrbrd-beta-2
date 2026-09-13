@@ -14,29 +14,29 @@ export const SCRBRD_LOGO = "/scrbrd-logo.svg";
 
 // ── THEME ENGINE ──────────────────────────────────────
 export const DARK_THEME = {
-  bg: "#060910", surf0: "#0a0f1a", surf1: "#0f1621",
-  surf2: "#151d2e", surf3: "#1c2640",
-  border: "rgba(255,255,255,0.07)", borderMed: "rgba(255,255,255,0.14)",
-  textPrimary: "#f0f4ff", textSecondary: "#8b9bc4", textMuted: "#94a3b8", // WCAG 2.1 AA Compliant (7.19:1)
-  cardBg: "rgba(255,255,255,0.03)", isDark: true,
+  bg: "#0b0f19", surf0: "#111827", surf1: "#151e2e",
+  surf2: "#1c2638", surf3: "#26354a",
+  border: "rgba(255,255,255,0.08)", borderMed: "rgba(255,255,255,0.16)",
+  textPrimary: "#f8fafc", textSecondary: "#cbd5e1", textMuted: "#94a3b8", // WCAG 2.1 AAA Compliant
+  cardBg: "#111827", isDark: true,
 };
 
 export const LIGHT_THEME = {
-  bg: "#f4f7fb", surf0: "#ffffff", surf1: "#ffffff",
-  surf2: "#f8fafc", surf3: "#edf2f7",
-  border: "rgba(0,0,0,0.08)", borderMed: "rgba(0,0,0,0.14)",
+  bg: "#f8fafc", surf0: "#ffffff", surf1: "#ffffff",
+  surf2: "#f1f5f9", surf3: "#e2e8f0",
+  border: "#e2e8f0", borderMed: "#cbd5e1",
   textPrimary: "#0f172a", textSecondary: "#334155", textMuted: "#64748b",
-  cardBg: "rgba(255,255,255,0.85)", isDark: false,
+  cardBg: "#ffffff", isDark: false,
 };
 
 export const THEME_ACCENTS = {
-  indigo: "#6366f1", sky: "#0ea5e9", emerald: "#10b981", amber: "#f59e0b",
-  rose: "#f43f5e", orange: "#f97316", violet: "#8b5cf6", cyan: "#06b6d4",
-  teal: "#14b8a6", lime: "#84cc16", pink: "#ec4899",
-  gradMain: "linear-gradient(135deg,#6366f1,#0ea5e9)",
-  gradGold: "linear-gradient(135deg,#f59e0b,#f97316)",
-  gradLive: "linear-gradient(135deg,#10b981,#06b6d4)",
-  sm: "6px", md: "10px", lg: "14px", xl: "18px", pill: "999px",
+  indigo: "#2563eb", sky: "#0284c7", emerald: "#059669", amber: "#d97706",
+  rose: "#e11d48", orange: "#ea580c", violet: "#7c3aed", cyan: "#0891b2",
+  teal: "#0d9488", lime: "#65a30d", pink: "#db2777",
+  gradMain: "linear-gradient(135deg,#2563eb,#0284c7)",
+  gradGold: "linear-gradient(135deg,#d97706,#ea580c)",
+  gradLive: "linear-gradient(135deg,#059669,#0284c7)",
+  sm: "4px", md: "8px", lg: "12px", xl: "14px", pill: "999px",
   mono: "var(--font-dm-mono), 'DM Mono', monospace",
   head: "var(--font-open-sans), 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
   body: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
